@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Docs: Project Name (in progress)</title>
+  <meta name="description" content="Architecture, trust model and public limitations of the protocol. Prototype placeholder." />
+  <meta name="theme-color" content="#0a0e1f" />
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <script src="assets/js/app.js" defer></script>
+  <script src="assets/js/stub.js" defer></script>
+</head>
+<body data-tone="neutral">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="ambient" aria-hidden="true"></div>
+
+  <div data-component="proto-bar"></div>
+  <header class="site-header" data-component="site-header" data-active="docs"></header>
+
+  <main id="main">
+    <section class="stub" data-tone="neutral" style="--accent: var(--periwinkle)" aria-labelledby="page-title">
+      <span class="stub__numeral" aria-hidden="true">06</span>
+      <div class="container">
+        <p class="stub__eyebrow"><span class="stub__num">06 / 06</span><span class="stub__tag">Design in progress</span></p>
+        <h1 class="stub__title" id="page-title">What this is, and what it is not.</h1>
+        <p class="lead stub__lead">How the protocol fits together, who has to be trusted, and the limits that apply to this testnet demonstration.</p>
+
+        <div class="callout stub__note">
+          <p><b>Placeholder page.</b> The full design for this page is the next step. The header, footer, scenarios and the plan below already follow the master brief.</p>
+        </div>
+
+        <div class="stub__grid">
+          <section class="panel panel--ticks stub__panel" aria-labelledby="wl-docs">
+            <h2 class="stub__h" id="wl-docs">What this page will do</h2>
+            <ul class="stub__list">
+            <li>Give an overview of the protocol and where Dojang ends and the Bojagi-inspired layer begins.</li>
+            <li>Describe the wallet, credential, proof and vault flows step by step.</li>
+            <li>Explain the issuer trust model, which fields are public and which are private, and where the demo data comes from.</li>
+            <li>State what each contract is responsible for, with network and explorer links.</li>
+            <li>List the limits plainly: no native Bojagi private transfer, no hidden sender or receiver, no private balances from GIWA’s Verified Balance attestation, no audit, no real market or custody.</li>
+            <li>Show how to run a repeatable local demo and check the evidence in the explorer.</li>
+            </ul>
+            <div class="callout" style="margin-top: var(--space-6)"><p><b>Limits come first.</b> The documentation page will state what the protocol does not do before it describes what it does.</p></div>
+          </section>
+
+          <div>
+          </div>
+        </div>
+
+        <nav class="stub__pager" aria-label="Page navigation">
+          <a href="05-contracts.html" rel="prev"><small>Previous</small><span>Contracts</span></a>
+          <a href="01-home.html" rel="next"><small>Next</small><span>Home</span></a>
+        </nav>
+      </div>
+    </section>
+  </main>
+
+  <footer data-component="site-footer"></footer>
+</body>
+</html>

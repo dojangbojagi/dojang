@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="132" viewBox="0 0 200 132">
+  <!-- Bojagi patchwork tile. Translucent panels with stitched seams; tiles seamlessly. -->
+  <g>
+    <rect x="0" y="0" width="74" height="48" fill="#9aa5ff" fill-opacity=".30"/>
+    <rect x="74" y="0" width="126" height="30" fill="#86d6bd" fill-opacity=".20"/>
+    <rect x="74" y="30" width="52" height="58" fill="#e6c36e" fill-opacity=".18"/>
+    <rect x="126" y="30" width="74" height="58" fill="#9aa5ff" fill-opacity=".36"/>
+    <rect x="0" y="48" width="74" height="84" fill="#ee7b78" fill-opacity=".13"/>
+    <rect x="74" y="88" width="60" height="44" fill="#86d6bd" fill-opacity=".26"/>
+    <rect x="134" y="88" width="66" height="44" fill="#9aa5ff" fill-opacity=".22"/>
+  </g>
+  <g fill="none" stroke="#eeebe1" stroke-opacity=".22" stroke-width="1">
+    <path d="M0 .5H200M0 48.5H74M74 30.5H200M74 88.5H200"/>
+    <path d="M.5 0V132M74.5 0V132M126.5 30V88M134.5 88V132"/>
+  </g>
+  <g fill="none" stroke="#eeebe1" stroke-opacity=".16" stroke-width="1" stroke-dasharray="3 3">
+    <path d="M0 3.5H200M0 51.5H74M74 33.5H200M74 91.5H200"/>
+    <path d="M3.5 0V132M77.5 0V132M129.5 30V88M137.5 88V132"/>
+  </g>
+</svg>

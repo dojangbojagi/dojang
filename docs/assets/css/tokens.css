@@ -1,0 +1,125 @@
+/* ==========================================================================
+   Design tokens
+   One place for every colour, size, radius, shadow and timing value.
+   Mirror this file in tailwind.config.ts (theme.extend) during migration.
+
+   Colour logic follows the protocol path:
+     celadon     = trusted state / Dojang
+     periwinkle  = private proof / Bojagi-inspired
+     gold        = verified execution / Vault and primary actions
+   ========================================================================== */
+
+/* Registered so the ambient glow can transition smoothly between sections. */
+@property --glow {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: rgba(122, 136, 255, 0.16);
+}
+
+:root {
+  /* Surfaces: deep indigo, not neutral black */
+  --ink-1000: #070a18;
+  --ink-950: #0a0e1f;
+  --ink-900: #0e1330;
+  --ink-850: #121839;
+  --ink-800: #171e45;
+  --ink-700: #222b5a;
+  --ink-600: #323d75;
+
+  /* Lines */
+  --line-faint: rgba(170, 182, 255, 0.09);
+  --line: rgba(170, 182, 255, 0.17);
+  --line-strong: rgba(170, 182, 255, 0.32);
+
+  /* Text contrast: --text (>= 11:1) and --text-muted (>= 6:1) pass AA on every surface.
+     --text-dim passes on --ink-950 to --ink-850 (4.8 to 5.4:1) but not on --ink-800 or lighter,
+     so it is kept for secondary notes and placeholders only. */
+  --text: #eeebe1;
+  --text-muted: #a7b0d0;
+  --text-dim: #7c86ad;
+
+  /* Protocol colours */
+  --celadon: #86d6bd;
+  --celadon-deep: #2f6b5b;
+  --periwinkle: #9aa5ff;
+  --periwinkle-deep: #3c4696;
+  --gold: #e6c36e;
+  --gold-deep: #7a6126;
+  --gold-ink: #17120a;
+
+  /* State colours */
+  --state-valid: var(--celadon);
+  --state-pending: var(--periwinkle);
+  --state-invalid: #ee7b78;
+  --state-warn: #f0a24f;
+  --state-demo: #d7a8ff;
+  --state-neutral: var(--text-muted);
+
+  /* Typography */
+  --font-display: "Instrument Serif", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --font-ui: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --fs-display: clamp(3.6rem, 1.9rem + 7.4vw, 9.6rem);
+  --fs-h1: clamp(2.7rem, 1.8rem + 3.8vw, 5.2rem);
+  --fs-h2: clamp(2.1rem, 1.5rem + 2.5vw, 3.7rem);
+  --fs-h3: clamp(1.45rem, 1.2rem + 0.9vw, 2rem);
+  --fs-lead: clamp(1.1rem, 1.02rem + 0.35vw, 1.3rem);
+  --fs-body: 1.0625rem;
+  --fs-sm: 0.9375rem;
+  --fs-xs: 0.8125rem;
+
+  --lh-tight: 1.02;
+  --lh-snug: 1.2;
+  --lh-body: 1.6;
+
+  /* Spacing (4px base) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4.5rem;
+  --space-9: 6.5rem;
+  --space-10: 9rem;
+
+  --section-pad: clamp(4rem, 2.4rem + 5.4vw, 7.5rem);
+  --gutter: clamp(1.25rem, 0.6rem + 3vw, 3.5rem);
+  --container: 1240px;
+  --container-narrow: 860px;
+  --header-h: 72px;
+
+  /* Radius: varies by role instead of one value everywhere */
+  --radius-xs: 3px; /* technical panels, evidence slots */
+  --radius-sm: 8px; /* inputs, small controls */
+  --radius-md: 14px; /* modals, large surfaces */
+  --radius-pill: 999px; /* chips, status */
+
+  /* Surfaces & depth */
+  --surface-1: color-mix(in srgb, var(--ink-900) 78%, transparent);
+  --surface-2: color-mix(in srgb, var(--ink-850) 86%, transparent);
+  --surface-raised: var(--ink-800);
+  --shadow-panel: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 24px 60px -28px rgba(2, 4, 16, 0.8);
+  --shadow-pop: 0 30px 80px -24px rgba(2, 4, 16, 0.9), 0 0 0 1px var(--line);
+  --focus-ring: 0 0 0 2px var(--ink-950), 0 0 0 4px var(--gold);
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 140ms;
+  --dur-med: 280ms;
+  --dur-slow: 640ms;
+  --dur-scene: 1200ms;
+
+  /* Ambient (changes per section) */
+  --glow: rgba(122, 136, 255, 0.16);
+
+  /* Stacking */
+  --z-header: 50;
+  --z-switcher: 60;
+  --z-modal: 80;
+  --z-toast: 90;
+  --z-tooltip: 95;
+}
