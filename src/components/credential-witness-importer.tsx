@@ -6,6 +6,7 @@ import { useDemoCredential } from "@/hooks/use-demo-credential";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import { parseDemoCredentialWitness } from "@/lib/credential/witness";
 import { explainProtocolError } from "@/lib/protocol/errors";
+import { StateChip } from "@/components/protocol-state";
 
 export function CredentialWitnessImporter() {
   const wallet = useWalletNetwork();
@@ -38,20 +39,25 @@ export function CredentialWitnessImporter() {
   }
 
   return (
-    <section className="panel" aria-labelledby="witness-heading">
-      <div className="panel-heading">
-        <h2 id="witness-heading">Project demo credential</h2>
-        <span className="status-chip status-chip--demo">Separate from official Dojang</span>
+    <section className="panel panel--ticks protocol-panel" aria-labelledby="witness-heading">
+      <div className="protocol-panel__head">
+        <h2 id="witness-heading">Private credential witness</h2>
+        <StateChip state={credential.state} />
       </div>
-      <p>Import the issuer-delivered witness JSON. The file is read into memory for this browser session and is not uploaded or persisted.</p>
-      <p className="muted">The importer checks wallet, policy, expiry and commitment metadata against the configured on-chain registry. The Noir circuit checks the private value and salt during proof generation.</p>
-      <label className="file-input-label" htmlFor="witness-file">Credential witness JSON</label>
-      <input id="witness-file" type="file" accept="application/json,.json" onChange={(event) => void importFile(event.currentTarget.files?.[0])} />
-      {witness && <p role="status">Witness loaded in memory for {witness.wallet}.</p>}
-      {message && <p role="status">{message}</p>}
-      <button className="button button--quiet" type="button" onClick={() => { setWitness(null); setMessage("Witness cleared from memory."); }} disabled={!witness}>
-        Clear witness
-      </button>
+      <p className="protocol-copy">Import the issuer-delivered JSON for this wallet. The file is read into this browser session and is not uploaded or persisted.</p>
+      <p className="callout callout--demo">Project demo credentials are separate from official Dojang. The importer checks wallet, policy, expiry and commitment metadata; Noir checks the private value and salt during proof generation.</p>
+      <div className="protocol-kv kv">
+        <div className="kv__row"><dt>Credential</dt><dd>{credential.record ? `Version ${credential.record.version.toString()}` : credential.state === "unconfigured" ? "Registry not configured" : "No record available"}</dd></div>
+        <div className="kv__row"><dt>Witness in memory</dt><dd>{witness ? "Loaded for this session" : "None"}</dd></div>
+      </div>
+      <label className="protocol-field" htmlFor="witness-file"><span>Credential witness JSON</span>
+        <input id="witness-file" type="file" accept="application/json,.json" onChange={(event) => void importFile(event.currentTarget.files?.[0])} />
+      </label>
+      {witness && <p className="small muted" role="status">Witness loaded for wallet <span className="addr">{witness.wallet}</span>.</p>}
+      {message && <p className="callout callout--demo" role="status" aria-live="polite">{message}</p>}
+      <div className="protocol-actions">
+        <button className="btn btn--secondary" type="button" onClick={() => { setWitness(null); setMessage("Witness cleared from memory."); }} disabled={!witness}>Clear witness</button>
+      </div>
     </section>
   );
 }

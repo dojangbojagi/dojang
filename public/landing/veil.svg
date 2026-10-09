@@ -1,21 +1,35 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="160" height="104" viewBox="0 0 160 104">
-  <!-- Bojagi patchwork tile in the landing palette: dark ink, vivid blue (public) and vivid orange (private). Tiles seamlessly. -->
-  <rect width="160" height="104" fill="#0a0f1c"/>
-  <g>
-    <rect x="0" y="0" width="60" height="38" fill="#3b86ff" fill-opacity=".34"/>
-    <rect x="60" y="0" width="100" height="24" fill="#ef5f22" fill-opacity=".22"/>
-    <rect x="60" y="24" width="42" height="46" fill="#3b86ff" fill-opacity=".16"/>
-    <rect x="102" y="24" width="58" height="46" fill="#ef5f22" fill-opacity=".34"/>
-    <rect x="0" y="38" width="60" height="66" fill="#3b86ff" fill-opacity=".12"/>
-    <rect x="60" y="70" width="48" height="34" fill="#ef5f22" fill-opacity=".16"/>
-    <rect x="108" y="70" width="52" height="34" fill="#3b86ff" fill-opacity=".26"/>
+  <!-- Bojagi patchwork tile in the landing palette. Seven saturated panels (blue = public, orange = private,
+       navy and one pale panel for rest), dark seams, white stitches, a lit top edge on every panel.
+       Tiles seamlessly. -->
+  <defs>
+    <linearGradient id="b1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5a9bff"/><stop offset="1" stop-color="#2459d8"/></linearGradient>
+    <linearGradient id="b2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b86ff"/><stop offset="1" stop-color="#1b44b3"/></linearGradient>
+    <linearGradient id="o1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff8f58"/><stop offset="1" stop-color="#e5531a"/></linearGradient>
+    <linearGradient id="o2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f26a2c"/><stop offset="1" stop-color="#b8400f"/></linearGradient>
+    <linearGradient id="n1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#16224a"/><stop offset="1" stop-color="#0a1230"/></linearGradient>
+    <linearGradient id="w1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f7ff"/><stop offset="1" stop-color="#cbd8f5"/></linearGradient>
+  </defs>
+  <rect width="160" height="104" fill="#060b1d"/>
+  <rect x="0"   y="0"  width="60"  height="38"  fill="url(#b1)"/>
+  <rect x="60"  y="0"  width="100" height="24"  fill="url(#n1)"/>
+  <rect x="60"  y="24" width="42"  height="46"  fill="url(#o1)"/>
+  <rect x="102" y="24" width="58"  height="46"  fill="url(#n1)"/>
+  <rect x="0"   y="38" width="60"  height="66"  fill="url(#o2)"/>
+  <rect x="60"  y="70" width="48"  height="34"  fill="url(#b2)"/>
+  <rect x="108" y="70" width="52"  height="34"  fill="url(#w1)"/>
+  <!-- seams -->
+  <g fill="none" stroke="#050918" stroke-opacity=".85" stroke-width="1.6">
+    <path d="M0 .8H160M0 38H60M60 24H160M60 70H160"/>
+    <path d="M.8 0V104M60 0V104M102 24V70M108 70V104"/>
   </g>
-  <g fill="none" stroke="#ffffff" stroke-opacity=".24" stroke-width="1">
-    <path d="M0 .5H160M0 38.5H60M60 24.5H160M60 70.5H160"/>
-    <path d="M.5 0V104M60.5 0V104M102.5 24V70M108.5 70V104"/>
+  <!-- lit top edge -->
+  <g fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1">
+    <path d="M2 2.5H58M62 2.5H158M62 26.5H100M104 26.5H158M2 40.5H58M62 72.5H106M110 72.5H158"/>
   </g>
-  <g fill="none" stroke="#ffffff" stroke-opacity=".16" stroke-width="1" stroke-dasharray="3 3">
-    <path d="M0 3.5H160M0 41.5H60M60 27.5H160M60 73.5H160"/>
-    <path d="M3.5 0V104M63.5 0V104M105.5 24V70M111.5 70V104"/>
+  <!-- stitches -->
+  <g fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="1" stroke-dasharray="3 3">
+    <path d="M4 5.5H56M64 5.5H156M64 29.5H98M106 29.5H156M4 43.5H56M64 75.5H104M112 75.5H156"/>
+    <path d="M4.5 5V35M64.5 5V21M64.5 29V67M106.5 29V67M4.5 43V101M64.5 75V101M112.5 75V101"/>
   </g>
 </svg>

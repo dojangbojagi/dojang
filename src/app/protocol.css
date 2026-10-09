@@ -1,0 +1,89 @@
+/* Small additions for the live React pages. The reference design tokens and
+   shared components remain in docs/assets/css and are imported above. */
+
+.protocol-form { display: grid; gap: var(--space-4); margin-top: var(--space-5); }
+.protocol-form__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.protocol-field { display: grid; gap: .45rem; min-width: 0; }
+.protocol-field > span { color: var(--text-muted); font-size: var(--fs-xs); font-weight: 600; }
+.protocol-field input,
+.protocol-field textarea,
+.protocol-field select {
+  width: 100%; min-height: 46px; padding: .7rem .85rem; color: var(--text);
+  background: color-mix(in srgb, var(--ink-1000) 70%, transparent);
+  border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
+}
+.protocol-field input:focus-visible,
+.protocol-field textarea:focus-visible,
+.protocol-field select:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.protocol-field input:disabled { opacity: .6; }
+.protocol-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin-top: var(--space-4); }
+.protocol-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(17rem, .85fr); gap: var(--space-5); margin-top: var(--space-7); align-items: start; }
+.protocol-stack { display: grid; gap: var(--space-5); min-width: 0; }
+.protocol-panel { min-width: 0; padding: clamp(1.25rem, .8rem + 1.6vw, 2rem); }
+.protocol-panel > * + * { margin-top: var(--space-4); }
+.protocol-panel__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.protocol-panel__head h2 { font-family: var(--font-ui); font-size: clamp(1.15rem, 1rem + .45vw, 1.45rem); font-weight: 600; letter-spacing: 0; }
+.protocol-copy { max-width: 68ch; color: var(--text-muted); }
+.protocol-kv { margin: var(--space-4) 0 0; }
+.protocol-kv .kv__row { align-items: flex-start; }
+.protocol-kv dd { max-width: 68%; overflow-wrap: anywhere; }
+.protocol-empty { padding: var(--space-4); color: var(--text-muted); border: 1px dashed var(--line-strong); background: color-mix(in srgb, var(--ink-1000) 32%, transparent); }
+.protocol-error { --c: var(--state-invalid); }
+.protocol-success { --c: var(--state-valid); }
+.protocol-notice { margin-top: var(--space-4); }
+.protocol-pager { gap: var(--space-4); }
+.protocol-section { margin-top: var(--space-8); }
+.protocol-section__head { display: grid; gap: var(--space-3); max-width: 54rem; margin-bottom: var(--space-5); }
+.protocol-section__head h2 { max-width: 18ch; }
+.protocol-section__head p { color: var(--text-muted); max-width: 64ch; }
+.protocol-list { list-style: none; display: grid; gap: var(--space-3); margin: var(--space-4) 0 0; padding: 0; }
+.protocol-list li { position: relative; padding-left: 1.3rem; color: var(--text-muted); }
+.protocol-list li::before { content: ""; position: absolute; left: 0; top: .72em; width: .65rem; border-top: 1px dashed var(--gold); }
+.protocol-inline-link { display: inline-flex; align-items: center; gap: .45rem; color: var(--text); font-size: var(--fs-sm); font-weight: 600; }
+.protocol-transaction { margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px dashed var(--line-strong); }
+.protocol-transaction__link { display: inline-block; max-width: 100%; overflow-wrap: anywhere; }
+.protocol-progress { display: grid; gap: .6rem; margin: var(--space-4) 0 0; padding: 0; list-style: none; }
+.protocol-progress li { display: flex; align-items: center; gap: .75rem; color: var(--text-dim); font-size: var(--fs-sm); }
+.protocol-progress li::before { content: ""; flex: none; width: .55rem; height: .55rem; border: 1px solid var(--line-strong); border-radius: 50%; }
+.protocol-progress li[data-current="true"] { color: var(--text); }
+.protocol-progress li[data-current="true"]::before { background: var(--state-pending); border-color: var(--state-pending); box-shadow: 0 0 0 4px color-mix(in srgb, var(--state-pending) 18%, transparent); }
+.protocol-progress li[data-complete="true"] { color: var(--state-valid); }
+.protocol-progress li[data-complete="true"]::before { background: var(--state-valid); border-color: var(--state-valid); }
+.protocol-cloth { --cloth-accent: var(--periwinkle); position: relative; min-height: 20rem; overflow: hidden; display: grid; place-items: center; isolation: isolate; background: radial-gradient(ellipse at 50% 44%, color-mix(in srgb, var(--cloth-accent) 17%, transparent), transparent 62%); }
+.protocol-cloth__square { position: relative; width: min(68vw, 17rem); aspect-ratio: 1; transform: rotate(-8deg); filter: drop-shadow(0 28px 40px rgba(0,0,0,.38)); animation: cloth-settle 8s ease-in-out infinite; }
+.protocol-cloth__piece { position: absolute; overflow: hidden; border: 1px solid color-mix(in srgb, white 28%, transparent); background-image: linear-gradient(135deg, color-mix(in srgb, var(--piece) 76%, white), var(--piece) 68%, color-mix(in srgb, var(--piece) 76%, black)), url("../../docs/assets/images/veil.svg"); background-blend-mode: normal, soft-light; background-size: auto, 150px 100px; box-shadow: inset 0 1px 0 rgba(255,255,255,.17), inset 0 -12px 22px rgba(0,0,0,.12); }
+.protocol-cloth__piece::after { content: ""; position: absolute; inset: .45rem; border: 1px dashed rgba(255,255,255,.32); }
+.protocol-cloth__piece--one { inset: 3% 53% 48% 3%; --piece: #739eaa; border-radius: 48% 2% 2% 2%; }
+.protocol-cloth__piece--two { inset: 3% 3% 53% 48%; --piece: #786aa5; border-radius: 2% 48% 2% 2%; }
+.protocol-cloth__piece--three { inset: 48% 53% 3% 3%; --piece: #d3ae67; border-radius: 2% 2% 2% 48%; }
+.protocol-cloth__piece--four { inset: 53% 3% 3% 48%; --piece: #b06c58; border-radius: 2% 2% 48% 2%; }
+.protocol-cloth__window { position: absolute; inset: 27%; display: grid; place-content: center; gap: .45rem; text-align: center; color: var(--text); border: 1px solid rgba(255,255,255,.24); background: color-mix(in srgb, var(--ink-950) 82%, transparent); backdrop-filter: blur(12px); }
+.protocol-cloth__window strong { font: 400 clamp(1.5rem, 1.2rem + 1.4vw, 2.15rem)/1 var(--font-display); }
+.protocol-cloth__window span { font: 500 .62rem/1.35 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted); }
+.protocol-cloth__caption { position: absolute; left: 0; right: 0; bottom: .5rem; text-align: center; color: var(--text-dim); font: 500 .67rem/1.4 var(--font-mono); letter-spacing: .1em; text-transform: uppercase; }
+.protocol-contracts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.protocol-contracts .slot { min-width: 0; }
+.protocol-article { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(16rem, .9fr); gap: var(--space-7); align-items: start; }
+.protocol-article__main { display: grid; gap: var(--space-5); min-width: 0; }
+.protocol-article__aside { position: sticky; top: calc(var(--header-h) + var(--space-5)); display: grid; gap: var(--space-4); }
+.protocol-article h2 { font-size: clamp(1.7rem, 1.4rem + 1.6vw, 2.55rem); }
+.protocol-article h3 { font-family: var(--font-ui); font-size: 1.05rem; font-weight: 600; letter-spacing: 0; }
+.protocol-article__section { display: grid; gap: var(--space-3); padding-bottom: var(--space-5); border-bottom: 1px solid var(--line); scroll-margin-top: calc(var(--header-h) + 1.5rem); }
+.protocol-toc { display: grid; gap: .75rem; margin: 0; padding: 0; list-style: none; }
+.protocol-toc a { color: var(--text-muted); text-decoration: none; font-size: var(--fs-sm); }
+.protocol-toc a:hover { color: var(--gold); }
+.protocol-reveal { opacity: 1; transform: none; }
+
+@keyframes cloth-settle { 0%, 100% { transform: rotate(-8deg) translateY(0); } 50% { transform: rotate(-5deg) translateY(-7px); } }
+
+@media (max-width: 860px) {
+  .protocol-grid, .protocol-article { grid-template-columns: 1fr; }
+  .protocol-article__aside { position: static; }
+}
+@media (max-width: 560px) {
+  .protocol-form__grid, .protocol-contracts { grid-template-columns: 1fr; }
+  .protocol-cloth { min-height: 17rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .protocol-cloth__square { animation: none; }
+}

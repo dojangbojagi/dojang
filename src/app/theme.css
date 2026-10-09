@@ -1,0 +1,358 @@
+/* ==========================================================================
+   Theme: the inner pages follow the landing.
+
+   The inner pages are built on the prototype's components (docs/assets/css, imported by
+   globals.css). Rather than copy those components, this file overrides their tokens and
+   the few shapes that carry the look, so every page built on them changes together and
+   the prototype files stay untouched. It loads after them (see layout.tsx).
+
+   Same language as the landing (components/landing/landing.css):
+     near-black navy ink, vivid blue = public / on-chain, vivid orange = private / the proof /
+     primary actions. Sora for headings, Hanken Grotesk for text, JetBrains Mono for labels.
+   ========================================================================== */
+
+:root {
+  /* Surfaces */
+  --ink-1000: #04060d;
+  --ink-950: #060912;
+  --ink-900: #0a0f1c;
+  --ink-850: #0d1322;
+  --ink-800: #131a2c;
+  --ink-700: #1b2438;
+  --ink-600: #2a3550;
+
+  --line-faint: rgba(255, 255, 255, 0.07);
+  --line: rgba(255, 255, 255, 0.12);
+  --line-strong: rgba(255, 255, 255, 0.22);
+
+  --text: #eceef4;
+  --text-muted: #9aa4b8;
+  --text-dim: #7d879d;
+
+  /* The protocol colours, re-pointed: trusted state (Dojang) is blue, the private proof
+     (Bojagi) is orange, and the vault and every primary action is the brand orange. */
+  --celadon: #3b86ff;
+  --celadon-deep: #1d4fd6;
+  --periwinkle: #ff7a3d;
+  --periwinkle-deep: #a83e12;
+  --gold: #ef5f22;
+  --gold-deep: #a83e12;
+  --gold-ink: #0a0c12;
+
+  --state-valid: #5b9bff;
+  --state-pending: #8fb4ff;
+  --state-invalid: #ff5d6c;
+  --state-warn: #ff8a4d;
+  --state-demo: #c3a6ff;
+
+  --font-display: var(--lp-font-display), "Sora", system-ui, sans-serif;
+  --font-ui: var(--lp-font-ui), "Hanken Grotesk", system-ui, sans-serif;
+  --font-mono: var(--lp-font-mono), "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --radius-xs: 14px;
+  --radius-sm: 12px;
+  --radius-md: 22px;
+
+  --surface-1: color-mix(in srgb, #0d1322 84%, transparent);
+  --surface-2: color-mix(in srgb, #0d1322 92%, transparent);
+  --shadow-panel: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 36px 80px -46px rgba(0, 0, 0, 0.95);
+  --shadow-pop: 0 30px 80px -24px rgba(0, 0, 0, 0.95), 0 0 0 1px var(--line);
+  --focus-ring: 0 0 0 2px var(--ink-950), 0 0 0 4px var(--gold);
+
+  --header-h: 76px;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* The atmosphere that follows the section in view, in blue and orange */
+body[data-tone="neutral"] { --glow: rgba(59, 134, 255, 0.16); }
+body[data-tone="dojang"] { --glow: rgba(59, 134, 255, 0.22); }
+body[data-tone="bojagi"] { --glow: rgba(239, 95, 34, 0.17); }
+body[data-tone="vault"] { --glow: rgba(239, 95, 34, 0.15); }
+.ambient {
+  background:
+    radial-gradient(70vw 55vh at 50% -8%, var(--glow), transparent 72%),
+    radial-gradient(46vw 44vh at 100% 105%, color-mix(in srgb, var(--glow) 70%, transparent), transparent 70%),
+    radial-gradient(40vw 40vh at 0% 100%, rgba(239, 95, 34, 0.1), transparent 70%);
+}
+
+::selection { background: color-mix(in srgb, var(--gold) 45%, transparent); }
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; box-shadow: none; }
+
+/* The patchwork cloth is the same tile as the landing's */
+.veil { background-image: url("/landing/veil.svg"); background-size: 160px 104px; }
+
+/* ---- Headings ---------------------------------------------------------- */
+h1, h2, h3, h4 { font-weight: 700; letter-spacing: -0.02em; }
+h4 { font-weight: 600; }
+.stub__title {
+  max-width: 17ch;
+  font-size: clamp(2.2rem, 1.2rem + 3.7vw, 4.7rem);
+  line-height: 1.04;
+  letter-spacing: -0.028em;
+  text-transform: uppercase;
+}
+.stub__numeral { font-weight: 800; letter-spacing: -0.04em; -webkit-text-stroke-width: 1.2px; }
+.stub__lead { max-width: 56ch; }
+.stub__pager span { font-weight: 700; letter-spacing: -0.015em; }
+.protocol-section__head h2,
+.protocol-article h2 {
+  font-size: clamp(1.7rem, 1.1rem + 2.4vw, 3.3rem);
+  line-height: 1.06;
+  letter-spacing: -0.026em;
+  text-transform: uppercase;
+}
+.stub__eyebrow, .stub__num { font-family: var(--font-mono); }
+.stub__tag { font-family: var(--font-mono); font-size: 0.7rem; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; }
+
+/* ---- Top bar, header, navigation --------------------------------------- */
+.proto-bar {
+  background: rgba(6, 9, 18, 0.92);
+  border-bottom: 1px solid var(--line-faint);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.proto-bar strong { color: var(--gold); }
+
+.site-header {
+  background: linear-gradient(to bottom, rgba(6, 9, 18, 0.88), rgba(6, 9, 18, 0.5) 62%, transparent);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border-bottom: 0;
+}
+.site-header[data-scrolled="true"] { background: linear-gradient(to bottom, rgba(6, 9, 18, 0.9), rgba(6, 9, 18, 0.55) 62%, transparent); }
+.site-header__inner { position: relative; }
+
+.brand { gap: 0.7rem; }
+.brand__mark, .brand svg { flex: none; transition: transform 0.6s var(--ease-out); }
+.brand:hover svg { transform: rotate(-8deg) scale(1.08); }
+.brand__name {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+/* the links sit in one floating pill, centred, as on the landing */
+.nav { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+.nav__list,
+.site-header[data-scrolled="true"] .nav__list {
+  gap: 0.15rem;
+  padding: 0.35rem;
+  background: rgba(13, 19, 34, 0.58);
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px var(--line), inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 18px 40px -22px rgba(0, 0, 0, 0.8);
+  -webkit-backdrop-filter: blur(16px) saturate(1.5);
+  backdrop-filter: blur(16px) saturate(1.5);
+}
+.nav__link {
+  padding: 0.72rem 1.05rem;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  transition: background-color 0.25s var(--ease-out), color 0.25s var(--ease-out);
+}
+.nav__link:hover { background: rgba(255, 255, 255, 0.09); color: #fff; }
+.nav__link[aria-current="page"] { background: rgba(255, 255, 255, 0.1); }
+.nav__link[aria-current="page"]::after,
+.site-header[data-scrolled="true"] .nav__link[aria-current="page"]::after { left: 1.05rem; right: 1.05rem; bottom: 0.4rem; border-bottom-color: var(--gold); }
+
+.net-pill {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: rgba(13, 19, 34, 0.5);
+}
+.net-pill i { letter-spacing: 0.14em; }
+
+.menu-toggle { border-radius: 50%; background: rgba(13, 19, 34, 0.5); transition: border-color 0.3s ease; }
+.menu-toggle:hover { border-color: var(--line-strong); }
+.mobile-nav { background: rgba(6, 9, 18, 0.94); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); }
+.mobile-nav a { font-family: var(--font-display); font-size: 1.15rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+
+/* the network pill only has room beside six links on wide screens */
+@media (min-width: 1240px) { .site-header__net { display: none; } }
+@media (min-width: 1520px) { .site-header__net { display: inline-flex; } }
+
+/* six links need more room than the prototype's 960px: use the menu until 1180px */
+@media (min-width: 960px) and (max-width: 1179px) {
+  .nav { display: none; }
+  .menu-toggle { display: inline-grid; }
+  .mobile-nav:not([hidden]) { display: block; }
+}
+
+/* phones: a two-line wordmark leaves room for the wallet button and the menu */
+@media (max-width: 520px) {
+  .site-header__inner { gap: 0.6rem; }
+  .brand { gap: 0.55rem; min-width: 0; }
+  .brand__name { font-size: 0.66rem; line-height: 1.1; letter-spacing: 0.04em; white-space: normal; max-width: 8.2em; }
+  .site-header__actions { gap: 0.45rem; }
+  .menu-toggle { width: 2.6rem; height: 2.6rem; }
+}
+
+/* ---- Buttons ------------------------------------------------------------ */
+.btn {
+  overflow: hidden;
+  min-height: 3rem;
+  padding: 0.8rem 1.55rem;
+  font-family: var(--font-display);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  isolation: isolate;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.3s ease, transform 0.25s var(--ease-out);
+}
+.btn::after { border-radius: 999px; inset: 4px; }
+.btn::before { /* a sheen crosses on hover */
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 32%, rgba(255, 255, 255, 0.4) 50%, transparent 68%);
+  transform: translateX(-130%);
+  transition: transform 0.9s var(--ease-out);
+}
+.btn:hover::before { transform: translateX(130%); }
+.btn:hover { transform: translateY(-2px); }
+.btn:active { transform: translateY(0) scale(0.98); }
+.btn--sm { min-height: 2.6rem; padding: 0.6rem 1.15rem; font-size: 0.7rem; }
+.btn--primary { background: var(--gold); color: var(--gold-ink); }
+.btn--primary:hover { background: #ff7a3d; box-shadow: 0 14px 36px -10px rgba(239, 95, 34, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.35); }
+.btn--secondary { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.24); color: var(--text); }
+.btn--secondary:hover {
+  border-color: transparent;
+  background: linear-gradient(rgba(12, 18, 34, 0.92), rgba(12, 18, 34, 0.92)) padding-box, linear-gradient(120deg, #3b86ff, #ef5f22) border-box;
+}
+.btn--ghost:hover { background: rgba(255, 255, 255, 0.07); }
+
+/* the wallet button is the landing's orange pill; its state still decides the colour */
+.btn--wallet { background: var(--gold); border-color: transparent; color: var(--gold-ink); }
+.btn--wallet:hover { background: #ff7a3d; border-color: transparent; box-shadow: 0 12px 30px -8px rgba(239, 95, 34, 0.7); }
+.btn--wallet[data-wallet="connected"] { background: rgba(255, 255, 255, 0.08); border-color: var(--line-strong); color: #fff; }
+.btn--wallet[data-wallet="connected"]:hover { background: rgba(255, 255, 255, 0.14); box-shadow: none; }
+.btn--wallet[data-wallet="connected"] .btn__dot { background: var(--celadon); box-shadow: 0 0 0 3px rgba(59, 134, 255, 0.25); }
+.btn--wallet[data-wallet="wrong-network"] { background: transparent; border-color: var(--gold); color: var(--gold); }
+.btn--wallet[data-wallet="wrong-network"]:hover { background: rgba(239, 95, 34, 0.12); box-shadow: none; }
+.btn--wallet[data-wallet="connecting"] { background: rgba(255, 255, 255, 0.06); border-color: var(--line-strong); color: var(--text-muted); }
+.btn--wallet .btn__dot { display: none; }
+.btn--wallet[data-wallet="connected"] .btn__dot,
+.btn--wallet[data-wallet="connecting"] .btn__dot { display: inline-block; }
+
+.text-link { font-family: var(--font-display); font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase; }
+.protocol-inline-link { font-family: var(--font-display); font-size: 0.74rem; letter-spacing: 0.06em; text-transform: uppercase; transition: color 0.25s ease, transform 0.4s var(--ease-out); }
+.protocol-inline-link:hover { color: var(--gold); transform: translateX(3px); }
+
+/* ---- Status, panels, lists --------------------------------------------- */
+.status {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.panel {
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.012)), var(--surface-1);
+  transition: border-color 0.4s ease, box-shadow 0.4s ease, transform 0.6s var(--ease-out);
+}
+.panel:hover { border-color: var(--line-strong); }
+/* blueprint ticks do not suit rounded corners: a lit top edge instead */
+.panel--ticks::before {
+  inset: 0 22px auto 22px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+}
+.kv dt { font-size: 0.9rem; }
+.kv dd { font-size: 0.92rem; }
+.kv__row { transition: background-color 0.3s ease; }
+.callout { border-radius: 0 14px 14px 0; }
+.slot { border-radius: 16px; transition: border-color 0.3s ease, background-color 0.3s ease; }
+.slot:hover { border-color: var(--gold); }
+.protocol-empty, .protocol-field input, .protocol-field textarea, .protocol-field select { border-radius: 14px; }
+.protocol-field > span { font-family: var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.68rem; }
+.protocol-panel__head h2 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.015em; }
+.protocol-kv .kv__row:hover { background: rgba(255, 255, 255, 0.02); }
+.protocol-list li::before, .stub__list li::before { border-top-style: solid; }
+
+/* The cloth piece on the Bojagi page, in the landing's colours */
+.protocol-cloth__piece--one { --piece: #3b86ff; }
+.protocol-cloth__piece--two { --piece: #0d1a4a; }
+.protocol-cloth__piece--three { --piece: #ef5f22; }
+.protocol-cloth__piece--four { --piece: #d9e4ff; }
+
+/* ---- Footer ------------------------------------------------------------- */
+.site-footer {
+  border-top: 1px solid var(--line-strong);
+  background:
+    radial-gradient(60% 80% at 92% 0%, rgba(59, 134, 255, 0.12), transparent 70%),
+    radial-gradient(56% 90% at 4% 100%, rgba(239, 95, 34, 0.14), transparent 70%),
+    rgba(4, 6, 13, 0.7);
+}
+.site-footer h2 { font-family: var(--font-mono); font-size: 0.66rem; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-dim); }
+.site-footer li a { position: relative; display: inline-block; font-family: var(--font-display); font-weight: 600; transition: color 0.25s ease, transform 0.4s var(--ease-out); }
+.site-footer li a::after { /* underline wipes in from the left */
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -0.25em;
+  height: 1px;
+  background: #ff7a3d;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.45s var(--ease-out);
+}
+.site-footer li a:hover { color: #ff7a3d; transform: translateX(4px); }
+.site-footer li a:hover::after { transform: scaleX(1); transform-origin: left; }
+.site-footer__legal { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.04em; border-top-style: solid; border-top-color: var(--line); }
+
+/* ---- Pages built from the old scaffold classes -------------------------
+   Some routes still use .page / .eyebrow / .page-lead / .data-list / .notice. Same look
+   until they move onto the shared components above. */
+.page { width: min(100% - 2 * var(--gutter), var(--container)); margin: 0 auto; padding-block: clamp(3rem, 2rem + 5vw, 6rem) var(--section-pad); }
+.page > * + * { margin-top: var(--space-5); }
+.page h1 { max-width: 17ch; font-size: clamp(2.2rem, 1.2rem + 3.7vw, 4.7rem); line-height: 1.04; letter-spacing: -0.028em; text-transform: uppercase; }
+.eyebrow { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-muted); }
+.page-lead { max-width: 58ch; font-size: var(--fs-lead); color: var(--text-muted); }
+.page .panel { padding: clamp(1.25rem, 0.8rem + 1.6vw, 2rem); }
+.page .panel h2 { font-family: var(--font-display); font-size: clamp(1.15rem, 1rem + 0.45vw, 1.45rem); letter-spacing: -0.015em; }
+.page .panel > * + * { margin-top: var(--space-4); }
+.data-list { display: grid; gap: 0.65rem; margin: var(--space-4) 0 0; }
+.data-list > div { display: grid; grid-template-columns: minmax(8rem, 0.5fr) 1fr; gap: var(--space-4); padding-bottom: 0.65rem; border-bottom: 1px dashed var(--line); }
+.data-list dt { color: var(--text-muted); font-size: var(--fs-sm); }
+.data-list dd { margin: 0; overflow-wrap: anywhere; font-size: var(--fs-sm); }
+.notice { padding: var(--space-4); font-size: var(--fs-sm); color: var(--text-muted); background: color-mix(in srgb, var(--state-warn) 7%, transparent); border-left: 2px solid var(--state-warn); border-radius: 0 14px 14px 0; }
+@media (max-width: 540px) { .data-list > div { grid-template-columns: 1fr; gap: 0.15rem; } }
+
+/* ---- Entering a page ----------------------------------------------------
+   The top of every page rises in, block by block. Panels further down rise as they scroll
+   into view where the browser supports scroll-driven animation (a bonus, not a requirement). */
+@keyframes th-rise { from { opacity: 0; transform: translateY(26px); filter: blur(5px); } }
+@keyframes th-scroll-rise { from { opacity: 0.15; transform: translateY(34px); } }
+.stub .container > *, .page > * { animation: th-rise 0.9s var(--ease-out) both; }
+.stub .container > :nth-child(1), .page > :nth-child(1) { animation-delay: 0.02s; }
+.stub .container > :nth-child(2), .page > :nth-child(2) { animation-delay: 0.1s; }
+.stub .container > :nth-child(3), .page > :nth-child(3) { animation-delay: 0.18s; }
+.stub .container > :nth-child(4), .page > :nth-child(4) { animation-delay: 0.26s; }
+.stub .container > :nth-child(n + 5), .page > :nth-child(n + 5) { animation-delay: 0.34s; }
+@supports (animation-timeline: view()) {
+  .stub .container > :nth-child(n + 4), .page > :nth-child(n + 4) {
+    animation: th-scroll-rise linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 38%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stub .container > *, .page > * { animation: none !important; }
+  .btn::before { display: none; }
+}

@@ -1,38 +1,93 @@
 "use client";
 
-import { WalletNetworkCard } from "@/components/wallet-network-card";
+import { useState } from "react";
 import { CredentialWitnessImporter } from "@/components/credential-witness-importer";
+import { DemoCredentialTools } from "@/components/demo-credential-tools";
+import { ProtocolPage } from "@/components/protocol-page";
+import { StateChip } from "@/components/protocol-state";
+import { WalletNetworkCard } from "@/components/wallet-network-card";
 import { useDojangVerification } from "@/hooks/use-dojang-verification";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import { officialDojang } from "@/lib/config/contracts";
+import { GIWA_EXPLORER_URL } from "@/lib/config/chain";
+
+function dateLabel(value: bigint) {
+  return value === 0n ? "No expiry" : new Date(Number(value) * 1000).toLocaleString();
+}
 
 export default function DojangPage() {
   const wallet = useWalletNetwork();
   const dojang = useDojangVerification(wallet.address);
+  const [readRequested, setReadRequested] = useState(false);
+
   return (
-    <main className="page">
-      <p className="eyebrow">Verify · Official read and separate demo credential</p>
-      <h1>Dojang verification</h1>
-      <p className="page-lead">Read the official GIWA Dojang Verified Address state for the selected UPBIT KOREA attester. A read does not issue an attestation.</p>
-      <WalletNetworkCard />
-      <section className="panel" aria-labelledby="official-dojang-heading">
-        <div className="panel-heading">
-          <h2 id="official-dojang-heading">Official GIWA Dojang</h2>
-          <span className={`status-chip status-chip--${dojang.state}`}>{dojang.state.replaceAll("-", " ")}</span>
+    <ProtocolPage
+      index={2}
+      tone="dojang"
+      accent="celadon"
+      status="Official read + project demo credential"
+      title="Check what is officially trusted."
+      lead="Read the connected wallet’s official Dojang Verified Address record on GIWA Sepolia. Issuer-managed demo credentials are a separate path and are never shown as official identity verification."
+    >
+      <div className="protocol-stack protocol-section">
+        <WalletNetworkCard />
+        <div className="protocol-grid">
+          <section className="panel panel--ticks protocol-panel" aria-labelledby="official-dojang-heading">
+            <div className="protocol-panel__head">
+              <h2 id="official-dojang-heading">Official GIWA Dojang</h2>
+              <StateChip state={dojang.state} />
+            </div>
+            <p className="protocol-copy">Read-only query for the UPBIT KOREA Verified Address attester. A missing record is a valid result; a read failure is kept separate.</p>
+
+            {!wallet.address && <p className="protocol-empty">Connect a wallet to check its official status.</p>}
+            {wallet.address && dojang.state === "checking" && <p className="callout callout--demo" role="status" aria-live="polite">Reading Dojang and EAS attestation details from GIWA Sepolia…</p>}
+            {wallet.address && dojang.state === "read-error" && <p className="callout callout--caution" role="alert">The official record could not be validated. This result does not mean the wallet lacks a credential.{dojang.error ? ` ${dojang.error.message}` : ""}</p>}
+            {wallet.address && dojang.state === "no-official-credential" && <p className="protocol-empty">No official Verified Address credential was found for this wallet and attester.</p>}
+            {dojang.credential && (
+              <>
+                <div className="protocol-panel__head"><h3>Attestation details</h3><StateChip state={dojang.credential.state} /></div>
+                <dl className="kv protocol-kv">
+                  <div className="kv__row"><dt>Wallet</dt><dd className="addr">{dojang.credential.wallet}</dd></div>
+                  <div className="kv__row"><dt>Issuer</dt><dd className="addr">{dojang.credential.issuer}</dd></div>
+                  <div className="kv__row"><dt>Attestation UID</dt><dd className="addr">{dojang.credential.attestationUid}</dd></div>
+                  <div className="kv__row"><dt>Issued</dt><dd>{dateLabel(dojang.credential.issuedAt)}</dd></div>
+                  <div className="kv__row"><dt>Expires</dt><dd>{dateLabel(dojang.credential.expirationTime)}</dd></div>
+                  <div className="kv__row"><dt>Revoked</dt><dd>{dojang.credential.revocationTime === 0n ? "No" : dateLabel(dojang.credential.revocationTime)}</dd></div>
+                  <div className="kv__row"><dt>EAS valid</dt><dd>{dojang.credential.isValid ? "Yes" : "No"}</dd></div>
+                  <div className="kv__row"><dt>Verified Address content</dt><dd>{dojang.credential.isVerified ? "Verified" : "Not verified"}</dd></div>
+                  <div className="kv__row"><dt>Schema UID</dt><dd className="addr">{dojang.credential.schemaUid}</dd></div>
+                </dl>
+              </>
+            )}
+
+            <div className="protocol-actions">
+              <button className="btn btn--secondary" type="button" onClick={() => { setReadRequested(true); void dojang.refetch(); }} disabled={!wallet.address || dojang.isLoading}>
+                {dojang.isLoading ? "Checking…" : "Refresh official status"}
+              </button>
+              {readRequested && !dojang.isLoading && dojang.state !== "read-error" && <span className="small muted" role="status">Read complete: {dojang.state.replaceAll("-", " ")}.</span>}
+            </div>
+          </section>
+
+          <div className="protocol-stack">
+            <section className="panel panel--ticks protocol-panel" aria-labelledby="dojang-source-heading">
+              <div className="protocol-panel__head"><h2 id="dojang-source-heading">Verified source</h2><StateChip state="connected">GIWA Sepolia</StateChip></div>
+              <dl className="kv protocol-kv">
+                <div className="kv__row"><dt>DojangScroll</dt><dd><a className="addr" href={`${GIWA_EXPLORER_URL}/address/${officialDojang.dojangScroll}`} target="_blank" rel="noopener noreferrer">{officialDojang.dojangScroll}<span className="visually-hidden"> (opens in a new tab)</span></a></dd></div>
+                <div className="kv__row"><dt>Attester</dt><dd className="addr">{officialDojang.upbitKoreaAttester}</dd></div>
+                <div className="kv__row"><dt>Attester ID</dt><dd className="addr">{officialDojang.upbitKoreaAttesterId}</dd></div>
+                <div className="kv__row"><dt>Schema</dt><dd className="addr">{officialDojang.verifiedAddressSchemaUid}</dd></div>
+              </dl>
+            </section>
+            <CredentialWitnessImporter />
+          </div>
         </div>
-        {!wallet.address ? <p>Connect a wallet to query official status.</p> : dojang.state === "read-error" ? <p role="alert">Unable to check Dojang through GIWA Sepolia. This is not a negative credential result.</p> : dojang.credential ? (
-          <dl className="data-list">
-            <div><dt>Issuer</dt><dd>{dojang.credential.issuer}</dd></div>
-            <div><dt>Attestation UID</dt><dd><code>{dojang.credential.attestationUid}</code></dd></div>
-            <div><dt>Issued at</dt><dd>{new Date(Number(dojang.credential.issuedAt) * 1000).toISOString()}</dd></div>
-            <div><dt>Expires</dt><dd>{dojang.credential.expirationTime === BigInt(0) ? "No expiry" : new Date(Number(dojang.credential.expirationTime) * 1000).toISOString()}</dd></div>
-            <div><dt>Schema UID</dt><dd>{dojang.credential.schemaUid}</dd></div>
-          </dl>
-        ) : dojang.state === "checking" ? <p>Checking the official attestation registry…</p> : <p>No official Dojang credential was found for this wallet and attester.</p>}
-        <p className="muted">GIWA DojangScroll: <code>{officialDojang.dojangScroll}</code> · UPBIT KOREA attester ID: <code>{officialDojang.upbitKoreaAttesterId}</code></p>
-        <button className="button button--quiet" type="button" onClick={() => void dojang.refetch()} disabled={!wallet.address}>Retry read</button>
-      </section>
-      <CredentialWitnessImporter />
-    </main>
+
+        <section className="protocol-panel panel panel--ticks" aria-labelledby="demo-issuer-heading">
+          <div className="protocol-panel__head"><h2 id="demo-issuer-heading">Optional issuer onboarding</h2><StateChip state="active">Project demo · not official</StateChip></div>
+          <p className="protocol-copy">The issuer-controlled commitment flow exists for the local demo path. It requires configured project contracts and an authorized issuer wallet. No issuer keys or credentials are provided by this app.</p>
+          <DemoCredentialTools />
+        </section>
+      </div>
+    </ProtocolPage>
   );
 }
