@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import { appEnv } from "@/lib/config/env";
@@ -15,6 +16,9 @@ const links = [
 
 export function SiteHeader() {
   const wallet = useWalletNetwork();
+  const pathname = usePathname();
+  /* The landing page has its own navigation (components/landing/landing-nav.tsx) */
+  if (pathname === "/") return null;
   return (
     <header className="site-header">
       <Link className="brand" href="/" aria-label={`${appEnv.appName} home`}>

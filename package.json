@@ -10,8 +10,10 @@
     "typecheck": "tsc --noEmit",
     "contracts:test": "bash contracts/run-forge.sh test",
     "contracts:build": "bash contracts/run-forge.sh build",
+    "dojang:check": "bun scripts/check-dojang-rpc.ts",
     "zk:compile": "bun circuits/scripts/compile.mjs",
-    "zk:conformance": "bun circuits/scripts/conformance.mjs"
+    "zk:conformance": "bun circuits/scripts/conformance.mjs",
+    "test:browser": "bun run contracts:build && playwright test"
   },
   "dependencies": {
     "@aztec/bb.js": "^5.2.1",

@@ -1,15 +1,31 @@
+# Dependencies
 node_modules/
+
+# Next.js & Build outputs
 .next/
 out/
 coverage/
+*.tsbuildinfo
+
+# Smart Contracts & Circuits build artifacts
 contracts/out/
 contracts/cache/
 circuits/cache/
 contracts/broadcast/
 contracts/lib/
-*.tsbuildinfo
+
+# Environment files
 .env
 .env.local
 .env.*.local
 !.env.example
+
+# OS & Editor files
 .DS_Store
+
+# Documentation & Handoffs (keep the source-controlled Next.js /docs route)
+/docs/
+
+# Playwright output
+playwright-report/
+test-results/

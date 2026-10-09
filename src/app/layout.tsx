@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Providers } from "@/components/providers";
+import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { appEnv } from "@/lib/config/env";
 import "./globals.css";
@@ -16,7 +17,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <Providers>
           <SiteHeader />
           {children}
-          <footer className="site-footer">GIWA Sepolia demonstration · Not audited · No funds held</footer>
+          <SiteFooter />
         </Providers>
       </body>
     </html>

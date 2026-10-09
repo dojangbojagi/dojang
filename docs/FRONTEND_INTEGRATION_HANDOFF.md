@@ -1,6 +1,6 @@
 # Frontend Integration Handoff
 
-**Checkpoint:** the six-route Next.js app, wallet providers, credential issue/read paths, browser proof hook, generated Solidity verifier, vault authorization, and local conformance tests are implemented. Project contract addresses are not configured and no project contracts are deployed. This file is the interface contract for presentation work.
+**Checkpoint (2026-10-09):** the six-route Next.js app, wallet providers, credential issue/read paths, browser proof hook, generated Solidity verifier, vault authorization, and local conformance tests are implemented. A real-browser proof completed the full local Anvil vault flow. Project contract addresses are not configured and no project contracts are deployed to GIWA Sepolia. This file is the interface contract for presentation work.
 
 ## Ownership boundary
 
@@ -47,16 +47,17 @@ Reads `DojangScroll.isVerified(wallet, UPBIT_KOREA_ID)`, its attestation UID, th
 ```ts
 {
   state: DojangState; // idle | checking | official-verified | no-official-credential |
-                     // expired | revoked | read-error
-  credential?: OfficialDojangCredential; // wallet, issuer, attestationUid, issuedAt,
-                                         // expirationTime, revocationTime, schemaUid, isVerified
+                     // invalid | expired | revoked | read-error
+  credential?: OfficialDojangCredential; // state, wallet, issuer, attestationUid, issuedAt,
+                                         // expirationTime, revocationTime, schemaUid,
+                                         // isValid, isVerified
   isLoading: boolean;
   error?: Error;
   refetch: () => Promise<unknown>;
 }
 ```
 
-No wallet is `idle`. A missing credential is reported only after a successful RPC read. RPC or attestation integrity failures are `read-error`. Official Dojang status is informational in this project: the demo vault does not claim to enforce official Dojang or KYC status.
+No wallet is `idle`. A missing credential is reported only after a successful `isVerified` RPC read. The attestation UID query runs only when `isVerified` returns true because Dojang reverts for missing UID lookups. `invalid` means EAS considers the attestation invalid; malformed or mismatched attestation metadata and RPC failures are `read-error`. Official Dojang status is informational in this project: the demo vault does not claim to enforce official Dojang or KYC status. `credential` is populated only after the UID, recipient, issuer, schema, content, and EAS validity reads are consistent.
 
 ### `useDemoCredential(wallet?)`
 
@@ -132,7 +133,7 @@ The provider keeps the witness only in React memory; refresh or clear removes it
 
 `generateProof()` checks the active record and wallet, executes the Noir circuit, generates an EVM-targeted UltraHonk proof with Barretenberg, locally verifies it, validates the public input order, then stores the proof in memory. `ready-to-submit` means only that a current proof passed local verification and matches the current credential context. It does not mean that a Solidity verifier accepted it or that a transaction occurred. Proof generation requires a configured vault address because the commitment binds the proof to that contract.
 
-The browser loads the compiled circuit artifact from `/circuits/private_eligibility.json` and initializes the 16,384 point SRS for Barretenberg. The private value and salt stay in the browser; the proof and public inputs are what may be submitted. A browser may fetch public SRS data from the Barretenberg distribution endpoint during prover initialization.
+The browser loads the compiled circuit artifact from `/circuits/private_eligibility.json`. The circuit uses 16,384 points; browser Barretenberg initializes from the public 131,072-point SRS blocks required by its decompressor. The private value and salt stay in the browser; only the proof and public inputs are submitted. Prover initialization fetches public SRS data from `https://crs.aztec-cdn.foundation`.
 
 ### `useVaultAccess()`
 
@@ -155,7 +156,7 @@ The browser loads the compiled circuit artifact from `/circuits/private_eligibil
 
 | Concern | States | Meaning |
 | --- | --- | --- |
-| Official Dojang | `checking`, `official-verified`, `no-official-credential`, `expired`, `revoked`, `read-error`, `idle` | Official Dojang/EAS read result; kept separate from project demo credentials |
+| Official Dojang | `checking`, `official-verified`, `no-official-credential`, `invalid`, `expired`, `revoked`, `read-error`, `idle` | Official Dojang/EAS read result; kept separate from project demo credentials |
 | Project credential | `checking`, `active`, `missing`, `expired`, `revoked`, `read-error`, `unconfigured`, `disconnected` | Issuer record in the project registry |
 | Witness | no witness, metadata matched, circuit checked | Metadata match is not cryptographic proof; the circuit checks the opening during generation |
 | Proof | `credential-required`, `ready-to-prove`, `generating`, `ready-to-submit`, `invalid`, `contract-unconfigured` | `ready-to-submit` is local proof verification only |
@@ -203,8 +204,9 @@ The generated EVM verifier is `contracts/src/generated/EligibilityHonkVerifier.s
 | --- | --- | --- |
 | GIWA Sepolia | chain `91342`, RPC `https://sepolia-rpc.giwa.io`, explorer `https://sepolia-explorer.giwa.io` | Official public testnet config; RPC is rate limited |
 | DojangScroll | `0xd5077b67dcb56caC8b270C7788FC3E6ee03F17B9` | Official GIWA Sepolia address |
+| DojangAttesterBook | `0xDA282E89244424E297Ce8e78089B54D043FB28B6` | Official GIWA Sepolia address |
 | EAS | `0x4200000000000000000000000000000000000021` | Official GIWA Sepolia address |
-| UPBIT KOREA attester | `0x4097bF3Cb731AEB3E501b910B33B2aF9Fa68E38` | Official GIWA testnet attester |
+| UPBIT KOREA attester | `0x09B170CA2A006081042992bCE7379B85a02149C6` | Official GIWA Sepolia registry result and attester |
 | UPBIT KOREA attester ID | `0xd99b42e778498aa3c9c1f6a012359130252780511687a35982e8e52735453034` | Official GIWA ID |
 | Verified Address schema | `0x072d75e18b2be4f89a13a7147240477481c4b526d5795802acba59046b426e08` | Official GIWA testnet schema |
 | Demo registry, verifier, vault | unset | Not deployed; no project transaction has been broadcast |
@@ -232,15 +234,17 @@ Contract addresses are not defaulted to example values. Invalid local placeholde
 ## Checkpoint and evidence
 
 - **Implemented:** six App Router routes, Bun manifest/lockfile, environment schema, GIWA Sepolia chain, RainbowKit/wagmi/viem providers, official Dojang read hook, demo credential issue/read/revoke hooks and contracts, typed protocol hooks, Noir circuit/artifact, browser prover integration, generated verifier/adapter, and vault transaction/readback flow.
-- **Locally verified:** `bun run typecheck`, `bun run build`, `bun run contracts:build`, and `bun run contracts:test`. The local suite includes 21 registry/vault boundary tests and 3 generated-verifier conformance tests. The valid circuit proof is accepted by the generated Solidity verifier; changed proof bytes and changed public input are rejected.
-- **Locally verified, proof generation:** `bun run zk:conformance` generated an 8,000-byte proof with nine public inputs. Noir/Barretenberg locally verified it and rejected under-threshold, mismatched-commitment, and wrong-wallet witnesses. The corresponding synthetic public proof fixture is checked into `circuits/testdata/`; it contains no private witness.
-- **Not browser-interaction verified:** the browser prover is typechecked and included in the production bundle, but this workspace did not have the `agent-browser` CLI installed for an interactive browser proof run. Browser runtime initialization and proof latency therefore remain to be verified in the target browser.
-- **Not deployed / not on-chain verified:** the demo registry, generated verifier, adapter, and vault have no configured addresses. No credential-issuance or vault transaction has been broadcast by this work. The official Dojang/EAS RPC reads have not been confirmed from this workspace.
-- **Simulated in tests only:** `TestOnlyVerifierFixture` accepts one test byte string for contract boundary tests. That is not cryptographic evidence. Generated verifier conformance is covered separately with the actual generated proof fixture.
+- **Stable frontend checkpoint:** `bun run typecheck` and `bun run build` passed; Next.js prerendered `/`, `/dojang`, `/bojagi`, `/vault`, `/contracts`, and `/docs`. `bun run zk:compile` and `bun run contracts:build` also passed. No project `lint` script is configured.
+- **Verified read-only on GIWA Sepolia:** `bun run dojang:check` returned chain ID `91342` and UPBIT attester `0x09B170CA2A006081042992bCE7379B85a02149C6`. For synthetic `0x…dEaD`, `isVerified` returned false and its absent-UID lookup reverted as expected. EAS returned `false` for the zero UID and a zero UID record. The script also checks valid and malformed ABI-encoded `bool isVerified` payloads. No wallet was supplied, so no positive personal credential result is claimed.
+- **Locally verified, proof generation:** `bun run zk:conformance` generated and locally verified an 8,000-byte proof with nine public inputs. Noir/Barretenberg rejected under-threshold, mismatched-commitment, and wrong-wallet witnesses. The checked-in synthetic public proof fixture contains no private witness.
+- **Foundry tests:** `bun run contracts:test` passed all 24 tests: 21 registry/vault boundary checks and 3 generated-verifier conformance checks. Foundry reports non-fatal lint warnings in generated verifier code and timestamp comparisons.
+- **Verified in a real browser and local Anvil:** `bun run test:browser` passed against the freshly compiled artifact. The browser generated and locally verified an 8,000-byte proof in 16.2 seconds. The generated Solidity verifier accepted it and the local RestrictedVault receipt/readback granted access. Under-threshold witnesses, invalid proof bytes, wrong-wallet use, a missing credential, unauthorized issuance, and replay were rejected. The local Anvil transaction was `0x3eb955cbd528ac1782afb4bcdbbf3c3d70a39298cc08db6cb65da2c4cb51cfd8` at local block 10; it is not a GIWA transaction.
+- **Not deployed to GIWA Sepolia:** project registry, generated verifier, adapter and vault addresses remain unset. No project credential or vault transaction has been broadcast to GIWA. Live RPC evidence above covers read-only Dojang/EAS calls only.
+- **Local test fixtures:** `TestOnlyVerifierFixture` is a Boolean double used only for vault boundary tests. It is not proof evidence and must never be deployed. Generated-verifier conformance and browser E2E use the actual generated verifier.
 - **Compiler setup:** Foundry uses pinned `solc-js` 0.8.28 through `contracts/solc-wrapper.sh` because the native compiler download endpoint was unavailable. Noir conformance downloads public Barretenberg SRS data into ignored `circuits/cache/`, separate from Foundry's cache.
 - **Foundry warning:** Foundry could not write its global signature cache under the user's home directory; the local tests and build still pass.
 
-Local commands:
+Local commands (lint is not currently configured as a project script):
 
 ```sh
 bun install
@@ -251,6 +255,8 @@ bun run contracts:build
 bun run contracts:test
 bun run zk:compile
 bun run zk:conformance
+bun run dojang:check
+bun run test:browser
 ```
 
 Do not claim project deployment or testnet transactions until their addresses and transaction receipts are independently confirmed. Never deploy the test-only verifier fixture.
