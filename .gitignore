@@ -1,0 +1,15 @@
+node_modules/
+.next/
+out/
+coverage/
+contracts/out/
+contracts/cache/
+circuits/cache/
+contracts/broadcast/
+contracts/lib/
+*.tsbuildinfo
+.env
+.env.local
+.env.*.local
+!.env.example
+.DS_Store

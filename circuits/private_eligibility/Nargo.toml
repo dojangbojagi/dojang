@@ -1,0 +1,5 @@
+[package]
+name = "private_eligibility"
+type = "bin"
+authors = ["GIWA demo"]
+compiler_version = ">=1.0.0-rc.2"

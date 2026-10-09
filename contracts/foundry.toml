@@ -1,0 +1,16 @@
+[profile.default]
+src = "src"
+test = "test"
+out = "out"
+libs = ["lib"]
+solc_version = "0.8.28"
+chain_id = 91342
+optimizer = true
+optimizer_runs = 200
+remappings = ["@openzeppelin/contracts/=../node_modules/@openzeppelin/contracts/"]
+fs_permissions = [{ access = "read", path = "../circuits/testdata" }]
+
+[fmt]
+line_length = 100
+tab_width = 4
+bracket_spacing = true
