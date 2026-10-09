@@ -4,6 +4,7 @@ import type { EligibilityProof, PublicProofInputs } from "@/lib/protocol/types";
 
 const ARTIFACT_URL = "/circuits/private_eligibility.json";
 const EVM_VERIFIER_TARGET = { verifierTarget: "evm" } as const;
+type ProverProgress = (stage: string) => void;
 
 type ProverRuntime = {
   Noir: typeof import("@noir-lang/noir_js").Noir;
@@ -18,30 +19,44 @@ let backendPromise: Promise<{
   api: InstanceType<ProverRuntime["Barretenberg"]>;
 }> | undefined;
 
-async function loadCircuit() {
+async function loadCircuit(onProgress?: ProverProgress) {
+  onProgress?.("fetching circuit artifact");
   circuitPromise ??= fetch(ARTIFACT_URL, { cache: "force-cache" }).then(async (response) => {
     if (!response.ok) throw new Error(`Circuit artifact request failed (${response.status}).`);
     return response.json();
   });
-  return circuitPromise;
+  const circuit = await circuitPromise;
+  onProgress?.("circuit artifact loaded");
+  return circuit;
 }
 
-async function loadRuntime() {
-  runtimePromise ??= Promise.all([loadCircuit(), import("@noir-lang/noir_js")]).then(([circuit, noirModule]) => ({
-    circuit,
-    noir: new noirModule.Noir(circuit),
-  }));
+async function loadRuntime(onProgress?: ProverProgress) {
+  runtimePromise ??= (async () => {
+    const circuit = await loadCircuit(onProgress);
+    onProgress?.("loading Noir runtime");
+    const noirModule = await import("@noir-lang/noir_js");
+    onProgress?.("initializing Noir runtime");
+    return { circuit, noir: new noirModule.Noir(circuit) };
+  })();
   return runtimePromise;
 }
 
-async function loadBackend() {
+async function loadBackend(onProgress?: ProverProgress) {
   backendPromise ??= (async () => {
     let api: InstanceType<ProverRuntime["Barretenberg"]> | undefined;
     try {
-      const [circuit, bbModule] = await Promise.all([loadCircuit(), import("@aztec/bb.js")]);
-      // The circuit has 16,384 gates. Keep the browser SRS at that size instead of
-      // downloading the package's much larger general-purpose default.
-      api = await bbModule.Barretenberg.new({ threads: 1, srsSize: 2 ** 14 });
+      const circuit = await loadCircuit(onProgress);
+      onProgress?.("loading Barretenberg runtime");
+      const bbModule = await import("@aztec/bb.js");
+      // Browser CRS decompression requires G1 data in 131,072-point (4 MiB) blocks.
+      // The circuit only consumes 16,384 points; the larger public CRS is a valid prefix source.
+      onProgress?.("initializing Barretenberg and public SRS");
+      api = await bbModule.Barretenberg.new({
+        threads: 1,
+        srsSize: 2 ** 17,
+        logger: onProgress ? (message: string) => onProgress(`Barretenberg: ${message}`) : undefined,
+      });
+      onProgress?.("constructing UltraHonk backend");
       return {
         api,
         backend: new bbModule.UltraHonkBackend(circuit.bytecode, api),
@@ -100,9 +115,12 @@ export async function validateEligibilityWitness(
 export async function generateEligibilityProof(
   witness: DemoCredentialWitness,
   context: PublicProofInputs,
+  onProgress?: ProverProgress,
 ): Promise<EligibilityProof> {
-  const [{ noir }, { api, backend }] = await Promise.all([loadRuntime(), loadBackend()]);
+  const [{ noir }, { api, backend }] = await Promise.all([loadRuntime(onProgress), loadBackend(onProgress)]);
+  onProgress?.("executing Noir witness");
   const { witness: compressedWitness } = await noir.execute(toCircuitInputs(witness, context));
+  onProgress?.("generating UltraHonk proof");
   const generated = await backend.generateProof(compressedWitness, EVM_VERIFIER_TARGET);
 
   const expected = expectedPublicInputs(context);
@@ -116,6 +134,7 @@ export async function generateEligibilityProof(
     throw new Error("Circuit public input order does not match the vault contract interface.");
   }
 
+  onProgress?.("locally verifying UltraHonk proof");
   const localVerification = await backend.verifyProof(generated, EVM_VERIFIER_TARGET);
   if (!localVerification) throw new Error("The generated proof failed local Barretenberg verification.");
 

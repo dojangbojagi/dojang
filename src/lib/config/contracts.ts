@@ -8,6 +8,7 @@ function checkedAddress(value?: string): Address | undefined {
 
 export const officialDojang = {
   dojangScroll: "0xd5077b67dcb56caC8b270C7788FC3E6ee03F17B9" as Address,
+  dojangAttesterBook: "0xDA282E89244424E297Ce8e78089B54D043FB28B6" as Address,
   eas: "0x4200000000000000000000000000000000000021" as Address,
   upbitKoreaAttesterId:
     "0xd99b42e778498aa3c9c1f6a012359130252780511687a35982e8e52735453034" as Hex,

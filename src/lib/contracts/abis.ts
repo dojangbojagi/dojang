@@ -5,6 +5,10 @@ export const dojangScrollAbi = parseAbi([
   "function getVerifiedAddressAttestationUid(address addr, bytes32 attesterId) view returns (bytes32)",
 ]);
 
+export const dojangAttesterBookAbi = parseAbi([
+  "function getAttester(bytes32 attesterId) view returns (address)",
+]);
+
 export const easAbi = [
   {
     type: "function",
