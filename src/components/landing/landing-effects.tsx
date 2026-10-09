@@ -2,30 +2,70 @@
 
 import { useEffect } from "react";
 
-/* Progressive enhancement for the landing: marks the page as script-driven, then
-   reveals [data-lp-reveal] blocks as they enter the viewport. Without JS, or with
-   reduced motion, everything is simply visible. */
+/* Progressive enhancement for the landing. Marks the page as script-driven, then:
+
+   - reveals [data-lp-reveal] and [data-lp-rail] blocks in and out as they cross the viewport.
+     data-rs is "below" (not reached yet), "in", or "above" (left through the top); the stylesheet
+     animates the three states, and the exit is quicker than the entrance;
+   - lets cards [data-spot] light up where the pointer is (--sx, --sy);
+   - makes buttons lean a little toward the pointer (--tx, --ty).
+
+   Without JS, or with reduced motion, everything is simply visible and still. */
 export function LandingEffects() {
   useEffect(() => {
     const root = document.querySelector<HTMLElement>(".lp");
     if (!root) return;
     root.dataset.js = "1";
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const fine = window.matchMedia("(pointer: fine)").matches;
 
-    const els = Array.from(root.querySelectorAll<HTMLElement>("[data-lp-reveal]"));
     const io = new IntersectionObserver(
       (entries) => {
         for (const e of entries) {
-          if (!e.isIntersecting) continue;
-          (e.target as HTMLElement).dataset.in = "1";
-          io.unobserve(e.target);
+          const el = e.target as HTMLElement;
+          if (e.isIntersecting) {
+            el.dataset.rs = "in";
+          } else {
+            const above = e.boundingClientRect.top < (e.rootBounds?.top ?? 0);
+            el.dataset.rs = above ? "above" : "below";
+          }
         }
       },
-      { rootMargin: "0px 0px -8% 0px", threshold: 0.12 },
+      { rootMargin: "-10% 0px -6% 0px", threshold: 0 },
     );
-    els.forEach((el) => io.observe(el));
+    root.querySelectorAll<HTMLElement>("[data-lp-reveal], [data-lp-rail]").forEach((el) => io.observe(el));
+
+    const onMove = (ev: PointerEvent) => {
+      const target = ev.target as Element | null;
+      const card = target?.closest<HTMLElement>("[data-spot]");
+      if (card) {
+        const r = card.getBoundingClientRect();
+        card.style.setProperty("--sx", `${ev.clientX - r.left}px`);
+        card.style.setProperty("--sy", `${ev.clientY - r.top}px`);
+      }
+      if (reduced || !fine) return;
+      const btn = target?.closest<HTMLElement>(".lp-btn, .lp-nav .lp-pill");
+      if (btn) {
+        const r = btn.getBoundingClientRect();
+        const dx = (ev.clientX - (r.left + r.width / 2)) / r.width;
+        const dy = (ev.clientY - (r.top + r.height / 2)) / r.height;
+        btn.style.setProperty("--tx", `${(dx * 10).toFixed(1)}px`);
+        btn.style.setProperty("--ty", `${(dy * 7).toFixed(1)}px`);
+      }
+    };
+    const onOut = (ev: PointerEvent) => {
+      const btn = (ev.target as Element | null)?.closest<HTMLElement>(".lp-btn, .lp-nav .lp-pill");
+      if (!btn || (ev.relatedTarget instanceof Node && btn.contains(ev.relatedTarget))) return;
+      btn.style.removeProperty("--tx");
+      btn.style.removeProperty("--ty");
+    };
+    root.addEventListener("pointermove", onMove, { passive: true });
+    root.addEventListener("pointerout", onOut, { passive: true });
 
     return () => {
       io.disconnect();
+      root.removeEventListener("pointermove", onMove);
+      root.removeEventListener("pointerout", onOut);
       delete root.dataset.js;
     };
   }, []);

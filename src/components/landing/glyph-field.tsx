@@ -76,6 +76,8 @@ export function GlyphField() {
     let alpha = new Float32Array(0);
     let tint = new Uint8Array(0); /* 0 navy, 1 blue, 2 orange: patchwork blocks */
     let edge = new Uint8Array(0); /* bit 1: block seam on the left, bit 2: on top */
+    let wash = new Uint8Array(0); /* the seal's panels sit on a faint wash of their colour: 0 none, else colour + 1 */
+    let washA = new Float32Array(0);
     let cov = new Float32Array(0);
     let seen = new Uint32Array(0);
     let live: number[] = [];
@@ -126,6 +128,8 @@ export function GlyphField() {
       alpha = new Float32Array(n);
       tint = new Uint8Array(n);
       edge = new Uint8Array(n);
+      wash = new Uint8Array(n);
+      washA = new Float32Array(n);
       cov = new Float32Array(n);
       seen = new Uint32Array(n);
       live = [];
@@ -133,11 +137,33 @@ export function GlyphField() {
       active.clear();
 
       const wide = cw >= 860;
-      /* [centre u, centre v, radius u, radius v, weight] in fractions of the hero */
+
+      /* The shape in the middle is the brand mark, built out of characters: a rounded-square
+         seal holding four patchwork panels (blue = public, orange = private). It is the square
+         from the cover, now filled with data. [x0, y0, x1, y1, colour] in mark units (0..24). */
+      const S = wide ? Math.min(chh * 0.9, cw * 0.58) : Math.min(cw * 0.92, chh * 0.42);
+      const mcx = cw * 0.5;
+      const mcy = wide ? chh * 0.5 : chh * 0.28;
+      const mu = S / 24;
+      const mx0 = mcx - S / 2;
+      const my0 = mcy - S / 2;
+      const PANELS: [number, number, number, number, number][] = [
+        [3, 3, 11, 14, 2],
+        [12, 3, 21, 9, 0],
+        [12, 10, 21, 21, 1],
+        [3, 15, 11, 21, 0],
+      ];
+      /* signed distance to a rounded square centred on the origin (negative inside) */
+      const sdSeal = (cx: number, cy: number, half: number, rad: number) => {
+        const qx = Math.abs(cx) - (half - rad);
+        const qy = Math.abs(cy) - (half - rad);
+        return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - rad;
+      };
+
+      /* [centre u, centre v, radius u, radius v, weight] in fractions of the hero: faint clouds around the seal */
       const blobs: [number, number, number, number, number][] = wide
-        ? [[0.68, 0.19, 0.27, 0.12, 1], [0.3, 0.08, 0.17, 0.06, 0.7], [0.85, 0.62, 0.2, 0.17, 1], [0.97, 0.38, 0.07, 0.14, 0.7]]
-        : [[0.5, 0.15, 0.6, 0.11, 1], [0.15, 0.3, 0.3, 0.06, 0.7], [0.92, 0.26, 0.2, 0.09, 0.7]];
-      const quiet = wide ? { x0: -0.3, x1: 0.66, y0: 0.53, y1: 0.88, m: 0.08 } : { x0: -1, x1: 2, y0: 0.4, y1: 1, m: 0.06 };
+        ? [[0.16, 0.2, 0.2, 0.14, 0.8], [0.86, 0.3, 0.18, 0.22, 0.8], [0.12, 0.72, 0.14, 0.16, 0.6], [0.9, 0.78, 0.16, 0.12, 0.6]]
+        : [[0.15, 0.1, 0.3, 0.07, 0.8], [0.9, 0.16, 0.2, 0.1, 0.7]];
 
       for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
@@ -151,34 +177,64 @@ export function GlyphField() {
           const py = y * cellH + cellH / 2;
           const u = px / cw;
           const v = py / chh;
+          const fade = 1 - 0.92 * smoothstep(0.8, 0.93, v); /* keeps the marquee readable */
 
-          /* organic clouds: placed on purpose (above and below the headline, as in the
-             reference), with value noise roughening their edges */
-          const n1 = vnoise(px / 190, py / 150, 11);
-          const n2 = vnoise(px / 70 + 7, py / 60 + 3, 29);
-          let m = 0;
-          for (const [bx, by, rx, ry, wt] of blobs) {
-            const dx = (u - bx) / rx;
-            const dy = (v - by) / ry;
-            m = Math.max(m, wt * (1 - (dx * dx + dy * dy) - (n1 - 0.5) * 0.95));
+          /* is this cell part of the seal? */
+          const ux = (px - mx0) / mu;
+          const uy = (py - my0) / mu;
+          let d = 0;
+          let col = -1; /* -1: decide below */
+          let aLo = 0.3;
+          let aHi = 0.55;
+          const sd = sdSeal(ux - 12, uy - 12, 11, 4);
+          if (sd <= 0 && sd >= -1.3) {
+            d = 0.94;
+            const r = hash(x, y, 61);
+            col = r < 0.62 ? 0 : r < 0.84 ? 2 : 1;
+            aLo = 0.55;
+            aHi = 0.4;
+            wash[i] = 1;
+            washA[i] = 0.14;
+          } else {
+            for (const [x0, y0, x1, y1, kind] of PANELS) {
+              if (ux >= x0 && ux < x1 && uy >= y0 && uy < y1) {
+                d = 0.9;
+                const r = hash(x, y, 67);
+                col = r < 0.78 ? (kind === 0 ? 0 : kind === 1 ? 1 : 2) : kind === 0 ? 2 : 0;
+                aLo = 0.42;
+                aHi = 0.5;
+                wash[i] = kind + 1;
+                washA[i] = kind === 0 ? 0.1 : 0.23;
+                break;
+              }
+            }
           }
-          let d = smoothstep(0.02, 0.5, m) * (0.62 + 0.38 * n2);
 
-          /* quiet zones keep the small copy and the marquee readable */
-          const qw =
-            smoothstep(quiet.x0 - 0.05, quiet.x0 + 0.03, u) * (1 - smoothstep(quiet.x1 - 0.03, quiet.x1 + 0.08, u)) *
-            smoothstep(quiet.y0 - 0.05, quiet.y0 + 0.04, v) * (1 - smoothstep(quiet.y1 - 0.04, quiet.y1 + 0.05, v));
-          d *= 1 - (1 - quiet.m) * qw;
-          d *= 1 - 0.92 * smoothstep(0.8, 0.93, v);
-          d = Math.max(d, 0.012 * (1 - smoothstep(0.8, 0.93, v)));
+          if (d === 0) {
+            /* organic clouds around the seal, with value noise roughening their edges */
+            const n1 = vnoise(px / 190, py / 150, 11);
+            const n2 = vnoise(px / 70 + 7, py / 60 + 3, 29);
+            let m = 0;
+            for (const [bx, by, rx, ry, wt] of blobs) {
+              const dx = (u - bx) / rx;
+              const dy = (v - by) / ry;
+              m = Math.max(m, wt * (1 - (dx * dx + dy * dy) - (n1 - 0.5) * 0.95));
+            }
+            d = smoothstep(0.02, 0.5, m) * (0.62 + 0.38 * n2) * 0.5;
+            d = Math.max(d, 0.008);
+          }
+          d *= fade;
           if (hash(x, y, 5) > d) continue;
 
           present[i] = 1;
           glyph[i] = (hash(x, y, 17) * 16) | 0;
-          const rc = hash(x, y, 23);
-          color[i] = rc < 0.46 ? 0 : rc < 0.78 ? 1 : 2;
-          alpha[i] = 0.3 + hash(x, y, 31) * 0.55;
-          if (hash(x, y, 41) < 0.1) {
+          if (col < 0) {
+            const rc = hash(x, y, 23);
+            col = rc < 0.46 ? 0 : rc < 0.78 ? 1 : 2;
+          }
+          color[i] = col;
+          alpha[i] = aLo + hash(x, y, 31) * aHi;
+          if (hash(x, y, 41) < 0.12) {
             isLive[i] = 1;
             live.push(i);
             livePhase.push(hash(x, y, 53) * 6.283);
@@ -200,6 +256,11 @@ export function GlyphField() {
     function paintBase() {
       setupText(bctx!, 500);
       bctx!.clearRect(0, 0, cw, chh);
+      for (let i = 0; i < wash.length; i++) {
+        if (!wash[i]) continue;
+        bctx!.fillStyle = `rgba(${SOLID[wash[i] - 1]},${washA[i].toFixed(3)})`;
+        bctx!.fillRect((i % cols) * cellW, Math.floor(i / cols) * cellH, cellW, cellH);
+      }
       for (let i = 0; i < present.length; i++) {
         if (!present[i] || isLive[i]) continue;
         const x = (i % cols) * cellW + cellW / 2;

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { GIWA_CHAIN_ID } from "@/lib/config/chain";
 import { Arrow } from "./arrow";
 
-/* Story sections between the hero and the curtain footer.
+/* Story sections between the hero and the curtain footer (01, the idea, is the sticky scene in idea-scene.tsx).
    Copy follows the prototype (docs/01-home.html): no invented numbers, no
    claims the protocol does not make. Blue always means public / on-chain,
    orange always means private / on your device. */
@@ -13,53 +13,6 @@ function Eyebrow({ n, children, ac }: { n: string; children: string; ac?: "blue"
       <i aria-hidden="true" />
       {n} — {children}
     </p>
-  );
-}
-
-/* ----------------------------------------------------------------- 01 */
-export function IdeaSection() {
-  return (
-    <section className="lp-sec" id="idea" aria-labelledby="idea-title">
-      <div className="lp-wrap lp-idea">
-        <div>
-          <Eyebrow n="01" ac="blue">The idea</Eyebrow>
-          <h2 className="lp-h2" id="idea-title" data-lp-reveal style={{ ["--i" as string]: 1 }}>
-            Verifiable facts should not require <em>public</em> data.
-          </h2>
-          <p className="lp-lead" data-lp-reveal style={{ ["--i" as string]: 2 }}>
-            Most on-chain checks work by publishing the fact itself. That makes the fact easy to trust and impossible to keep private. Private data has the opposite problem: no one else can rely on it.
-          </p>
-          <p className="lp-body" data-lp-reveal style={{ ["--i" as string]: 3 }}>
-            This protocol pairs the two. A trusted issuer seals a fact in an <strong>attestation</strong>. You then prove that the sealed fact meets a rule, without showing the fact. The rule is enforced by a smart contract, so anyone can inspect that it was applied.
-          </p>
-        </div>
-
-        <div className="lp-ledger" data-lp-reveal style={{ ["--i" as string]: 2 }}>
-          <p className="lp-ledger__cap">What a verifier sees about the same fact. Illustrative values, not real data.</p>
-
-          <div className="lp-lrow">
-            <h3>A public attestation</h3>
-            <div className="lp-lrow__view"><u>balance</u><b>1,250</b></div>
-            <span className="lp-chip" data-tone="warn"><i aria-hidden="true" />Trusted, but exposed</span>
-          </div>
-
-          <div className="lp-lrow">
-            <h3>A private note</h3>
-            <div className="lp-lrow__view"><u>balance</u><span className="lp-veil" role="img" aria-label="Hidden value" /></div>
-            <span className="lp-chip" data-tone="neutral"><i aria-hidden="true" />Private, but unverifiable</span>
-          </div>
-
-          <div className="lp-lrow lp-lrow--proof">
-            <h3>A sealed credential with a proof</h3>
-            <div className="lp-lrow__view">
-              <u>balance</u><span className="lp-veil" role="img" aria-label="Hidden value" />
-              <u>meets minimum of 1,000</u><span className="lp-yes">yes</span>
-            </div>
-            <span className="lp-chip" data-tone="valid"><i aria-hidden="true" />Trusted and private</span>
-          </div>
-        </div>
-      </div>
-    </section>
   );
 }
 
@@ -115,9 +68,9 @@ export function PathSection() {
           <span className="pb"><i aria-hidden="true" />Public: on GIWA Sepolia</span>
         </p>
 
-        <ol className="lp-path">
+        <ol className="lp-path" data-lp-rail>
           {STEPS.map((s, i) => (
-            <li className="lp-step" data-lane={s.lane} key={s.name} data-lp-reveal style={{ ["--i" as string]: i + 1 }}>
+            <li className="lp-step" data-lane={s.lane} key={s.name} data-spot data-lp-reveal style={{ ["--i" as string]: i + 1 }}>
               <span className="lp-step__node" aria-hidden="true">{`0${i + 1}`}</span>
               <p className="lp-step__where">{s.where}</p>
               <h3>{s.name}</h3>
@@ -159,7 +112,7 @@ export function ExploreSection() {
         </h2>
         <ul className="lp-routes">
           {DESTINATIONS.map(([title, desc, href], i) => (
-            <li className="lp-route" key={href} data-lp-reveal style={{ ["--i" as string]: Math.min(i, 3) }}>
+            <li className="lp-route" key={href} data-spot data-lp-reveal={i % 2 ? "right" : "left"} style={{ ["--i" as string]: Math.min(i, 3) }}>
               <Link href={href}>
                 <span className="lp-route__idx">{`0${i + 1}`}</span>
                 <span className="lp-route__title">{title}</span>
@@ -184,11 +137,11 @@ export function FactsSection({ contracts }: { contracts: string }) {
           What is live today
         </p>
         <dl className="lp-facts__grid" data-lp-reveal>
-          <div className="lp-fact"><dt>Network</dt><dd>GIWA Sepolia</dd></div>
-          <div className="lp-fact"><dt>Chain ID</dt><dd className="mono">{GIWA_CHAIN_ID}</dd></div>
-          <div className="lp-fact"><dt>Project contracts</dt><dd>{contracts}</dd></div>
-          <div className="lp-fact"><dt>Audit</dt><dd>None</dd></div>
-          <div className="lp-fact"><dt>Funds held</dt><dd>None</dd></div>
+          <div className="lp-fact" data-spot><dt>Network</dt><dd>GIWA Sepolia</dd></div>
+          <div className="lp-fact" data-spot><dt>Chain ID</dt><dd className="mono">{GIWA_CHAIN_ID}</dd></div>
+          <div className="lp-fact" data-spot><dt>Project contracts</dt><dd>{contracts}</dd></div>
+          <div className="lp-fact" data-spot><dt>Audit</dt><dd>None</dd></div>
+          <div className="lp-fact" data-spot><dt>Funds held</dt><dd>None</dd></div>
         </dl>
       </div>
     </section>

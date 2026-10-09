@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { BrandMark } from "./brand-mark";
+import { BrandMark } from "@/components/brand-mark";
 
 /* Same destinations as the app header. Light over the white cover, dark glass after it. */
 const LINKS = [
@@ -43,6 +43,20 @@ function WalletPill() {
 
 export function LandingNav({ appName }: { appName: string }) {
   const [open, setOpen] = useState(false);
+  const linksRef = useRef<HTMLElement>(null);
+
+  /* one highlight slides to whichever link is hovered or focused */
+  const moveBead = (link: Element | null) => {
+    const nav = linksRef.current;
+    if (!nav) return;
+    if (!(link instanceof HTMLElement)) {
+      nav.dataset.hover = "false";
+      return;
+    }
+    nav.style.setProperty("--bead-x", `${link.offsetLeft}px`);
+    nav.style.setProperty("--bead-w", `${link.offsetWidth}px`);
+    nav.dataset.hover = "true";
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -68,7 +82,16 @@ export function LandingNav({ appName }: { appName: string }) {
           <span>{appName}</span>
         </Link>
 
-        <nav className="lp-nav__links" aria-label="Main navigation">
+        <nav
+          className="lp-nav__links"
+          aria-label="Main navigation"
+          ref={linksRef}
+          onPointerOver={(e) => moveBead((e.target as Element).closest("a"))}
+          onPointerLeave={() => moveBead(null)}
+          onFocus={(e) => moveBead((e.target as Element).closest("a"))}
+          onBlur={() => moveBead(null)}
+        >
+          <i className="lp-bead" aria-hidden="true" />
           {LINKS.map(([label, href]) => (
             <Link href={href} key={href}>{label}</Link>
           ))}

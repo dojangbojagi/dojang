@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { GIWA_EXPLORER_URL } from "@/lib/config/chain";
 import { Arrow } from "./arrow";
-import { BrandMark } from "./brand-mark";
+import { BrandMark } from "@/components/brand-mark";
 
 /* The last section. A fixed footer sits under the opaque content (the curtain);
    a one-screen spacer after the content lets the curtain peel away and reveal it.
@@ -34,11 +34,35 @@ export function FinalReveal({ appName }: { appName: string }) {
       sync();
     });
     io.observe(spacer);
-    window.addEventListener("resize", sync);
+
+    /* the footer rises into place as the curtain lifts: --fr runs 0 -> 1 across the spacer */
+    let raf = 0;
+    const rise = () => {
+      raf = 0;
+      if (getComputedStyle(footer).position !== "fixed") {
+        footer.style.setProperty("--fr", "1");
+        return;
+      }
+      const top = spacer.getBoundingClientRect().top;
+      const fr = Math.min(1, Math.max(0, (window.innerHeight - top) / window.innerHeight));
+      footer.style.setProperty("--fr", fr.toFixed(3));
+    };
+    const schedule = () => {
+      if (!raf) raf = requestAnimationFrame(rise);
+    };
+    const onResize = () => {
+      sync();
+      schedule();
+    };
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", onResize);
     sync();
+    rise();
     return () => {
+      if (raf) cancelAnimationFrame(raf);
       io.disconnect();
-      window.removeEventListener("resize", sync);
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", onResize);
     };
   }, []);
 
@@ -82,9 +106,9 @@ export function FinalReveal({ appName }: { appName: string }) {
             <nav aria-label="GIWA">
               <h2>GIWA</h2>
               <ul>
-                <li><a href={GIWA_DOCS} target="_blank" rel="noopener noreferrer">Network setup</a></li>
-                <li><a href={DOJANG_DOCS} target="_blank" rel="noopener noreferrer">Dojang contracts</a></li>
-                <li><a href={GIWA_EXPLORER_URL} target="_blank" rel="noopener noreferrer">Explorer</a></li>
+                <li><a href={GIWA_DOCS} target="_blank" rel="noopener noreferrer">Network setup<span className="arr" aria-hidden="true">↗</span></a></li>
+                <li><a href={DOJANG_DOCS} target="_blank" rel="noopener noreferrer">Dojang contracts<span className="arr" aria-hidden="true">↗</span></a></li>
+                <li><a href={GIWA_EXPLORER_URL} target="_blank" rel="noopener noreferrer">Explorer<span className="arr" aria-hidden="true">↗</span></a></li>
               </ul>
             </nav>
           </div>
@@ -92,7 +116,7 @@ export function FinalReveal({ appName }: { appName: string }) {
             <span>GIWA Sepolia demonstration</span>
             <span>Not audited · No funds held</span>
           </p>
-          <span className="lp-word-out" aria-hidden="true">{appName}</span>
+          <span className="lp-word-out" aria-hidden="true" style={{ ["--chars" as string]: appName.length }}>{appName}</span>
         </div>
       </footer>
     </>
