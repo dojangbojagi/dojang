@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Contracts: Project Name (in progress)</title>
+  <meta name="description" content="Official GIWA contracts and the project&#x27;s own contracts, with real on-chain evidence. Prototype placeholder." />
+  <meta name="theme-color" content="#0a0e1f" />
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <script src="assets/js/app.js" defer></script>
+  <script src="assets/js/stub.js" defer></script>
+</head>
+<body data-tone="neutral">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="ambient" aria-hidden="true"></div>
+
+  <div data-component="proto-bar"></div>
+  <header class="site-header" data-component="site-header" data-active="contracts"></header>
+
+  <main id="main">
+    <section class="stub" data-tone="neutral" style="--accent: var(--gold)" aria-labelledby="page-title">
+      <span class="stub__numeral" aria-hidden="true">05</span>
+      <div class="container">
+        <p class="stub__eyebrow"><span class="stub__num">05 / 06</span><span class="stub__tag">Design in progress</span></p>
+        <h1 class="stub__title" id="page-title">Evidence you can check.</h1>
+        <p class="lead stub__lead">Every contract the protocol relies on, split into official GIWA contracts and the project’s own, with links to the transactions that prove they ran.</p>
+
+        <div class="callout stub__note">
+          <p><b>Placeholder page.</b> The full design for this page is the next step. The header, footer, scenarios and the plan below already follow the master brief.</p>
+        </div>
+
+        <div class="stub__grid">
+          <section class="panel panel--ticks stub__panel" aria-labelledby="wl-contracts">
+            <h2 class="stub__h" id="wl-contracts">What this page will do</h2>
+            <ul class="stub__list">
+            <li>List the official GIWA contracts that are actually used, such as DojangScroll and EAS, with their official addresses and links.</li>
+            <li>List the project’s own contracts: the credential registry, the eligibility verifier and the restricted vault.</li>
+            <li>For each one show the network, address, source verification, role, main read and write functions, deployment transaction and events.</li>
+            <li>Say “Not deployed yet” for anything that is not on-chain. Example addresses are never shown as if they were real.</li>
+            <li>Make real verification and execution transactions easy to find in the explorer.</li>
+            <li>Keep issuer and admin write functions out of reach of visitors who are not authorised.</li>
+            </ul>
+            <div class="callout" style="margin-top: var(--space-6)"><p><b>Nothing here is invented.</b> Addresses, transaction hashes and events appear only after they exist on GIWA Sepolia. Until then each slot says so.</p></div>
+          </section>
+
+          <div>
+          <section class="panel panel--ticks stub__panel" aria-labelledby="st-contracts">
+            <h2 class="stub__h" id="st-contracts">States this page will show</h2>
+            <div data-stub-states="tx:confirmed|reverted|rpc-error"></div>
+          </section>
+          <section class="panel panel--ticks stub__panel" aria-labelledby="sl-contracts">
+            <h2 class="stub__h" id="sl-contracts">Evidence slots</h2>
+            <div class="stub__slots">
+              <div class="slot"><div class="slot__label">Official GIWA contracts</div><div class="slot__value" data-empty="true">To be listed from official GIWA documentation</div><div class="slot__note">Dojang and EAS</div></div>
+              <div class="slot"><div class="slot__label">Project contracts</div><div class="slot__value" data-empty="true">Not deployed yet</div><div class="slot__note">Registry, verifier, vault</div></div>
+              <div class="slot"><div class="slot__label">Execution evidence</div><div class="slot__value" data-empty="true">No transactions yet</div><div class="slot__note">Verification and vault transactions</div></div>
+            </div>
+          </section>
+          <section class="panel stub__panel" aria-labelledby="lv-contracts">
+            <h2 class="stub__h" id="lv-contracts">Current prototype state</h2>
+            <div class="stub__live" data-stub-live="tx" aria-live="polite"></div>
+            <p class="xsmall muted stub__livenote">Use the Scenarios button to change it. These values are simulated.</p>
+          </section>
+          </div>
+        </div>
+
+        <nav class="stub__pager" aria-label="Page navigation">
+          <a href="04-vault.html" rel="prev"><small>Previous</small><span>Vault</span></a>
+          <a href="06-docs.html" rel="next"><small>Next</small><span>Docs</span></a>
+        </nav>
+      </div>
+    </section>
+  </main>
+
+  <footer data-component="site-footer"></footer>
+</body>
+</html>

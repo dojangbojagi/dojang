@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vault: Project Name (in progress)</title>
+  <meta name="description" content="A restricted vault that records access after an on-chain proof check. Prototype placeholder." />
+  <meta name="theme-color" content="#0a0e1f" />
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <script src="assets/js/app.js" defer></script>
+  <script src="assets/js/stub.js" defer></script>
+</head>
+<body data-tone="vault">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="ambient" aria-hidden="true"></div>
+
+  <div data-component="proto-bar"></div>
+  <header class="site-header" data-component="site-header" data-active="vault"></header>
+
+  <main id="main">
+    <section class="stub" data-tone="vault" style="--accent: var(--gold)" aria-labelledby="page-title">
+      <span class="stub__numeral" aria-hidden="true">04</span>
+      <div class="container">
+        <p class="stub__eyebrow"><span class="stub__num">04 / 06</span><span class="stub__tag">Design in progress</span></p>
+        <h1 class="stub__title" id="page-title">Enter with a proof, not a balance.</h1>
+        <p class="lead stub__lead">A smart contract decides who may enter. A valid proof is the key, and the number behind it stays private.</p>
+
+        <div class="callout stub__note">
+          <p><b>Placeholder page.</b> The full design for this page is the next step. The header, footer, scenarios and the plan below already follow the master brief.</p>
+        </div>
+
+        <div class="stub__grid">
+          <section class="panel panel--ticks stub__panel" aria-labelledby="wl-vault">
+            <h2 class="stub__h" id="wl-vault">What this page will do</h2>
+            <ul class="stub__list">
+            <li>Show the active policy, the requirement, proof readiness and the on-chain access state.</li>
+            <li>“Enter Vault” sends a wallet transaction that the contract checks. It is never only a local page change.</li>
+            <li>Walk through the transaction: simulation, wallet confirmation, submitted, confirming, then confirmed, reverted or rejected.</li>
+            <li>Show the explorer link and the access event once the transaction is confirmed.</li>
+            <li>Block the action, or explain the on-chain rejection, when the proof is invalid, expired, revoked, for another wallet, or the network is wrong.</li>
+            </ul>
+            <div class="callout callout--caution" style="margin-top: var(--space-6)"><p><b>No deposits, no custody, no yield.</b> The vault only records who has access. A green check or an animation is never proof that something happened on-chain: only a confirmed transaction is.</p></div>
+          </section>
+
+          <div>
+          <section class="panel panel--ticks stub__panel" aria-labelledby="st-vault">
+            <h2 class="stub__h" id="st-vault">States this page will show</h2>
+            <div data-stub-states="vault:locked|eligible|access-granted|previously-granted;tx:awaiting-signature|submitted|confirming|confirmed|reverted|rejected|rpc-error"></div>
+          </section>
+          <section class="panel stub__panel" aria-labelledby="lv-vault">
+            <h2 class="stub__h" id="lv-vault">Current prototype state</h2>
+            <div class="stub__live" data-stub-live="wallet,proof,tx,vault" aria-live="polite"></div>
+            <p class="xsmall muted stub__livenote">Use the Scenarios button to change it. These values are simulated.</p>
+          </section>
+          </div>
+        </div>
+
+        <nav class="stub__pager" aria-label="Page navigation">
+          <a href="03-bojagi.html" rel="prev"><small>Previous</small><span>Bojagi</span></a>
+          <a href="05-contracts.html" rel="next"><small>Next</small><span>Contracts</span></a>
+        </nav>
+      </div>
+    </section>
+  </main>
+
+  <footer data-component="site-footer"></footer>
+</body>
+</html>

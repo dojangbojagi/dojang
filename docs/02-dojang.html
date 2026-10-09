@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dojang: Project Name (in progress)</title>
+  <meta name="description" content="Read a wallet&#x27;s official Dojang credential on GIWA Sepolia. Prototype placeholder." />
+  <meta name="theme-color" content="#0a0e1f" />
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <script src="assets/js/app.js" defer></script>
+  <script src="assets/js/stub.js" defer></script>
+</head>
+<body data-tone="dojang">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="ambient" aria-hidden="true"></div>
+
+  <div data-component="proto-bar"></div>
+  <header class="site-header" data-component="site-header" data-active="dojang"></header>
+
+  <main id="main">
+    <section class="stub" data-tone="dojang" style="--accent: var(--celadon)" aria-labelledby="page-title">
+      <span class="stub__numeral" aria-hidden="true">02</span>
+      <div class="container">
+        <p class="stub__eyebrow"><span class="stub__num">02 / 06</span><span class="stub__tag">Design in progress</span></p>
+        <h1 class="stub__title" id="page-title">Check what is officially trusted.</h1>
+        <p class="lead stub__lead">Connect a wallet and read its official Dojang record on GIWA Sepolia. See who issued it, when it expires and whether it was revoked.</p>
+
+        <div class="callout stub__note">
+          <p><b>Placeholder page.</b> The full design for this page is the next step. The header, footer, scenarios and the plan below already follow the master brief.</p>
+        </div>
+
+        <div class="stub__grid">
+          <section class="panel panel--ticks stub__panel" aria-labelledby="wl-dojang">
+            <h2 class="stub__h" id="wl-dojang">What this page will do</h2>
+            <ul class="stub__list">
+            <li>Check the wallet and the network before anything is read.</li>
+            <li>Look up the connected wallet in the official Dojang Verified Address record.</li>
+            <li>Show the issuer, attestation ID, issue date, expiry and revocation when a credential exists.</li>
+            <li>Offer an optional demo issuer for the testnet path, clearly labelled and kept apart from the official credential.</li>
+            <li>Send the visitor to Bojagi only when a usable demo credential exists. Otherwise explain how to get one.</li>
+            </ul>
+            <div class="callout" style="margin-top: var(--space-6)"><p><b>Official and demo stay separate.</b> A demo credential is never shown as official Upbit or GIWA verification. “No credential found” is a valid result, and a network error is never shown as “not verified”.</p></div>
+          </section>
+
+          <div>
+          <section class="panel panel--ticks stub__panel" aria-labelledby="st-dojang">
+            <h2 class="stub__h" id="st-dojang">States this page will show</h2>
+            <div data-stub-states="wallet:disconnected|connecting|connected|wrong-network;dojang:checking|official-verified|no-official-credential|expired|revoked|read-error;demo:true"></div>
+          </section>
+          <section class="panel stub__panel" aria-labelledby="lv-dojang">
+            <h2 class="stub__h" id="lv-dojang">Current prototype state</h2>
+            <div class="stub__live" data-stub-live="wallet,dojang,demo" aria-live="polite"></div>
+            <p class="xsmall muted stub__livenote">Use the Scenarios button to change it. These values are simulated.</p>
+          </section>
+          </div>
+        </div>
+
+        <nav class="stub__pager" aria-label="Page navigation">
+          <a href="01-home.html" rel="prev"><small>Previous</small><span>Home</span></a>
+          <a href="03-bojagi.html" rel="next"><small>Next</small><span>Bojagi</span></a>
+        </nav>
+      </div>
+    </section>
+  </main>
+
+  <footer data-component="site-footer"></footer>
+</body>
+</html>

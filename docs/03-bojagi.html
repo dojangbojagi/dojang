@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bojagi: Project Name (in progress)</title>
+  <meta name="description" content="Generate a private eligibility proof on your own device. Prototype placeholder." />
+  <meta name="theme-color" content="#0a0e1f" />
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <script src="assets/js/app.js" defer></script>
+  <script src="assets/js/stub.js" defer></script>
+</head>
+<body data-tone="bojagi">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="ambient" aria-hidden="true"></div>
+
+  <div data-component="proto-bar"></div>
+  <header class="site-header" data-component="site-header" data-active="bojagi"></header>
+
+  <main id="main">
+    <section class="stub" data-tone="bojagi" style="--accent: var(--periwinkle)" aria-labelledby="page-title">
+      <span class="stub__numeral" aria-hidden="true">03</span>
+      <div class="container">
+        <p class="stub__eyebrow"><span class="stub__num">03 / 06</span><span class="stub__tag">Design in progress</span></p>
+        <h1 class="stub__title" id="page-title">Prove it without showing it.</h1>
+        <p class="lead stub__lead">Pick an eligibility policy. Your device builds a proof that your sealed credential meets it. Only the proof and the public inputs leave your device.</p>
+
+        <div class="callout stub__note">
+          <p><b>Placeholder page.</b> The full design for this page is the next step. The header, footer, scenarios and the plan below already follow the master brief.</p>
+        </div>
+
+        <div class="stub__grid">
+          <section class="panel panel--ticks stub__panel" aria-labelledby="wl-bojagi">
+            <h2 class="stub__h" id="wl-bojagi">What this page will do</h2>
+            <ul class="stub__list">
+            <li>Explain the sample policy (at least 1,000 verified test units), the credential in use, what stays private and what is public.</li>
+            <li>Check the wallet, the credential’s expiry and revocation, and the network before a proof can be made.</li>
+            <li>Generate the proof, offer an optional local check, then pass it to the vault action for on-chain verification.</li>
+            <li>Show “Proof Generated” separately from “Proof Verified On-chain” and “Vault Action Confirmed”.</li>
+            <li>Keep the exact value out of logs, analytics, the address bar, transaction arguments and events.</li>
+            <li>If a browser cannot prove, a server prover may exist only as a flagged demo fallback, with a plain warning that sending the value to a server changes the privacy.</li>
+            </ul>
+            <div class="callout" style="margin-top: var(--space-6)"><p><b>Eligibility privacy only.</b> The exact value stays private, but your wallet address and the transaction stay visible. This is not GIWA’s native Bojagi private transfer.</p></div>
+          </section>
+
+          <div>
+          <section class="panel panel--ticks stub__panel" aria-labelledby="st-bojagi">
+            <h2 class="stub__h" id="st-bojagi">States this page will show</h2>
+            <div data-stub-states="proof:credential-required|ready-to-prove|generating|generated|invalid|ready-to-submit;demo:true"></div>
+          </section>
+          <section class="panel stub__panel" aria-labelledby="lv-bojagi">
+            <h2 class="stub__h" id="lv-bojagi">Current prototype state</h2>
+            <div class="stub__live" data-stub-live="wallet,demo,proof" aria-live="polite"></div>
+            <p class="xsmall muted stub__livenote">Use the Scenarios button to change it. These values are simulated.</p>
+          </section>
+          </div>
+        </div>
+
+        <nav class="stub__pager" aria-label="Page navigation">
+          <a href="02-dojang.html" rel="prev"><small>Previous</small><span>Dojang</span></a>
+          <a href="04-vault.html" rel="next"><small>Next</small><span>Vault</span></a>
+        </nav>
+      </div>
+    </section>
+  </main>
+
+  <footer data-component="site-footer"></footer>
+</body>
+</html>

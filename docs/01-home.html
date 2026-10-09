@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Project Name: Prove more. Reveal less.</title>
+  <meta name="description" content="Verify trusted state, generate private eligibility proofs, and unlock on-chain access without exposing unnecessary data. Testnet demonstration on GIWA Sepolia." />
+  <meta name="theme-color" content="#0a0e1f" />
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/css/home.css" />
+  <script src="assets/js/app.js" defer></script>
+  <script src="assets/js/home.js" defer></script>
+</head>
+<body data-tone="neutral">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="ambient" aria-hidden="true"></div>
+
+  <div data-component="proto-bar"></div>
+  <header class="site-header" data-component="site-header" data-active="home"></header>
+
+  <main id="main">
+
+    <!-- ========================= A. COVER AND HERO =========================
+         Phase 1: the sentence, with the sealed square sitting in the gap.
+         Scrolling opens the square until it fills the screen; phase 2 (the hero)
+         is inside it. Without JavaScript or with reduced motion the two phases
+         simply stack, so nothing is hidden behind an animation.
+         ====================================================================== -->
+    <section class="cover" data-tone="neutral" aria-labelledby="hero-title" data-cover>
+      <div class="cover__stage" data-cover-stage>
+
+        <div class="cover__phase1" data-cover-phase1>
+          <h1 class="cover__words" id="hero-title">
+            <span class="cover__word" data-cover-word="a">Prove more.</span>
+            <span class="cover__slot" data-cover-slot aria-hidden="true"></span>
+            <span class="cover__word" data-cover-word="b">Reveal less.</span>
+          </h1>
+          <p class="cover__sub">Verify trusted state, prove eligibility privately, then unlock an <span class="nowrap">on-chain</span> action. A testnet demonstration on GIWA Sepolia.</p>
+          <p class="cover__hint" aria-hidden="true"><span>Scroll to open</span><i class="cover__hintline"></i></p>
+        </div>
+
+        <div class="cover__outline" data-cover-outline aria-hidden="true"></div>
+
+        <div class="cover__box" data-cover-box>
+          <div class="cover__cloth veil" aria-hidden="true"></div>
+
+          <div class="hero" data-hero>
+            <canvas class="field" data-field aria-hidden="true"></canvas>
+            <div class="hero__scrim" aria-hidden="true"></div>
+
+            <div class="container hero__inner">
+              <div class="hero__copy">
+                <p class="hero__eyebrow"><i class="hero__eyedot" aria-hidden="true"></i>Private verifiable state</p>
+                <ol class="hero__steps">
+                  <li data-accent="dojang"><i aria-hidden="true"></i>Verify trusted state</li>
+                  <li data-accent="bojagi"><i aria-hidden="true"></i>Prove eligibility privately</li>
+                  <li data-accent="vault"><i aria-hidden="true"></i>Unlock an <span class="nowrap">on-chain</span> action</li>
+                </ol>
+                <p class="hero__lede">The exact value stays on your device. Only a proof that it met the rule is checked <span class="nowrap">on-chain</span>.</p>
+                <div class="hero__actions">
+                  <a class="btn btn--primary" href="#systems">Explore Protocol</a>
+                  <a class="btn btn--secondary" href="#how">How It Works</a>
+                </div>
+              </div>
+
+              <aside class="hero__plate panel panel--ticks" aria-labelledby="plate-title">
+                <h2 class="hero__plate-title" id="plate-title">Testnet demonstration</h2>
+                <dl class="kv">
+                  <div class="kv__row"><dt>Network</dt><dd>GIWA Sepolia</dd></div>
+                  <div class="kv__row"><dt>Chain ID</dt><dd class="mono">91342</dd></div>
+                  <div class="kv__row"><dt>Contracts</dt><dd>Not deployed yet</dd></div>
+                  <div class="kv__row"><dt>Audit</dt><dd>None</dd></div>
+                  <div class="kv__row"><dt>Funds held</dt><dd>None</dd></div>
+                </dl>
+              </aside>
+            </div>
+
+            <div class="hero__foot">
+              <p class="hero__footlabel">What this is</p>
+              <div class="ticker" data-ticker>
+                <div class="ticker__track" aria-hidden="true"><span class="ticker__item">Testnet demonstration</span><i class="ticker__sep" aria-hidden="true"></i><span class="ticker__item">Not audited</span><i class="ticker__sep" aria-hidden="true"></i><span class="ticker__item">No funds held</span><i class="ticker__sep" aria-hidden="true"></i><span class="ticker__item">Proofs, not balances</span><i class="ticker__sep" aria-hidden="true"></i><span class="ticker__item">No deposits, no custody</span><i class="ticker__sep" aria-hidden="true"></i><span class="ticker__item">Independent project</span><i class="ticker__sep" aria-hidden="true"></i><span class="ticker__item">Testnet demonstration</span><i class="ticker__sep" aria-hidden="true"></i><span class="ticker__item">Not audited</span><i class="ticker__sep" aria-hidden="true"></i><span class="ticker__item">No funds held</span><i class="ticker__sep" aria-hidden="true"></i><span class="ticker__item">Proofs, not balances</span><i class="ticker__sep" aria-hidden="true"></i><span class="ticker__item">No deposits, no custody</span><i class="ticker__sep" aria-hidden="true"></i><span class="ticker__item">Independent project</span><i class="ticker__sep" aria-hidden="true"></i></div>
+              </div>
+              <p class="visually-hidden">Testnet demonstration. Not audited. No funds held. Proofs, not balances. No deposits, no custody. Independent project.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================== A2. PROOF PATH ========================== -->
+    <section class="section proofsec" data-tone="neutral" aria-labelledby="pp-title">
+      <div class="container">
+        <div class="proofpath panel panel--ticks" data-proofpath>
+          <div class="proofpath__bar">
+            <h2 class="proofpath__title" id="pp-title">From trusted state to verified execution</h2>
+            <button type="button" class="btn btn--ghost btn--sm" data-pp-toggle>Pause animation</button>
+          </div>
+          <div class="proofpath__canvas" data-pp-canvas>
+            <ol class="proofpath__fallback">
+              <li><strong>Trusted state.</strong> A trusted issuer vouches for a fact about your wallet.</li>
+              <li><strong>Attestation.</strong> A sealed fingerprint of the fact is registered on-chain.</li>
+              <li><strong>Private proof.</strong> Your device proves the fact meets a rule without revealing it.</li>
+              <li><strong>Verified execution.</strong> A contract checks the proof and grants access.</li>
+            </ol>
+          </div>
+          <div class="proofpath__detail" data-pp-detail aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== B. PROTOCOL INTRODUCTION ===================== -->
+    <section class="section intro" id="intro" data-tone="neutral" aria-labelledby="intro-title">
+      <div class="container intro__grid">
+        <div class="intro__copy stack stack--lg">
+          <h2 id="intro-title">Verifiable facts should not require public data.</h2>
+          <p class="lead">Most on-chain checks work by publishing the fact itself. That makes the fact easy to trust and impossible to keep private. Private data has the opposite problem: no one else can rely on it.</p>
+          <p class="muted">This protocol pairs the two. A trusted issuer seals a fact in an <button type="button" class="term" data-tip="A signed statement from an issuer about a wallet, recorded on-chain so anyone can check it.">attestation</button>. You then prove that the sealed fact meets a rule, without showing the fact. The rule is enforced by a smart contract, so anyone can inspect that it was applied.</p>
+        </div>
+
+        <div class="ledger panel panel--ticks" data-inview>
+          <p class="ledger__caption">What a verifier sees about the same fact. Illustrative values, not real data.</p>
+          <div class="ledger__rows" role="list">
+            <div class="ledger__row" role="listitem">
+              <h3 class="ledger__kind">A public attestation</h3>
+              <div class="ledger__view">
+                <span class="ledger__field">balance</span>
+                <span class="ledger__val">1,250</span>
+              </div>
+              <span class="status" data-state="warn"><i class="status__dot" aria-hidden="true"></i>Trusted, but exposed</span>
+            </div>
+            <div class="ledger__row" role="listitem">
+              <h3 class="ledger__kind">A private note</h3>
+              <div class="ledger__view">
+                <span class="ledger__field">balance</span>
+                <span class="ledger__hidden veil" role="img" aria-label="Hidden value"></span>
+              </div>
+              <span class="status" data-state="neutral"><i class="status__dot" aria-hidden="true"></i>Private, but unverifiable</span>
+            </div>
+            <div class="ledger__row ledger__row--joined" role="listitem">
+              <h3 class="ledger__kind">A sealed credential with a proof</h3>
+              <div class="ledger__view">
+                <span class="ledger__field">balance</span>
+                <span class="ledger__hidden veil" role="img" aria-label="Hidden value"></span>
+                <span class="ledger__field ledger__field--result">meets minimum of 1,000</span>
+                <span class="ledger__result">yes</span>
+              </div>
+              <span class="status" data-state="valid"><i class="status__dot" aria-hidden="true"></i>Trusted and private</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================== C. TWO CORE SYSTEMS ======================== -->
+    <section class="section systems" id="systems" data-tone="dojang" aria-labelledby="systems-title">
+      <div class="container">
+        <header class="section-head">
+          <h2 id="systems-title">Two systems, one chain of trust.</h2>
+          <p class="lead">Dojang establishes what is true. The Bojagi-inspired layer proves it privately.</p>
+        </header>
+
+        <div class="systems__grid">
+          <article class="sys sys--dojang" aria-labelledby="sys-dojang">
+            <div class="sheets" aria-hidden="true">
+              <div class="sheets__back sheets__back--2"></div>
+              <div class="sheets__back sheets__back--1"></div>
+              <div class="sheets__front">
+                <div class="seal"><svg viewBox="0 0 40 40" width="40" height="40" focusable="false"><rect x="1.5" y="1.5" width="37" height="37" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 8h10v14H8zM22 8h10v6H22zM22 18h10v14H22zM8 26h10v6H8z" fill="currentColor"/></svg></div>
+                <dl class="kv sheets__rows">
+                  <div class="kv__row"><dt>Attestation ID</dt><dd class="muted">Read from chain</dd></div>
+                  <div class="kv__row"><dt>Issuer</dt><dd class="muted">Read from chain</dd></div>
+                  <div class="kv__row"><dt>Expiry</dt><dd class="muted">Read from chain</dd></div>
+                  <div class="kv__row"><dt>Status</dt><dd data-sys-dojang-status></dd></div>
+                </dl>
+              </div>
+            </div>
+
+            <div class="sys__body">
+              <h3 class="sys__name" id="sys-dojang">Dojang</h3>
+              <p class="sys__tag">Establish trust</p>
+              <p class="muted">Check whether a wallet holds a valid credential from a recognised issuer on GIWA Sepolia. See who issued it, when it expires and whether it was revoked.</p>
+              <ul class="dash-list">
+                <li>Issuer and attestation ID</li>
+                <li>Issue date, expiry and revocation</li>
+                <li>Official credentials kept apart from the labelled demo credential</li>
+              </ul>
+              <p class="xsmall muted">Read-only. This app reads official credentials; it does not issue them.</p>
+              <a class="btn btn--secondary" href="02-dojang.html">Open Dojang</a>
+            </div>
+          </article>
+
+          <div class="systems__seam" aria-hidden="true"></div>
+
+          <article class="sys sys--bojagi" aria-labelledby="sys-bojagi">
+            <div class="cloth" aria-hidden="true">
+              <div class="cloth__window">
+                <span class="cloth__window-main">Minimum met</span>
+                <span class="cloth__window-sub">Exact value stays hidden</span>
+              </div>
+            </div>
+
+            <div class="sys__body">
+              <h3 class="sys__name" id="sys-bojagi">Bojagi-inspired Protection</h3>
+              <p class="sys__tag">Prove privately</p>
+              <p class="muted">Prove that issuer-backed data meets a policy without publishing the data. The proof is built on your device and checked by a smart contract.</p>
+              <ul class="dash-list">
+                <li>Eligibility privacy: the exact value stays off-chain</li>
+                <li>Not transaction privacy: your address and the transaction stay visible</li>
+                <li>Not GIWA's native Bojagi private transfer</li>
+              </ul>
+              <a class="btn btn--secondary" href="03-bojagi.html">Open Bojagi</a>
+            </div>
+          </article>
+        </div>
+
+        <p class="systems__caption">A proof is only as strong as the credential behind it.</p>
+      </div>
+    </section>
+
+    <!-- ===================== D. HOW THE PROTOCOL WORKS ===================== -->
+    <section class="section how" id="how" data-tone="neutral" aria-labelledby="how-title">
+      <div class="container">
+        <header class="section-head">
+          <h2 id="how-title">How the protocol works</h2>
+          <p class="lead">Four steps, from connecting a wallet to a transaction anyone can inspect.</p>
+        </header>
+
+        <div class="how__grid" data-how>
+          <div class="how__nav">
+            <div class="how__tabs" role="tablist" aria-label="Protocol steps" aria-orientation="vertical">
+              <button type="button" role="tab" id="how-tab-1" aria-controls="how-panel" aria-selected="true" data-step="1"><span class="how__num">1</span><span class="how__tab-text"><b>Connect</b><span>Wallet and network</span></span></button>
+              <button type="button" role="tab" id="how-tab-2" aria-controls="how-panel" aria-selected="false" tabindex="-1" data-step="2"><span class="how__num">2</span><span class="how__tab-text"><b>Verify</b><span>Credentials and commitments</span></span></button>
+              <button type="button" role="tab" id="how-tab-3" aria-controls="how-panel" aria-selected="false" tabindex="-1" data-step="3"><span class="how__num">3</span><span class="how__tab-text"><b>Prove</b><span>Private eligibility proof</span></span></button>
+              <button type="button" role="tab" id="how-tab-4" aria-controls="how-panel" aria-selected="false" tabindex="-1" data-step="4"><span class="how__num">4</span><span class="how__tab-text"><b>Execute</b><span>Verified, protected action</span></span></button>
+            </div>
+            <div class="how__panel" role="tabpanel" id="how-panel" aria-labelledby="how-tab-1" tabindex="0" data-how-panel></div>
+          </div>
+
+          <figure class="how__diagram panel panel--ticks" data-how-diagram data-step="1" role="region" aria-label="Protocol architecture diagram" tabindex="0">
+            <svg class="how-svg" viewBox="0 0 640 440" role="img" aria-labelledby="how-svg-title how-svg-desc">
+              <title id="how-svg-title">Protocol architecture</title>
+              <desc id="how-svg-desc">Your wallet and prover sit on your device. Dojang, the credential registry, the verifier and the vault sit on GIWA Sepolia. The highlighted parts change with the selected step.</desc>
+              <defs>
+                <marker id="how-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1l8 4-8 4z" fill="currentColor"/></marker>
+              </defs>
+
+              <!-- zones -->
+              <g class="how-zone how-zone--device">
+                <rect x="14" y="30" width="214" height="396" rx="6"/>
+                <text x="30" y="56" class="how-zonelabel">On your device</text>
+                <text x="30" y="74" class="how-zonesub">Private</text>
+              </g>
+              <g class="how-zone how-zone--chain" data-on="1 2 3 4">
+                <rect x="252" y="30" width="374" height="396" rx="6"/>
+                <text x="268" y="56" class="how-zonelabel">GIWA Sepolia</text>
+                <text x="268" y="74" class="how-zonesub">Public, on-chain</text>
+              </g>
+              <g class="how-chip" data-on="1" transform="translate(484 38)">
+                <rect width="130" height="26" rx="13"/>
+                <text x="65" y="17.5" text-anchor="middle">Chain ID 91342</text>
+              </g>
+
+              <!-- edges -->
+              <g class="how-edges" fill="none" stroke="currentColor" stroke-width="1.6">
+                <path data-on="2" class="how-edge" d="M196 121H268" marker-end="url(#how-arrow)"/>
+                <path data-on="2" class="how-edge" d="M170 150L268 219" marker-end="url(#how-arrow)"/>
+                <path data-on="3" class="how-edge how-edge--private" d="M121 150V298" marker-end="url(#how-arrow)"/>
+                <path data-on="3" class="how-edge" d="M196 314L284 266" marker-end="url(#how-arrow)"/>
+                <path data-on="4" class="how-edge" d="M196 338L359 354" marker-end="url(#how-arrow)"/>
+                <path data-on="4" class="how-edge" d="M470 328L520 266" marker-end="url(#how-arrow)"/>
+                <path data-on="4" class="how-edge" d="M396 328L372 266" marker-end="url(#how-arrow)"/>
+              </g>
+              <g class="how-edgelabels">
+                <text data-on="2" x="233" y="112" text-anchor="middle">reads status</text>
+                <text data-on="2" x="262" y="190">checks commitment</text>
+                <text data-on="3" x="131" y="224">witness<tspan x="131" dy="15">stays here</tspan></text>
+                <text data-on="3" x="262" y="290">reads commitment</text>
+                <text data-on="4" x="240" y="374">proof and<tspan x="240" dy="15">public inputs</tspan></text>
+                <text data-on="4" x="512" y="312">verifies</text>
+                <text data-on="4" x="400" y="302">checks active</text>
+              </g>
+
+              <!-- nodes -->
+              <g class="how-node how-node--device" data-on="1 2 3" transform="translate(46 92)">
+                <rect width="150" height="58" rx="4"/><text x="14" y="25" class="how-nt">Your wallet</text><text x="14" y="44" class="how-ns">Signs transactions</text>
+              </g>
+              <g class="how-node how-node--device" data-on="3 4" transform="translate(46 300)">
+                <rect width="150" height="58" rx="4"/><text x="14" y="25" class="how-nt">Prover</text><text x="14" y="44" class="how-ns">Builds the proof locally</text>
+              </g>
+              <g class="how-node how-node--official" data-on="2" transform="translate(270 92)">
+                <rect width="170" height="58" rx="4"/><text x="14" y="25" class="how-nt">Dojang and EAS</text><text x="14" y="44" class="how-ns">Official GIWA contracts</text>
+              </g>
+              <g class="how-node how-node--ours" data-on="2 3 4" transform="translate(270 206)">
+                <rect width="170" height="58" rx="4"/><text x="14" y="25" class="how-nt">Credential registry</text><text x="14" y="44" class="how-ns">Sealed commitments</text>
+              </g>
+              <g class="how-node how-node--ours" data-on="4" transform="translate(452 206)">
+                <rect width="160" height="58" rx="4"/><text x="14" y="25" class="how-nt">ZK verifier</text><text x="14" y="44" class="how-ns">Checks the proof</text>
+              </g>
+              <g class="how-node how-node--ours" data-on="4" transform="translate(361 330)">
+                <rect width="170" height="58" rx="4"/><text x="14" y="25" class="how-nt">Restricted vault</text><text x="14" y="44" class="how-ns">Records access</text>
+              </g>
+            </svg>
+            <figcaption class="how__legend">
+              <span><i class="swatch swatch--official"></i>Official GIWA</span>
+              <span><i class="swatch swatch--ours"></i>Project contracts</span>
+              <span><i class="swatch swatch--device"></i>Your device</span>
+            </figcaption>
+            <p class="how__scrollhint xsmall muted">Swipe sideways to see the whole diagram.</p>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= E. PRIVATE ELIGIBILITY SHOWCASE ================= -->
+    <section class="section showcase" id="showcase" data-tone="bojagi" aria-labelledby="showcase-title">
+      <div class="container">
+        <header class="section-head">
+          <h2 id="showcase-title">Eligible, without showing the number.</h2>
+          <p class="lead">A holder proves they meet a minimum. The chain learns the answer and nothing else.</p>
+        </header>
+
+        <div class="demo panel panel--ticks" data-showcase data-value="meets" data-phase="idle">
+          <div class="demo__controls">
+            <div class="seg" role="radiogroup" aria-label="Credential value in this illustration">
+              <button type="button" role="radio" aria-checked="true" data-value="meets">Meets the policy</button>
+              <button type="button" role="radio" aria-checked="false" tabindex="-1" data-value="below">Below the policy</button>
+            </div>
+            <button type="button" class="btn btn--primary btn--sm" data-sc-run>Run illustration</button>
+          </div>
+
+          <ol class="phases" aria-label="Illustration steps" data-sc-phases>
+            <li data-phase-id="witness">Prepare witness</li>
+            <li data-phase-id="proof">Build proof</li>
+            <li data-phase-id="verify">Check on-chain</li>
+            <li data-phase-id="result">Result</li>
+          </ol>
+
+          <div class="demo__stage">
+            <section class="side side--private" aria-labelledby="side-private">
+              <header class="side__head">
+                <h3 id="side-private">On your device</h3>
+                <span class="status" data-state="demo"><i class="status__dot" aria-hidden="true"></i>Private</span>
+              </header>
+              <div class="cred">
+                <div class="cred__top">
+                  <span>Verified demo balance</span>
+                  <span class="cred__tag">Demo credential</span>
+                </div>
+                <dl class="kv">
+                  <div class="kv__row"><dt>Issued by</dt><dd>Demo issuer, project-controlled</dd></div>
+                  <div class="kv__row"><dt>Value</dt><dd class="cred__value"><span class="cred__num" data-sc-value>1,240</span> <span class="cred__unit">test units</span></dd></div>
+                  <div class="kv__row"><dt><button type="button" class="term" data-tip="A random number mixed into the sealed fingerprint so the value cannot be guessed.">Salt</button></dt><dd class="mono">&bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull;</dd></div>
+                </dl>
+                <div class="cred__wrap veil" aria-hidden="true"></div>
+              </div>
+              <p class="xsmall muted">Synthetic values. The credential was sealed by the issuer in advance.</p>
+            </section>
+
+            <div class="demo__boundary" aria-hidden="true">
+              <span class="demo__boundary-label">Privacy<br>boundary</span>
+              <span class="demo__line"></span>
+              <span class="demo__packet" data-sc-packet>proof</span>
+            </div>
+
+            <section class="side side--public" aria-labelledby="side-public">
+              <header class="side__head">
+                <h3 id="side-public">On-chain</h3>
+                <span class="status" data-state="pending"><i class="status__dot" aria-hidden="true"></i>Public</span>
+              </header>
+              <dl class="kv">
+                <div class="kv__row"><dt>Policy</dt><dd>Minimum verified demo balance</dd></div>
+                <div class="kv__row"><dt>Threshold</dt><dd>1,000 test units</dd></div>
+                <div class="kv__row"><dt>Eligibility</dt><dd data-sc-eligibility></dd></div>
+                <div class="kv__row"><dt>Exact value</dt><dd><span class="private-pill"><span class="veil" aria-hidden="true"></span>Private</span></dd></div>
+              </dl>
+              <p class="demo__result" data-sc-note aria-live="polite"></p>
+            </section>
+          </div>
+
+          <div class="callout callout--demo demo__foot">
+            <div><strong>Illustration only.</strong> No proof is generated here. A real proof depends on a credential the issuer sealed in advance: a number typed in by the holder is never accepted as evidence, and this demo issuer is not exchange verification.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================== F. RESTRICTED VAULT INTRODUCTION ================== -->
+    <section class="section vault" id="vault-intro" data-tone="vault" aria-labelledby="vault-title">
+      <div class="container vault__grid">
+        <div class="vault__copy stack stack--lg">
+          <h2 id="vault-title">A vault that checks proofs, not balances.</h2>
+          <p class="lead">A smart contract decides who may enter. A valid proof is the key; the number behind it stays private.</p>
+
+          <div class="checks">
+            <h3 class="checks__title">What the contract is designed to check, in one transaction</h3>
+            <ul class="dash-list dash-list--gold">
+              <li>The sender is the wallet the proof was made for</li>
+              <li>The commitment is active: from a trusted issuer, not revoked, not expired</li>
+              <li>The policy and threshold match what the contract holds, not what the user supplies</li>
+              <li>The verifier accepts the proof</li>
+            </ul>
+            <p class="small muted">If any check fails, the transaction reverts and nothing changes.</p>
+          </div>
+
+          <p class="small muted">No deposits, no custody, no yield. The vault only records who has access.</p>
+          <div><a class="btn btn--primary" href="04-vault.html">Explore Vault</a></div>
+        </div>
+
+        <figure class="gate panel panel--ticks" data-vault-gate data-gate="locked">
+          <svg class="gate__svg" viewBox="0 0 420 380" role="img" aria-labelledby="gate-title gate-desc">
+            <title id="gate-title">Vault gate</title>
+            <desc id="gate-desc">An arched gate made of patchwork doors. The doors stay closed until a verified on-chain transaction records access. This preview follows the selected prototype scenario.</desc>
+            <defs>
+              <pattern id="gate-cloth" patternUnits="userSpaceOnUse" width="200" height="132">
+                <image href="assets/images/veil.svg" width="200" height="132"/>
+              </pattern>
+              <pattern id="gate-cloth-2" patternUnits="userSpaceOnUse" width="200" height="132" patternTransform="translate(70 46)">
+                <image href="assets/images/veil.svg" width="200" height="132"/>
+              </pattern>
+              <linearGradient id="gate-light" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#e6c36e" stop-opacity=".9"/>
+                <stop offset=".55" stop-color="#9aa5ff" stop-opacity=".35"/>
+                <stop offset="1" stop-color="#0a0e1f" stop-opacity="0"/>
+              </linearGradient>
+              <clipPath id="gate-clip"><path d="M92 340V160A118 118 0 0 1 328 160V340Z"/></clipPath>
+            </defs>
+
+            <g clip-path="url(#gate-clip)">
+              <rect x="92" y="40" width="236" height="300" fill="#070a18"/>
+              <rect class="gate__light" x="92" y="40" width="236" height="300" fill="url(#gate-light)"/>
+              <g class="gate__inside">
+                <path d="M130 340V250h160v90" fill="none" stroke="#e6c36e" stroke-opacity=".5" stroke-dasharray="3 4"/>
+                <text x="210" y="300" text-anchor="middle" class="gate__text">Access recorded</text>
+              </g>
+              <g class="gate__leaf gate__leaf--l">
+                <path d="M92 340V160A118 118 0 0 1 210 42V340Z" fill="#121839"/>
+                <path d="M92 340V160A118 118 0 0 1 210 42V340Z" fill="url(#gate-cloth)"/>
+                <path d="M92 340V160A118 118 0 0 1 210 42V340Z" fill="none" stroke="#eeebe1" stroke-opacity=".3"/>
+              </g>
+              <g class="gate__leaf gate__leaf--r">
+                <path d="M328 340V160A118 118 0 0 0 210 42V340Z" fill="#121839"/>
+                <path d="M328 340V160A118 118 0 0 0 210 42V340Z" fill="url(#gate-cloth-2)"/>
+                <path d="M328 340V160A118 118 0 0 0 210 42V340Z" fill="none" stroke="#eeebe1" stroke-opacity=".3"/>
+              </g>
+            </g>
+            <path d="M70 344V160A140 140 0 0 1 350 160V344" fill="none" stroke="#eeebe1" stroke-opacity=".5" stroke-width="1.5"/>
+            <path d="M92 340V160A118 118 0 0 1 328 160V340" fill="none" stroke="#eeebe1" stroke-opacity=".22"/>
+            <path class="gate__key" d="M192 14h36l8 26h-52z" />
+            <path d="M40 344H380" stroke="#eeebe1" stroke-opacity=".35" stroke-width="1.5"/>
+          </svg>
+
+          <figcaption class="gate__cap">
+            <ol class="gate__states" aria-label="Vault states">
+              <li data-gate-step="locked">Locked</li>
+              <li data-gate-step="eligible">Eligible</li>
+              <li data-gate-step="granted">Access granted</li>
+            </ol>
+            <p class="small muted">Preview of the selected prototype scenario: <span data-gate-chip></span></p>
+            <p class="xsmall muted">In the real build the doors open only after a confirmed on-chain transaction, never from interface state alone.</p>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ===================== G. CONTRACT TRANSPARENCY ===================== -->
+    <section class="section chain" id="contracts-intro" data-tone="neutral" aria-labelledby="chain-title">
+      <div class="container">
+        <header class="section-head">
+          <h2 id="chain-title">Every check lives on-chain.</h2>
+          <p class="lead">The vault does not trust the interface. It calls the contracts below and reverts if any check fails.</p>
+        </header>
+
+        <ol class="chain__row" data-inview>
+          <li class="node node--official">
+            <span class="node__owner">Official GIWA</span>
+            <h3>Dojang and EAS</h3>
+            <p class="mono node__code">DojangScroll, EAS</p>
+            <p class="small muted">The attestation layer. Optional input: read only when a policy requires official status, and then enforced on-chain.</p>
+            <span class="status" data-state="neutral"><i class="status__dot" aria-hidden="true"></i>Read-only integration</span>
+          </li>
+          <li class="node node--ours">
+            <span class="node__owner">Project contract</span>
+            <h3>Credential commitment</h3>
+            <p class="mono node__code">DemoCredentialRegistry</p>
+            <p class="small muted">Holds sealed commitments from authorised issuers, with expiry and revocation. No private values.</p>
+            <span class="status" data-state="neutral"><i class="status__dot" aria-hidden="true"></i>Not deployed yet</span>
+          </li>
+          <li class="node node--ours">
+            <span class="node__owner">Project contract</span>
+            <h3>ZK verifier</h3>
+            <p class="mono node__code">EligibilityVerifier</p>
+            <p class="small muted">Checks the proof against the circuit's verification key. A stub that always says yes is not allowed.</p>
+            <span class="status" data-state="neutral"><i class="status__dot" aria-hidden="true"></i>Not deployed yet</span>
+          </li>
+          <li class="node node--ours">
+            <span class="node__owner">Project contract</span>
+            <h3>Restricted vault</h3>
+            <p class="mono node__code">RestrictedVault</p>
+            <p class="small muted">Runs every check and records access in a single transaction, then emits an event.</p>
+            <span class="status" data-state="neutral"><i class="status__dot" aria-hidden="true"></i>Not deployed yet</span>
+          </li>
+        </ol>
+
+        <div class="slots" aria-label="On-chain evidence">
+          <div class="slot"><div class="slot__label">Transaction hash</div><div class="slot__value" data-empty="true">Not available yet</div><div class="slot__note">Appears after the first confirmed transaction.</div></div>
+          <div class="slot"><div class="slot__label">Contract events</div><div class="slot__value" data-empty="true">None recorded</div><div class="slot__note">VaultAccessGranted will be listed here.</div></div>
+          <div class="slot"><div class="slot__label">Source verification</div><div class="slot__value" data-empty="true">Not verified</div><div class="slot__note">Marked verified only once the explorer confirms it.</div></div>
+          <div class="slot"><div class="slot__label">Contract addresses</div><div class="slot__value" data-empty="true">Not deployed</div><div class="slot__note">No example addresses are shown.</div></div>
+        </div>
+
+        <div class="chain__cta"><a class="btn btn--secondary" href="05-contracts.html">Explore Contracts</a></div>
+      </div>
+    </section>
+
+    <!-- ======================== H. FINAL CTA ======================== -->
+    <section class="final" data-tone="neutral" aria-labelledby="final-title">
+      <div class="final__bg" aria-hidden="true"><div class="final__grid"></div></div>
+      <div class="container final__inner">
+        <h2 class="final__title" id="final-title">See what your wallet can prove.</h2>
+        <p class="lead final__lead">Check a credential with Dojang, generate a private proof, then enter the vault.</p>
+
+        <ul class="entry">
+          <li><a href="02-dojang.html"><span class="entry__name">Explore Dojang</span><span class="entry__desc">Inspect a wallet's credentials</span></a></li>
+          <li><a href="03-bojagi.html"><span class="entry__name">Generate Proof</span><span class="entry__desc">Prove eligibility privately</span></a></li>
+          <li><a href="05-contracts.html"><span class="entry__name">View Contracts</span><span class="entry__desc">Inspect the on-chain checks</span></a></li>
+          <li><a href="06-docs.html"><span class="entry__name">Read Docs</span><span class="entry__desc">Trust model and limits</span></a></li>
+        </ul>
+      </div>
+      <div class="final__band veil" aria-hidden="true"></div>
+    </section>
+
+  </main>
+
+  <footer data-component="site-footer"></footer>
+</body>
+</html>
