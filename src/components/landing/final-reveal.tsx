@@ -24,9 +24,10 @@ export function FinalReveal({ appName }: { appName: string }) {
     if (!spacer || !footer) return;
     let spacerVisible = false;
 
+    let curtain = getComputedStyle(footer).position === "fixed";
     const sync = () => {
       /* when the curtain is off (short windows, reduced motion) the footer is ordinary content */
-      const curtain = getComputedStyle(footer).position === "fixed";
+      curtain = getComputedStyle(footer).position === "fixed";
       footer.inert = curtain ? !spacerVisible : false;
     };
     const io = new IntersectionObserver((entries) => {
@@ -39,7 +40,7 @@ export function FinalReveal({ appName }: { appName: string }) {
     let raf = 0;
     const rise = () => {
       raf = 0;
-      if (getComputedStyle(footer).position !== "fixed") {
+      if (!curtain) {
         footer.style.setProperty("--fr", "1");
         return;
       }

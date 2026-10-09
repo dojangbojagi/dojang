@@ -6,7 +6,7 @@ import { GIWA_CHAIN_ID } from "@/lib/config/chain";
 import { Arrow } from "./arrow";
 import { GlyphField } from "./glyph-field";
 
-/* Phase 1 is the claim on white. The full stop after "more" is a glossy dot; scrolling
+/* Phase 1 is the claim on white. The full stop after "more" is a black dot, like the one after "less"; scrolling
    swells it into a rounded square and then into the whole screen, and phase 2, the hero,
    was inside it all along. After a short hold the hero leaves again, line by line.
 
@@ -44,72 +44,19 @@ function openness(p: number) {
 const motionQuery = () => window.matchMedia("(prefers-reduced-motion: reduce)");
 
 /* ---------------------------------------------------------------- sparks */
-/* While the opening is being scrolled, it throws off sparks from its rim. */
-type Spark = { x: number; y: number; vx: number; vy: number; life: number; max: number; r: number; c: string };
+/* While the opening is being scrolled, it throws off sparks from its rim.
+   They are a small pool of plain elements animated with the Web Animations API (transform and
+   opacity only), so the browser runs them off the main thread: no canvas, no frame loop, and
+   nothing for the scroll to wait on. */
 type Rect = { x: number; y: number; w: number; h: number };
 
-function createSparks(canvas: HTMLCanvasElement) {
-  const ctx = canvas.getContext("2d");
-  const parts: Spark[] = [];
-  const COLORS = ["#ff7a3d", "#ef5f22", "#ffb08a", "#3b86ff", "#6ba3ff"];
-  let dpr = 1;
-  let w = 0;
-  let h = 0;
-  let raf = 0;
-  let last = 0;
-
-  function resize() {
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
-    w = canvas.clientWidth;
-    h = canvas.clientHeight;
-    canvas.width = Math.round(w * dpr);
-    canvas.height = Math.round(h * dpr);
-  }
-
-  function frame(now: number) {
-    raf = 0;
-    if (!ctx) return;
-    const dt = Math.min(0.05, (now - (last || now - 16)) / 1000);
-    last = now;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, w, h);
-    ctx.lineCap = "round";
-    const drag = Math.pow(0.9, dt * 60);
-    for (let i = parts.length - 1; i >= 0; i--) {
-      const s = parts[i];
-      s.life -= dt;
-      if (s.life <= 0) {
-        parts.splice(i, 1);
-        continue;
-      }
-      s.x += s.vx * dt;
-      s.y += s.vy * dt;
-      s.vx *= drag;
-      s.vy *= drag;
-      ctx.globalAlpha = Math.pow(s.life / s.max, 1.2);
-      ctx.strokeStyle = s.c;
-      ctx.shadowColor = s.c;
-      ctx.shadowBlur = 10;
-      ctx.lineWidth = s.r;
-      ctx.beginPath();
-      ctx.moveTo(s.x - s.vx * 0.07, s.y - s.vy * 0.07);
-      ctx.lineTo(s.x, s.y);
-      ctx.stroke();
-      ctx.fillStyle = s.c;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r * 0.75, 0, 6.283);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-    ctx.shadowBlur = 0;
-    if (parts.length) raf = requestAnimationFrame(frame);
-    else last = 0;
-  }
-
+function createSparks(layer: HTMLElement) {
+  const pool = Array.from(layer.children) as HTMLElement[];
+  let next = 0;
   return {
-    resize,
     emit(rect: Rect, count: number) {
       for (let i = 0; i < count; i++) {
+        const el = pool[next++ % pool.length];
         /* a point on the perimeter, with its outward normal */
         let t = Math.random() * (2 * (rect.w + rect.h));
         let x = rect.x;
@@ -134,26 +81,23 @@ function createSparks(canvas: HTMLCanvasElement) {
           nx = -1;
           ny = 0;
         }
-        const speed = 70 + Math.random() * 230;
-        const tang = (Math.random() - 0.5) * 120;
-        const max = 0.45 + Math.random() * 0.6;
-        parts.push({
-          x,
-          y,
-          vx: nx * speed - ny * tang,
-          vy: ny * speed + nx * tang,
-          life: max,
-          max,
-          r: 1.6 + Math.random() * 2.2,
-          c: COLORS[(Math.random() * COLORS.length) | 0],
-        });
+        const dist = 36 + Math.random() * 120;
+        const side = (Math.random() - 0.5) * 70;
+        const dx = nx * dist - ny * side;
+        const dy = ny * dist + nx * side;
+        el.getAnimations().forEach((a) => a.cancel());
+        el.animate(
+          [
+            { transform: `translate3d(${x.toFixed(0)}px, ${y.toFixed(0)}px, 0) scale(1.3)`, opacity: 1, offset: 0 },
+            { opacity: 0.9, offset: 0.55 },
+            { transform: `translate3d(${(x + dx).toFixed(0)}px, ${(y + dy).toFixed(0)}px, 0) scale(0.45)`, opacity: 0, offset: 1 },
+          ],
+          { duration: 520 + Math.random() * 480, easing: "cubic-bezier(0.1, 0.75, 0.25, 1)" },
+        );
       }
-      if (parts.length > 220) parts.splice(0, parts.length - 220);
-      if (!raf) raf = requestAnimationFrame(frame);
     },
     destroy() {
-      if (raf) cancelAnimationFrame(raf);
-      parts.length = 0;
+      pool.forEach((el) => el.getAnimations().forEach((a) => a.cancel()));
     },
   };
 }
@@ -170,7 +114,7 @@ export function CoverReveal({ tagline, contractsLabel }: Props) {
   const slotRef = useRef<HTMLSpanElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
-  const sparkRef = useRef<HTMLCanvasElement>(null);
+  const sparkRef = useRef<HTMLDivElement>(null);
   const [wordA, wordB] = splitTagline(tagline);
 
   useEffect(() => {
@@ -179,16 +123,17 @@ export function CoverReveal({ tagline, contractsLabel }: Props) {
     const slot = slotRef.current;
     const box = boxRef.current;
     const hero = heroRef.current;
-    const sparkCanvas = sparkRef.current;
-    if (!cover || !stage || !slot || !box || !hero || !sparkCanvas) return;
+    const sparkLayer = sparkRef.current;
+    if (!cover || !stage || !slot || !box || !hero || !sparkLayer) return;
     const root = cover.closest<HTMLElement>(".lp");
     const motion = motionQuery();
-    const sparks = createSparks(sparkCanvas);
+    const sparks = createSparks(sparkLayer);
 
     let geo = { sw: 0, sh: 0, x: 0, y: 0, w: 0, h: 0 };
     let raf = 0;
     let last = -1;
     let lastE = 0;
+    let lastSpark = 0;
     let heroOn: boolean | null = null;
 
     const setPhase = (dark: boolean) => {
@@ -212,7 +157,9 @@ export function CoverReveal({ tagline, contractsLabel }: Props) {
         w: slot.offsetWidth,
         h: slot.offsetHeight,
       };
-      sparks.resize();
+      /* the dot never moves, so its centre is written once, not on every frame */
+      stage.style.setProperty("--ox", `${(geo.x + geo.w / 2).toFixed(1)}px`);
+      stage.style.setProperty("--oy", `${(geo.y + geo.h / 2).toFixed(1)}px`);
       last = -1;
     };
 
@@ -247,36 +194,41 @@ export function CoverReveal({ tagline, contractsLabel }: Props) {
       const bw = geo.sw - l - ri;
       const bh = geo.sh - t - b;
 
-      /* a circle while it is a dot, a soft rounded square next, square-cornered once it fills the screen */
+      /* the dot has the soft corners of the typeface's own full stop, becomes a rounded square,
+         and is square-cornered once it fills the screen */
       const half = Math.min(bw, bh) / 2;
       const toSquare = smooth(0, 0.12, e);
-      const radius = Math.min(half, (half * (1 - toSquare) + 26 * toSquare) * (1 - smooth(0.5, 1, e)));
+      const dotRadius = Math.min(bw, bh) * 0.2;
+      const radius = Math.min(half, (dotRadius * (1 - toSquare) + 26 * toSquare) * (1 - smooth(0.5, 1, e)));
 
       const s = stage.style;
-      s.setProperty("--p", p.toFixed(4));
       s.setProperty("--e", e.toFixed(4));
       s.setProperty("--c", clamp01((e - 0.6) / 0.34).toFixed(4));
       s.setProperty("--q", q.toFixed(4));
-      s.setProperty("--ct", `${t.toFixed(1)}px`);
-      s.setProperty("--cr", `${ri.toFixed(1)}px`);
-      s.setProperty("--cb", `${b.toFixed(1)}px`);
-      s.setProperty("--cl", `${l.toFixed(1)}px`);
-      s.setProperty("--crad", `${radius.toFixed(1)}px`);
+      s.setProperty("--clip", `inset(${t.toFixed(1)}px ${ri.toFixed(1)}px ${b.toFixed(1)}px ${l.toFixed(1)}px round ${radius.toFixed(1)}px)`);
       s.setProperty("--bx", `${l.toFixed(1)}px`);
       s.setProperty("--by", `${t.toFixed(1)}px`);
       s.setProperty("--bw", `${bw.toFixed(1)}px`);
       s.setProperty("--bh", `${bh.toFixed(1)}px`);
-      s.setProperty("--ox", `${(geo.x + geo.w / 2).toFixed(1)}px`);
-      s.setProperty("--oy", `${(geo.y + geo.h / 2).toFixed(1)}px`);
+      s.setProperty("--crad", `${radius.toFixed(1)}px`);
+
+      /* the glyph field only draws while the hero is mostly open */
+      const live = e > 0.45 ? "1" : "0";
+      if (box.dataset.live !== live) {
+        box.dataset.live = live;
+        box.dispatchEvent(new Event("lp-live"));
+      }
 
       setHero(e > 0.6 && q < 0.9);
       setPhase(t < NAV_H * 0.8 && b < 96);
 
       /* sparks leave the rim while the opening is being scrolled, in either direction */
       const moved = Math.abs(e - lastE);
-      lastE = e;
-      if (moved > 0.0003 && e > 0.003 && e < 0.985) {
-        sparks.emit({ x: l, y: t, w: bw, h: bh }, Math.min(22, Math.ceil(moved * 900)));
+      const now = performance.now();
+      if (moved > 0.002 && e > 0.003 && e < 0.985 && now - lastSpark > 55) {
+        lastE = e;
+        lastSpark = now;
+        sparks.emit({ x: l, y: t, w: bw, h: bh }, Math.min(5, Math.ceil(moved * 110)));
       }
     };
 
@@ -375,13 +327,12 @@ export function CoverReveal({ tagline, contractsLabel }: Props) {
 
           <p className="lp-pointer-hint" aria-hidden="true">Move the pointer · seal the data</p>
           <div className="lp-veil-cover" aria-hidden="true" />
-          <div className="lp-orb" aria-hidden="true" />
+          <div className="lp-dot" aria-hidden="true" />
         </div>
-        <i className="lp-ping" aria-hidden="true" />
-        <div className="lp-echo lp-echo--2" aria-hidden="true" />
-        <div className="lp-echo lp-echo--1" aria-hidden="true" />
         <div className="lp-outline" aria-hidden="true" />
-        <canvas className="lp-sparks" ref={sparkRef} aria-hidden="true" />
+        <div className="lp-sparks" ref={sparkRef} aria-hidden="true">
+          {Array.from({ length: 48 }, (_, i) => <i key={i} />)}
+        </div>
 
         {/* ---- Always present, light then dark ---- */}
         <div className="lp-marq">

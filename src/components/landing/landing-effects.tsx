@@ -35,7 +35,14 @@ export function LandingEffects() {
     );
     root.querySelectorAll<HTMLElement>("[data-lp-reveal], [data-lp-rail]").forEach((el) => io.observe(el));
 
-    const onMove = (ev: PointerEvent) => {
+    /* pointer moves are handled once per frame, so no layout is read more often than it is painted */
+    let pending: PointerEvent | null = null;
+    let raf = 0;
+    const process = () => {
+      raf = 0;
+      const ev = pending;
+      pending = null;
+      if (!ev) return;
       const target = ev.target as Element | null;
       const card = target?.closest<HTMLElement>("[data-spot]");
       if (card) {
@@ -53,6 +60,10 @@ export function LandingEffects() {
         btn.style.setProperty("--ty", `${(dy * 7).toFixed(1)}px`);
       }
     };
+    const onMove = (ev: PointerEvent) => {
+      pending = ev;
+      if (!raf) raf = requestAnimationFrame(process);
+    };
     const onOut = (ev: PointerEvent) => {
       const btn = (ev.target as Element | null)?.closest<HTMLElement>(".lp-btn, .lp-nav .lp-pill");
       if (!btn || (ev.relatedTarget instanceof Node && btn.contains(ev.relatedTarget))) return;
@@ -63,6 +74,7 @@ export function LandingEffects() {
     root.addEventListener("pointerout", onOut, { passive: true });
 
     return () => {
+      if (raf) cancelAnimationFrame(raf);
       io.disconnect();
       root.removeEventListener("pointermove", onMove);
       root.removeEventListener("pointerout", onOut);

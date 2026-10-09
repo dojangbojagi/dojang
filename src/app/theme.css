@@ -37,7 +37,7 @@
   --periwinkle-deep: #a83e12;
   --gold: #ef5f22;
   --gold-deep: #a83e12;
-  --gold-ink: #0a0c12;
+  --gold-ink: #ffffff; /* the label on an orange button is white */
 
   --state-valid: #5b9bff;
   --state-pending: #8fb4ff;
@@ -226,7 +226,7 @@ h4 { font-weight: 600; }
 .btn:hover { transform: translateY(-2px); }
 .btn:active { transform: translateY(0) scale(0.98); }
 .btn--sm { min-height: 2.6rem; padding: 0.6rem 1.15rem; font-size: 0.7rem; }
-.btn--primary { background: var(--gold); color: var(--gold-ink); }
+.btn--primary { background: var(--gold); color: var(--gold-ink); text-shadow: 0 1px 2px rgba(120, 35, 5, 0.4); }
 .btn--primary:hover { background: #ff7a3d; box-shadow: 0 14px 36px -10px rgba(239, 95, 34, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.35); }
 .btn--secondary { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.24); color: var(--text); }
 .btn--secondary:hover {
@@ -236,14 +236,14 @@ h4 { font-weight: 600; }
 .btn--ghost:hover { background: rgba(255, 255, 255, 0.07); }
 
 /* the wallet button is the landing's orange pill; its state still decides the colour */
-.btn--wallet { background: var(--gold); border-color: transparent; color: var(--gold-ink); }
+.btn--wallet { background: var(--gold); border-color: transparent; color: var(--gold-ink); text-shadow: 0 1px 2px rgba(120, 35, 5, 0.4); }
 .btn--wallet:hover { background: #ff7a3d; border-color: transparent; box-shadow: 0 12px 30px -8px rgba(239, 95, 34, 0.7); }
-.btn--wallet[data-wallet="connected"] { background: rgba(255, 255, 255, 0.08); border-color: var(--line-strong); color: #fff; }
+.btn--wallet[data-wallet="connected"] { background: rgba(255, 255, 255, 0.08); border-color: var(--line-strong); color: #fff; text-shadow: none; }
 .btn--wallet[data-wallet="connected"]:hover { background: rgba(255, 255, 255, 0.14); box-shadow: none; }
 .btn--wallet[data-wallet="connected"] .btn__dot { background: var(--celadon); box-shadow: 0 0 0 3px rgba(59, 134, 255, 0.25); }
-.btn--wallet[data-wallet="wrong-network"] { background: transparent; border-color: var(--gold); color: var(--gold); }
+.btn--wallet[data-wallet="wrong-network"] { background: transparent; border-color: var(--gold); color: var(--gold); text-shadow: none; }
 .btn--wallet[data-wallet="wrong-network"]:hover { background: rgba(239, 95, 34, 0.12); box-shadow: none; }
-.btn--wallet[data-wallet="connecting"] { background: rgba(255, 255, 255, 0.06); border-color: var(--line-strong); color: var(--text-muted); }
+.btn--wallet[data-wallet="connecting"] { background: rgba(255, 255, 255, 0.06); border-color: var(--line-strong); color: var(--text-muted); text-shadow: none; }
 .btn--wallet .btn__dot { display: none; }
 .btn--wallet[data-wallet="connected"] .btn__dot,
 .btn--wallet[data-wallet="connecting"] .btn__dot { display: inline-block; }

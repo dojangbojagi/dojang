@@ -87,6 +87,8 @@ export function GlyphField() {
     let frameId = 0;
     let raf = 0;
     let inView = true;
+    let scrolling = false; /* the canvas rests while the page is being scrolled */
+    let scrollTimer = 0;
     let ready = false;
     let lastNow = 0;
     let lastDraw = 0;
@@ -108,7 +110,7 @@ export function GlyphField() {
       if (w < 2 || h < 2) return;
       cw = w;
       chh = h;
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      dpr = Math.min(window.devicePixelRatio || 1, 1.5); /* a retina canvas at 2x is four times the pixels for glyphs this small */
       const compact = cw < 760;
       cellW = compact ? 13 : 16;
       cellH = Math.round(cellW * 1.38);
@@ -371,9 +373,11 @@ export function GlyphField() {
       fctx!.globalAlpha = 1;
     }
 
+    const opened = () => host.dataset.live !== "0"; /* the opening is still too small to show the field */
+
     function frame(now: number) {
       raf = 0;
-      if (!ready || !inView || document.hidden) return;
+      if (!ready || !inView || document.hidden || scrolling || !opened()) return;
       const dt = Math.min(0.05, Math.max(0.001, (now - (lastNow || now - 16)) / 1000));
       lastNow = now;
 
@@ -386,8 +390,8 @@ export function GlyphField() {
       }
 
       updatePointer(dt);
-      /* idle: ~15 fps is plenty for the breathing cells; pointer activity runs at full rate */
-      if (active.size > 0 || ptr.on || now - lastDraw > 66) {
+      /* idle: ~12 fps is plenty for the breathing cells; pointer activity runs at full rate */
+      if (active.size > 0 || ptr.on || now - lastDraw > 83) {
         drawFx(now);
         lastDraw = now;
       }
@@ -395,7 +399,7 @@ export function GlyphField() {
     }
 
     function schedule() {
-      if (reduce || raf || !ready || !inView || document.hidden) return;
+      if (reduce || raf || !ready || !inView || document.hidden || scrolling || !opened()) return;
       raf = requestAnimationFrame(frame);
     }
 
@@ -415,6 +419,19 @@ export function GlyphField() {
       ptr.on = false;
       schedule();
     }
+
+    /* Scrolling is the one moment the page cannot spare any GPU time, so the field stops drawing
+       until the scroll has been still for a moment. The twinkle pauses for it; nobody sees that. */
+    function onScroll() {
+      scrolling = true;
+      window.clearTimeout(scrollTimer);
+      scrollTimer = window.setTimeout(() => {
+        scrolling = false;
+        schedule();
+      }, 160);
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    host.addEventListener("lp-live", schedule);
 
     host.addEventListener("pointermove", onMove);
     host.addEventListener("pointerleave", onLeave);
@@ -466,6 +483,9 @@ export function GlyphField() {
       io.disconnect();
       ro.disconnect();
       document.removeEventListener("visibilitychange", onVisibility);
+      window.clearTimeout(scrollTimer);
+      window.removeEventListener("scroll", onScroll);
+      host.removeEventListener("lp-live", schedule);
       host.removeEventListener("pointermove", onMove);
       host.removeEventListener("pointerleave", onLeave);
     };

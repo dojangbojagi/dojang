@@ -16,9 +16,7 @@
        --e  how far the opening has grown (a dot, then a rounded square, then the screen)
        --c  how far the hero copy has come in (starts once the opening nearly fills the screen)
        --q  how far the hero copy has left again (after a short hold)
-       --p  raw progress of the opening (kept for debugging)
-     plus the clip insets of the opening (--ct --cr --cb --cl --crad) and its rectangle
-     (--bx --by --bw --bh). All motion below is CSS reading those values, so it also
+     plus the clip of the opening (--clip) and its rectangle (--bx --by --bw --bh --crad). All motion below is CSS reading those values, so it also
      runs in reverse when the visitor scrolls back up.
      With prefers-reduced-motion the two phases simply stack.
    ========================================================================== */
@@ -69,7 +67,7 @@
 
 .lp-skip {
   position: fixed; left: 1rem; top: 1rem; z-index: 200;
-  padding: .7rem 1rem; border-radius: 10px; background: var(--lp-orange); color: var(--lp-ink) !important;
+  padding: .7rem 1rem; border-radius: 10px; background: var(--lp-orange); color: #fff !important;
   font: 600 .85rem/1 var(--lp-font-display); transform: translateY(-200%);
 }
 .lp-skip:focus { transform: none; }
@@ -182,17 +180,17 @@
 .lp .lp-pill {
   display: inline-flex; align-items: center; gap: .55rem; height: 2.9rem; padding: 0 1.35rem;
   border: 1px solid transparent; border-radius: 999px;
-  background: var(--lp-orange); color: var(--lp-ink);
+  background: var(--lp-orange); color: #fff; text-shadow: 0 1px 2px rgba(120, 35, 5, .4);
   font: 700 .74rem/1 var(--lp-font-display); letter-spacing: .07em; text-transform: uppercase; white-space: nowrap;
   transition: background-color .2s ease, box-shadow .3s ease, color .2s ease, border-color .2s ease, transform .25s var(--lp-ease), scale .2s ease;
 }
 .lp .lp-pill:hover { background: var(--lp-orange-hi); box-shadow: 0 12px 30px -8px rgba(239, 95, 34, .7); }
-.lp .lp-pill--ok { background: var(--lp-ink); color: #fff; border-color: transparent; }
+.lp .lp-pill--ok { background: var(--lp-ink); color: #fff; border-color: transparent; text-shadow: none; }
 .lp[data-phase="dark"] .lp-pill--ok { background: rgba(255, 255, 255, .08); border-color: var(--lp-line-2); }
 .lp .lp-pill--ok:hover { background: #1a1f2e; box-shadow: none; }
 .lp[data-phase="dark"] .lp-pill--ok:hover { background: rgba(255, 255, 255, .14); }
 .lp-pill--ok i { width: .5rem; height: .5rem; border-radius: 50%; background: var(--lp-blue); box-shadow: 0 0 0 3px rgba(59, 134, 255, .25); }
-.lp .lp-pill--warn { background: transparent; color: var(--lp-orange); border-color: var(--lp-orange); }
+.lp .lp-pill--warn { background: transparent; color: var(--lp-orange); border-color: var(--lp-orange); text-shadow: none; }
 .lp .lp-pill--warn:hover { background: rgba(239, 95, 34, .12); box-shadow: none; }
 .lp-pill__short { display: none; }
 .lp-wallet[data-pending="true"] { opacity: 0; pointer-events: none; user-select: none; }
@@ -254,7 +252,7 @@
 /* ============================ COVER ===================================== */
 .lp-cover { position: relative; height: calc(100svh + var(--lp-run)); }
 .lp-stage {
-  --p: 0; --e: 0; --c: 0; --q: 0;
+  --e: 0; --c: 0; --q: 0;
   position: sticky; top: 0; height: 100svh;
   overflow: clip;
   background: var(--lp-white);
@@ -283,10 +281,7 @@
   transform: translate(calc(var(--e) * var(--push-x, -34vw) * -1), calc(var(--e) * var(--push-y, 0px) * -1));
 }
 /* Reserves the dot's place. The real dot is .lp-box, clipped to exactly this rectangle. */
-.lp-slot {
-  flex: none; width: .26em; height: .26em; border-radius: 50%;
-  background: radial-gradient(circle at 32% 28%, #ffc0a0, #ff7a3d 24%, #ef5f22 50%, #a8340a);
-}
+.lp-slot { flex: none; width: .26em; height: .26em; border-radius: 22%; background: #0a0c12; }
 .lp-sub {
   max-width: 54ch;
   font-size: clamp(1rem, .92rem + .45vw, 1.28rem); line-height: 1.55; color: var(--lp-ink-soft);
@@ -310,54 +305,45 @@
 .lp-box {
   position: absolute; inset: 0; z-index: 2;
   background: var(--lp-bg); color: var(--lp-text);
-  clip-path: inset(var(--ct, 50%) var(--cr, 50%) var(--cb, 50%) var(--cl, 50%) round var(--crad, 0px));
+  clip-path: var(--clip, inset(50% 50% 50% 50%));
   will-change: clip-path;
 }
-.lp-box::after { /* faint light that follows the pointer */
-  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
-  background: radial-gradient(520px 420px at var(--mx, 62%) var(--my, 42%), rgba(59, 134, 255, .13), transparent 70%);
+.lp-box { --mx: 62vw; --my: 42svh; }
+.lp-box::after { /* faint light that follows the pointer; it is moved, not repainted */
+  content: ""; position: absolute; left: 0; top: 0; width: 760px; height: 620px; z-index: 1; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(59, 134, 255, .14), transparent);
+  transform: translate3d(calc(var(--mx) - 380px), calc(var(--my) - 310px), 0); will-change: transform;
 }
-/* The dot is a glossy orange bead; it turns into patchwork cloth, which dissolves into the hero */
-.lp-orb {
+/* The dot is plain black, like the full stop it replaces; it turns into patchwork cloth, which dissolves into the hero */
+.lp-dot {
   position: absolute; inset: 0; z-index: 5; pointer-events: none;
-  background: radial-gradient(circle calc(var(--bw, 20px) * .95) at calc(var(--bx, 0px) + var(--bw, 20px) * .32) calc(var(--by, 0px) + var(--bh, 20px) * .26), #ffc9ac 0%, #ff7a3d 22%, #ef5f22 50%, #a8340a 100%);
-  opacity: calc(1 - var(--e) * 8);
+  background: #0a0c12; opacity: calc(1.25 - var(--e) * 10);
 }
 .lp-veil-cover {
-  position: absolute; inset: 0; z-index: 4; pointer-events: none;
+  position: absolute; inset: 0; z-index: 4; pointer-events: none; will-change: opacity;
   background: #0a0f1c var(--lp-veil) 0 0 / 150px 98px;
   opacity: calc(min(1, var(--e) * 9) * (1.1 - var(--e) * 1.25));
 }
-/* Depth: a lit rim, two echoes of the frame, and a ripple while it is still a dot */
-.lp-outline, .lp-echo, .lp-ping {
-  position: absolute; pointer-events: none;
+/* A lit rim once it is a square, like light on glass. No shadows or halos: they are costly to repaint as it grows. */
+.lp-outline {
+  position: absolute; z-index: 5; pointer-events: none;
   left: var(--bx, 50%); top: var(--by, 50%); width: var(--bw, 0px); height: var(--bh, 0px);
   border-radius: var(--crad, 0px);
+  opacity: calc(min(1, max(0, (var(--e) - .035) * 14)) * (1 - var(--e) * 1.15));
 }
-.lp-outline {
-  z-index: 5; opacity: calc(1 - var(--e) * 1.15);
-  box-shadow: 0 0 46px -10px rgba(59, 134, 255, .6), 0 0 80px -24px rgba(239, 95, 34, .55), 0 44px 80px -34px rgba(6, 9, 18, .55);
-}
-.lp-outline::before { /* the rim: bright on the upper left, orange on the lower right, like light on glass */
+.lp-outline::before {
   content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1.5px;
   background: linear-gradient(135deg, #a9c8ff 0%, rgba(255, 255, 255, .85) 14%, #3b86ff 42%, #ef5f22 78%, #ffb08a 100%);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor; mask-composite: exclude;
 }
-.lp-echo { z-index: 4; border: 1px solid rgba(59, 134, 255, .45); }
-.lp-echo--1 {
-  left: calc(var(--bx, 50%) - 14px); top: calc(var(--by, 50%) - 14px);
-  width: calc(var(--bw, 0px) + 28px); height: calc(var(--bh, 0px) + 28px);
-  border-radius: calc(var(--crad, 0px) + 14px); opacity: calc((1 - var(--e) * 1.5) * .85);
-}
-.lp-echo--2 {
-  left: calc(var(--bx, 50%) - 32px); top: calc(var(--by, 50%) - 32px);
-  width: calc(var(--bw, 0px) + 64px); height: calc(var(--bh, 0px) + 64px);
-  border-radius: calc(var(--crad, 0px) + 32px); border-color: rgba(239, 95, 34, .4); opacity: calc((1 - var(--e) * 2) * .6);
-}
-.lp-ping { z-index: 5; border-radius: 50%; opacity: calc(1 - var(--e) * 40); animation: lp-ping 2.4s ease-out infinite; }
-@keyframes lp-ping { 0% { box-shadow: 0 0 0 0 rgba(239, 95, 34, .55); } 80%, 100% { box-shadow: 0 0 0 1.1em rgba(239, 95, 34, 0); } }
-.lp-sparks { position: absolute; inset: 0; z-index: 7; width: 100%; height: 100%; pointer-events: none; }
+/* Sparks: a pool of small elements animated by the compositor (see cover-reveal.tsx) */
+.lp-sparks { position: absolute; inset: 0; z-index: 7; pointer-events: none; overflow: clip; }
+/* the glow is a static shadow: painted once per element, then only moved, never repainted */
+.lp-sparks i { position: absolute; left: 0; top: 0; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 50%; background: #ff7a3d; box-shadow: 0 0 7px 1px rgba(255, 122, 61, .75); opacity: 0; will-change: transform, opacity; }
+.lp-sparks i:nth-child(3n + 2) { background: #ef5f22; box-shadow: 0 0 7px 1px rgba(239, 95, 34, .75); }
+.lp-sparks i:nth-child(3n) { background: #3b86ff; box-shadow: 0 0 7px 1px rgba(59, 134, 255, .8); }
+.lp-sparks i:nth-child(7n) { background: #6ba3ff; box-shadow: 0 0 7px 1px rgba(107, 163, 255, .8); }
 
 /* The field of public characters, zooming out from the middle of the opening */
 .lp-field {
@@ -445,7 +431,7 @@
 }
 .lp-btn svg { transition: transform .35s var(--lp-ease); }
 .lp-btn:hover svg { transform: translateX(4px); }
-.lp .lp-btn--primary { background: var(--lp-orange); color: var(--lp-ink) !important; }
+.lp .lp-btn--primary { background: var(--lp-orange); color: #fff !important; text-shadow: 0 1px 2px rgba(120, 35, 5, .4); }
 .lp .lp-btn--primary:hover { background: var(--lp-orange-hi); box-shadow: 0 14px 38px -10px rgba(239, 95, 34, .8), inset 0 1px 0 rgba(255, 255, 255, .35); }
 .lp .lp-btn--ghost { color: #fff; border-color: rgba(255, 255, 255, .28); background: rgba(255, 255, 255, .04); }
 .lp .lp-btn--ghost:hover {
@@ -695,7 +681,7 @@
   font: 500 .9rem/1 var(--lp-font-mono); box-shadow: 0 0 0 7px var(--lp-bg);
   transition: background-color .35s ease, color .35s ease, box-shadow .45s ease, transform .5s cubic-bezier(.34, 1.56, .64, 1);
 }
-.lp-step:hover .lp-step__node { background: var(--ac); color: var(--lp-ink); transform: scale(1.12); box-shadow: 0 0 0 7px var(--lp-bg), 0 0 34px -4px var(--ac); }
+.lp-step:hover .lp-step__node { background: var(--ac); color: #fff; transform: scale(1.12); box-shadow: 0 0 0 7px var(--lp-bg), 0 0 34px -4px var(--ac); }
 .lp-step__where { font: 500 .7rem/1 var(--lp-font-mono); letter-spacing: .16em; text-transform: uppercase; color: var(--ac); }
 .lp-step h3 { margin-top: .8rem; font: 700 clamp(1.25rem, 1rem + .7vw, 1.65rem) / 1.15 var(--lp-font-display); letter-spacing: -.01em; }
 .lp-step > p { margin-top: .8rem; color: var(--lp-muted); font-size: .97rem; }
@@ -727,7 +713,7 @@
   transition: background-color .3s ease, border-color .3s ease, color .3s ease, transform .5s var(--lp-ease);
 }
 .lp-route__arrow svg { transition: transform .5s var(--lp-ease); }
-.lp-route:hover .lp-route__arrow { background: var(--rc); border-color: var(--rc); color: var(--lp-ink); transform: scale(1.1); }
+.lp-route:hover .lp-route__arrow { background: var(--rc); border-color: var(--rc); color: #fff; transform: scale(1.1); }
 .lp-route:hover .lp-route__arrow svg { transform: translateX(2px) rotate(-45deg); }
 
 /* ---- Status strip ---- */
@@ -839,7 +825,7 @@
   .lp-word, .lp-word--b, .lp-sub, .lp-hint { transform: none; opacity: 1; }
   .lp-box { position: relative; clip-path: none; min-height: 100svh; }
   .lp-field { transform: none; opacity: 1; }
-  .lp-veil-cover, .lp-orb, .lp-outline, .lp-echo, .lp-ping, .lp-sparks, .lp-hint { display: none; }
+  .lp-veil-cover, .lp-dot, .lp-outline, .lp-sparks, .lp-hint { display: none; }
   .lp-hero { min-height: 100svh; height: auto; }
   .lp-pointer-hint { opacity: 1; }
   .lp-marq { position: relative; background: var(--lp-bg); color: var(--lp-muted); border-top-color: rgba(255, 255, 255, .07); }

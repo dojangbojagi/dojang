@@ -28,6 +28,7 @@ export function IdeaScene() {
     if (!run) return;
     const pinned = window.matchMedia(PIN_QUERY);
     let raf = 0;
+    let lastP = -1;
 
     const update = () => {
       raf = 0;
@@ -38,7 +39,10 @@ export function IdeaScene() {
       const r = run.getBoundingClientRect();
       const travel = r.height - window.innerHeight;
       const p = travel > 0 ? Math.min(1, Math.max(0, -r.top / travel)) : 0;
-      run.style.setProperty("--ip", p.toFixed(4));
+      if (Math.abs(p - lastP) > 0.002) {
+        lastP = p;
+        run.style.setProperty("--ip", p.toFixed(3));
+      }
       /* hysteresis, so the card does not flicker when the scroll rests on a boundary */
       setState((prev) => {
         let s = prev;
