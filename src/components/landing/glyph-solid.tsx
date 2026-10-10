@@ -32,7 +32,7 @@ const CORE = 216; /* 6 faces x 36: the sealed core of state 2; the other 270 poi
 const PALETTE: readonly (readonly [number, number, number])[] = [
   [250, 247, 248], /* 0 public, white */
   [205, 196, 200], /* 1 public, silver */
-  [190, 26, 56], /* 2 private, ruby (burgundy lit up so it reads on black) */
+  [196, 30, 58], /* 2 private, ruby (burgundy lit up so it reads on black) */
   [168, 157, 161], /* 3 sealed, warm grey (drawn as a small closed cell, not as a character) */
   [206, 38, 66], /* 4 bright garnet, a rare accent */
 ];

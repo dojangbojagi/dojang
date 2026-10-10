@@ -34,7 +34,7 @@ const RING_N = 330; /* characters per ring of the gyro; the last 330 are its cor
 const PALETTE: readonly (readonly [number, number, number])[] = [
   [250, 247, 248], /* 0 white (public) */
   [205, 196, 200], /* 1 silver (public) */
-  [190, 26, 56], /* 2 wine red: burgundy lit up so it reads on black (private) */
+  [196, 30, 58], /* 2 wine red: burgundy lit up so it reads on black (private) */
   [138, 16, 44], /* 3 burgundy, for depth */
   [206, 38, 66], /* 4 bright garnet, a rare fleck */
 ];

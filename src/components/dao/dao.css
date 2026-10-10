@@ -6,7 +6,7 @@
 .dao-notice__title { margin: 0 0 var(--space-2); font-family: var(--font-display); font-size: 1rem; font-weight: 700; letter-spacing: -.01em; color: var(--text); text-transform: none; }
 .dao-notice__list { display: grid; gap: .45rem; margin: 0 0 var(--space-3); padding: 0; list-style: none; }
 .dao-notice__list li { position: relative; padding-left: 1.05rem; font-size: var(--fs-sm); line-height: 1.5; }
-.dao-notice__list li::before { content: ""; position: absolute; left: 0; top: .62em; width: .42rem; height: .42rem; border-radius: 1px; background: var(--state-warn); transform: rotate(45deg); }
+.dao-notice__list li::before { content: ""; position: absolute; left: 0; top: .62em; width: .42rem; height: .42rem; border-radius: 1px; background: var(--gold); transform: rotate(45deg); }
 .dao-notice__list strong { color: var(--text); font-weight: 600; }
 
 .dao-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-5); }
