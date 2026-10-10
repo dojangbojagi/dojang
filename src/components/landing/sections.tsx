@@ -4,12 +4,12 @@ import { Arrow } from "./arrow";
 
 /* Story sections between the hero and the curtain footer (01, the idea, is the sticky scene in idea-scene.tsx).
    Copy follows the prototype (docs/01-home.html): no invented numbers, no
-   claims the protocol does not make. Champagne always means public / on-chain,
-   lime always means private / on your device. */
+   claims the protocol does not make. White always means public / on-chain,
+   burgundy always means private / on your device. */
 
 function Eyebrow({ n, children, ac }: { n: string; children: string; ac?: "blue" | "orange" }) {
   return (
-    <p className="lp-eyebrow" data-lp-reveal style={{ ["--ac" as string]: ac === "blue" ? "var(--lp-champagne)" : "var(--lp-lime)" }}>
+    <p className="lp-eyebrow" data-lp-reveal style={{ ["--ac" as string]: ac === "blue" ? "var(--lp-public)" : "var(--lp-rose)" }}>
       <i aria-hidden="true" />
       {n} — {children}
     </p>
@@ -95,7 +95,7 @@ export function PathSection() {
 
 /* ----------------------------------------------------------------- 03 */
 /* The two ways through the product, each two pages long. A starts from what GIWA already trusts (public,
-   champagne) and ends in a decision; B starts from a private fact (lime) and ends in an action. The vault is a
+   white) and ends in a decision; B starts from a private fact (burgundy) and ends in an action. The vault is a
    technical primitive, so it sits in the secondary row, not in either journey. */
 const JOURNEYS = [
   {

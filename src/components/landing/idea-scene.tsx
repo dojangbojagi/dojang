@@ -28,9 +28,9 @@ const STATES = [
 const CAPTION = "What a verifier sees about the same fact. An illustration, not real data.";
 const IDEA_SHAPES: readonly ShapeId[] = ["sphere", "cube", "seal"];
 const SOLID_LABEL = [
-  "A sphere of readable characters with a few lime ones among them: the private value, exposed.",
+  "A sphere of readable characters with a few burgundy ones among them: the private value, exposed.",
   "A closed cube of sealed grey cells: the value is hidden, but nothing can check it.",
-  "A lime core that stays sealed, inside a champagne ring: the public proof the chain can check.",
+  "A burgundy core that stays sealed, inside a white ring: the public proof the chain can check.",
 ] as const;
 const PIN_QUERY = "(min-width: 1024px) and (min-height: 680px)"; /* keep in sync with landing.css */
 const BANDS = [0.33, 0.66];
@@ -139,7 +139,7 @@ export function IdeaScene() {
       <div className="lp-idea-pin">
         <div className="lp-wrap lp-idea" data-live={live ? "1" : "0"} inert={!live}>
           <div className="lp-idea__copy">
-            <p className="lp-eyebrow lp-ie" style={{ ["--ac" as string]: "var(--lp-champagne)" }}>
+            <p className="lp-eyebrow lp-ie" style={{ ["--ac" as string]: "var(--lp-public)" }}>
               <i aria-hidden="true" />
               01 — The idea
             </p>

@@ -10,7 +10,7 @@ export default function BojagiPage() {
       tone="bojagi"
       accent="periwinkle"
       status="Private eligibility · browser proof"
-      glyph={{ shape: "seal", label: "A lime core sealed inside a champagne ring: the value stays private and the proof is public.", caption: "Value sealed · proof public", legend: ["private", "public"] }}
+      glyph={{ shape: "seal", label: "A burgundy core sealed inside a white ring: the value stays private and the proof is public.", caption: "Value sealed · proof public", legend: ["private", "public"] }}
       title="Prove it without showing it."
       lead="Your device checks the issuer-backed witness against the current on-chain commitment, then proves that it meets the policy. The exact value stays hidden; the wallet and proof remain public."
     >

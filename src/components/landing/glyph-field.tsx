@@ -6,9 +6,9 @@ import { useEffect, useRef } from "react";
    in 3D on the right of the headline (behind it on narrow screens). It has two forms and the scroll decides
    which one you see:
 
-     A  "Knot"   a woven tube of characters in champagne and ivory, with a few lime flecks: verified,
+     A  "Knot"   a woven tube of white and silver characters, with a few ruby flecks: verified,
                  public state (Dojang -> DAO). It is what the hero opens on.
-     B  "Gyro"   three tilting rings around a lime core: the private proof and the action it unlocks
+     B  "Gyro"   three tilting rings around a ruby core: the private proof and the action it unlocks
                  (Bojagi -> Lending). The knot unspools into it while the camera pushes in.
 
    The scroll is not touched by any of this. cover-reveal.tsx already writes how far the camera has
@@ -31,11 +31,11 @@ const SIDE = 12; /* characters around its tube at each step */
 const COUNT = SEG * SIDE; /* 1320, shared by both forms: the knot's points become the gyro's */
 const RING_N = 330; /* characters per ring of the gyro; the last 330 are its core */
 const PALETTE: readonly (readonly [number, number, number])[] = [
-  [252, 248, 236], /* 0 ivory */
-  [234, 220, 182], /* 1 champagne (public) */
-  [200, 255, 106], /* 2 lime (private) */
-  [176, 156, 108], /* 3 bronze, for depth */
-  [233, 255, 184], /* 4 pale lime, a rare accent */
+  [250, 247, 248], /* 0 white (public) */
+  [205, 196, 200], /* 1 silver (public) */
+  [224, 64, 95], /* 2 ruby: burgundy lit up so it reads on black (private) */
+  [150, 22, 52], /* 3 burgundy, for depth */
+  [243, 166, 182], /* 4 pale rose, a rare fleck */
 ];
 const FRAME_MS = 40; /* ~25 frames a second while it drifts; the turn is slow, so it still looks smooth */
 const Q_GONE = 0.8; /* the zoom has faded the field out completely by here (see .lp-field), so there is nothing to draw */
@@ -128,10 +128,10 @@ function buildModel(): Model {
   const palA = new Uint8Array(COUNT);
   const palB = new Uint8Array(COUNT);
   for (let i = 0; i < COUNT; i++) {
-    palA[i] = rnd(i * 3) > 0.94 ? 2 : rnd(i * 5 + 1) > 0.5 ? 0 : 1;
+    palA[i] = rnd(i * 3) > 0.94 ? 2 : rnd(i * 5 + 1) > 0.55 ? 1 : 0;
     const g = (i / RING_N) | 0;
     const v = rnd(i * 7 + 2);
-    palB[i] = g === 0 ? (v > 0.2 ? 1 : 0) : g === 1 ? (v > 0.9 ? 4 : 2) : g === 2 ? (v > 0.45 ? 3 : 1) : v > 0.2 ? 2 : 4;
+    palB[i] = g === 0 ? (v > 0.2 ? 0 : 1) : g === 1 ? (v > 0.9 ? 4 : 2) : g === 2 ? (v > 0.45 ? 3 : 1) : v > 0.2 ? 2 : 4;
   }
 
   /* Pair the points by where they are, not by their number: both forms are sorted by azimuth around the
@@ -380,7 +380,9 @@ export function GlyphField() {
         const s = CAMERA / (CAMERA - sz[i]);
         const dw = base * s * (0.62 + 0.5 * dz);
         ctx.globalAlpha = K * (0.2 + 0.8 * Math.pow(dz, 1.25));
-        ctx.drawImage(atlas, M.glyph[i] * cs, sc[i] * cs, cs, cs, sx[i] - dw / 2, sy[i] - dw / 2, dw, dw);
+        /* the far side of the form falls into burgundy, like silk in shadow; ruby and rose flecks keep their colour */
+        const col = sc[i] <= 1 && dz < 0.36 ? 3 : sc[i];
+        ctx.drawImage(atlas, M.glyph[i] * cs, col * cs, cs, cs, sx[i] - dw / 2, sy[i] - dw / 2, dw, dw);
       }
       ctx.globalAlpha = 1;
     }
