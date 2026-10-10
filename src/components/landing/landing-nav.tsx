@@ -8,6 +8,7 @@ import { BrandMark } from "@/components/brand-mark";
 /* Same destinations as the app header. Light over the white cover, dark glass after it. */
 const LINKS = [
   ["Dojang", "/dojang"],
+  ["DAO", "/dao"],
   ["Bojagi", "/bojagi"],
   ["Vault", "/vault"],
   ["Lending", "/lending"],
@@ -94,7 +95,7 @@ export function LandingNav({ appName }: { appName: string }) {
         >
           <i className="lp-bead" aria-hidden="true" />
           {LINKS.map(([label, href]) => (
-            <Link href={href} key={href}>{label}</Link>
+            <Link href={href} key={href} data-flagship={href === "/dao" ? "" : undefined}>{label}</Link>
           ))}
         </nav>
 

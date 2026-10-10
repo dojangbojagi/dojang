@@ -96,8 +96,10 @@ export function PathSection() {
 /* ----------------------------------------------------------------- 03 */
 const DESTINATIONS = [
   ["Dojang", "Inspect official GIWA Verified Address attestations and the separate project demo credential.", "/dojang"],
+  ["DAO Governance", "The flagship utility: verify with official Dojang, then propose and vote on the one policy this contract governs. Votes are public.", "/dao"],
   ["Bojagi-inspired Protection", "Review the private eligibility policy and proof system readiness.", "/bojagi"],
   ["Restricted Vault", "Inspect on-chain access state and the proof-gated action.", "/vault"],
+  ["Lending", "Supply, or borrow against collateral with a private eligibility proof: a controlled demonstration market.", "/lending"],
   ["Contracts", "See official GIWA references and project deployment status.", "/contracts"],
   ["Protocol Docs", "Read the trust model, data boundaries and current limitations.", "/docs"],
 ] as const;
@@ -142,6 +144,7 @@ const PHASES = [
       "A demo credential registry holding issuer-signed commitments",
       "A Noir circuit, proofs made in the browser and a generated Solidity verifier",
       "A restricted vault that records access only after a verified proof",
+      "Verified DAO governance: official Dojang membership and public votes, tested locally",
     ],
   },
   {

@@ -93,6 +93,7 @@ export function FinalReveal({ appName }: { appName: string }) {
               <h2>Protocol</h2>
               <ul>
                 <li><Link href="/dojang">Dojang</Link></li>
+                <li><Link href="/dao">DAO governance</Link></li>
                 <li><Link href="/bojagi">Bojagi</Link></li>
                 <li><Link href="/vault">Vault</Link></li>
                 <li><Link href="/lending">Lending</Link></li>

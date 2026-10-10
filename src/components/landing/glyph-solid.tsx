@@ -21,8 +21,9 @@ import { useEffect, useRef } from "react";
 
 /* The shapes. sphere / cube / seal are the three states of the idea scene; orb is a sphere with no private
    characters (an official, public record); rings is two linked rings (supply and borrow, joined by a proof);
-   stack is four slabs (layers of on-chain evidence); book is an open book of text lines (documentation). */
-export type ShapeId = "sphere" | "cube" | "seal" | "orb" | "rings" | "stack" | "book";
+   stack is four slabs (layers of on-chain evidence); book is an open book of text lines (documentation);
+   assembly is tiered half-circle seating (a governing body voting in public). */
+export type ShapeId = "sphere" | "cube" | "seal" | "orb" | "rings" | "stack" | "book" | "assembly";
 
 const GLYPHS = "0123456789ABCDEF";
 const NG = GLYPHS.length;
@@ -150,6 +151,29 @@ function bookPoint(i: number, out: Float32Array, o: number) {
   out[o + 2] = v * 0.66;
 }
 
+/* tiered half-circle seating: five rows, each row longer than the one in front */
+const ASSEMBLY_RADII = [0.34, 0.5, 0.66, 0.82, 0.98];
+const ASSEMBLY_COUNTS = (() => {
+  const total = ASSEMBLY_RADII.reduce((a, b) => a + b, 0);
+  const counts = ASSEMBLY_RADII.map((r) => Math.round((COUNT * r) / total));
+  counts[counts.length - 1] += COUNT - counts.reduce((a, b) => a + b, 0);
+  return counts;
+})();
+const P_ASSEMBLY = (() => {
+  const p = new Float32Array(COUNT * 3);
+  let i = 0;
+  ASSEMBLY_RADII.forEach((r, row) => {
+    const n = ASSEMBLY_COUNTS[row];
+    for (let k = 0; k < n; k++, i++) {
+      const a = (k / (n - 1)) * Math.PI;
+      p[i * 3] = Math.cos(a) * r;
+      p[i * 3 + 1] = 0.3 - row * 0.15; /* the back rows sit higher (y points down) */
+      p[i * 3 + 2] = Math.sin(a) * r - 0.4;
+    }
+  });
+  return p;
+})();
+
 /* which colour each point has */
 const palette = (fn: (i: number) => number) => Uint8Array.from({ length: COUNT }, (_, i) => fn(i));
 const PAL_SPHERE = palette((i) => (i % 9 === 0 ? 2 : rnd(i * 3) > 0.55 ? 0 : 1));
@@ -157,6 +181,7 @@ const PAL_ORB = palette((i) => (rnd(i * 3) > 0.55 ? 0 : 1));
 const PAL_CUBE = palette(() => SEALED);
 const PAL_SEAL = palette((i) => (i < CORE ? 2 : rnd(i * 5) > 0.78 ? 0 : 1));
 const PAL_STACK = palette((i) => (rnd(i * 3) > 0.35 + ((i / 121) | 0) * 0.08 ? 1 : 0));
+const PAL_ASSEMBLY = palette((i) => (rnd(i * 3) > 0.5 ? 1 : 0));
 const PAL_BOOK = palette((i) => (rnd(i * 3) > 0.5 ? 1 : 0));
 const PAL_RINGS = palette((i) => (i < HALF ? (rnd(i * 5) > 0.7 ? 0 : 1) : rnd(i * 7) > 0.88 ? 0 : 2));
 
@@ -180,6 +205,7 @@ const SHAPES: Record<ShapeId, Shape> = {
   seal: { pos: (i, spin, out) => (i < CORE ? copy3(P_CORE, i, out) : ringPoint(i - CORE, spin, out, 0)), pal: PAL_SEAL, yaw: 1.8 },
   rings: { pos: (i, spin, out) => linkedPoint(i, spin, out, 0), pal: PAL_RINGS, yaw: 0.9 },
   stack: { pos: (i, _s, out) => stackPoint(i, out, 0), pal: PAL_STACK, yaw: 0.6 },
+  assembly: { pos: (i, _s, out) => copy3(P_ASSEMBLY, i, out), pal: PAL_ASSEMBLY, yaw: 0.5, sway: 0.7 },
   book: { pos: (i, _s, out) => bookPoint(i, out, 0), pal: PAL_BOOK, yaw: 0.45, sway: 0.75 },
 };
 

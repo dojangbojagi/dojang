@@ -951,3 +951,7 @@ html.lenis, html.lenis body { height: auto; }
 .lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
 .lenis.lenis-stopped { overflow: clip; }
 .lenis.lenis-smooth iframe { pointer-events: none; }
+
+/* the governance link carries a small blue dot: the flagship utility, easy to find */
+.lp-nav [data-flagship] { position: relative; }
+.lp-nav [data-flagship]::before { content: ""; position: absolute; top: .5rem; right: .6rem; width: .34rem; height: .34rem; border-radius: 50%; background: var(--lp-blue); } /* ::before, because ::after already draws the hover stitch */

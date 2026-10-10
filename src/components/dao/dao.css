@@ -1,0 +1,69 @@
+/* Governance page (/dao). Same language as the rest of the app: ink panels, thin lines, mono labels,
+   blue = public / on-chain. It reuses the .lend layout and panel styles from lending.css. */
+
+.dao-anchor { scroll-margin-top: calc(var(--header-h) + var(--space-4)); }
+.dao-notice { display: block; padding: var(--space-4) var(--space-5); }
+.dao-notice__title { margin: 0 0 var(--space-2); font-family: var(--font-display); font-size: 1rem; font-weight: 700; letter-spacing: -.01em; color: var(--text); text-transform: none; }
+.dao-notice__list { display: grid; gap: .45rem; margin: 0 0 var(--space-3); padding: 0; list-style: none; }
+.dao-notice__list li { position: relative; padding-left: 1.05rem; font-size: var(--fs-sm); line-height: 1.5; }
+.dao-notice__list li::before { content: ""; position: absolute; left: 0; top: .62em; width: .42rem; height: .42rem; border-radius: 1px; background: var(--state-warn); transform: rotate(45deg); }
+.dao-notice__list strong { color: var(--text); font-weight: 600; }
+
+.dao-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-5); }
+@media (max-width: 860px) { .dao-grid-2 { grid-template-columns: 1fr; } }
+.dao .kv dd { overflow-wrap: anywhere; }
+.dao-deploy, .dao-protected { margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px dashed var(--line); display: grid; gap: var(--space-2); }
+
+/* how a proposal moves: four named stages, the current one lit */
+.dao-stages { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-2); margin: var(--space-4) 0 0; padding: 0; list-style: none; }
+.dao-stages li { display: grid; gap: .3rem; align-content: start; padding: .8rem .9rem; border-radius: 14px; border: 1px solid var(--line); font-size: var(--fs-xs); color: var(--text-dim); }
+.dao-stages b { font: 600 .74rem/1.2 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted); }
+.dao-stages li[data-state="current"] { border-color: var(--celadon); background: color-mix(in srgb, var(--celadon) 10%, transparent); color: var(--text-muted); }
+.dao-stages li[data-state="current"] b { color: var(--celadon); }
+.dao-stages li[data-state="done"] b { color: var(--text); }
+@media (max-width: 860px) { .dao-stages { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 480px) { .dao-stages { grid-template-columns: 1fr; } }
+
+/* proposal list */
+.dao-feed { display: grid; gap: var(--space-3); margin: var(--space-4) 0 0; padding: 0; list-style: none; }
+.dao-card {
+  display: grid; gap: .65rem; width: 100%; padding: var(--space-4); text-align: left; cursor: pointer; color: inherit;
+  border-radius: 18px; border: 1px solid var(--line); background: rgba(255, 255, 255, .02);
+  transition: border-color .2s ease, background-color .2s ease;
+}
+.dao-card:hover { border-color: var(--line-strong); background: rgba(255, 255, 255, .04); }
+.dao-card[data-selected="true"] { border-color: var(--celadon); background: color-mix(in srgb, var(--celadon) 8%, transparent); }
+.dao-card:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.dao-card__top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; }
+.dao-card__id { font-family: var(--font-display); font-size: 1.05rem; letter-spacing: -.01em; }
+.dao-card__ref { color: var(--text); overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.dao-card__meta { display: flex; flex-wrap: wrap; gap: .25rem 1.2rem; font: 500 .68rem/1.5 var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--text-dim); }
+.dao-card__tally { display: grid; gap: .45rem; }
+
+/* For / Against / Abstain */
+.dao-votes { display: grid; gap: .5rem; }
+.dao-bar { display: flex; height: .55rem; overflow: hidden; border-radius: 999px; background: rgba(255, 255, 255, .08); }
+.dao-bar span { display: block; height: 100%; }
+.dao-bar [data-k="for"], .dao-votes__counts [data-k="for"] i { background: var(--state-valid, #3b86ff); }
+.dao-bar [data-k="against"], .dao-votes__counts [data-k="against"] i { background: var(--gold); }
+.dao-bar [data-k="abstain"], .dao-votes__counts [data-k="abstain"] i { background: var(--text-dim); }
+.dao-bar [data-k="none"] { background: transparent; }
+.dao-votes__counts { display: flex; flex-wrap: wrap; gap: .3rem 1.2rem; margin: 0; padding: 0; list-style: none; font-size: var(--fs-xs); color: var(--text-muted); }
+.dao-votes__counts li { display: inline-flex; align-items: center; gap: .45rem; }
+.dao-votes__counts i { width: .5rem; height: .5rem; border-radius: 50%; }
+.dao-votes__counts b { color: var(--text); font-weight: 600; }
+
+/* detail */
+.dao-ref { overflow-wrap: anywhere; }
+a.dao-ref { color: var(--celadon); text-decoration: underline; text-underline-offset: .2em; }
+.dao-detail__ref { margin: 0; font-size: 1.05rem; color: var(--text); }
+.dao-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-5); margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px dashed var(--line); }
+@media (max-width: 760px) { .dao-actions { grid-template-columns: 1fr; } }
+.dao-actions .protocol-actions { margin-top: var(--space-2); }
+.dao .protocol-field textarea { resize: vertical; min-height: 5.5rem; font: inherit; }
+.dao [data-invalid="true"] { color: var(--state-invalid); }
+
+/* the outcome of the last action stays in view while you scroll, on every screen size */
+.dao-banner-slot { position: sticky; top: calc(var(--header-h) + .75rem); z-index: 6; }
+.dao-banner-slot:empty { display: none; }
+.dao-banner-slot .lend-banner { box-shadow: 0 18px 40px -18px rgba(0, 0, 0, .8); background-color: color-mix(in srgb, var(--ink-950, #060912) 92%, transparent); }

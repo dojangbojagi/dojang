@@ -139,7 +139,7 @@ export function LendingWorkspace() {
 
         <aside className="lend-side" aria-label="Position and transactions">
           <PositionPanel market={market} gasBalance={gasBalance} />
-          <TransactionPanel market={market} action={action} evidence={evidence} />
+          <TransactionPanel transaction={market.transaction} action={action} evidence={evidence} />
           <div className="protocol-actions">
             <button className="btn btn--secondary btn--sm" type="button" onClick={() => void market.refetch()} disabled={market.state === "unconfigured" || !wallet.address}>Refresh market</button>
           </div>
