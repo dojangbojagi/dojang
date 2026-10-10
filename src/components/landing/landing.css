@@ -683,7 +683,9 @@
   /* it only becomes visible once the hero is almost gone (--zk .6), so the two never fight; the growth is the same --zk */
   .lp-idea__copy { opacity: clamp(0, calc((var(--zk) - .6) * 2.5), 1); scale: calc(.7 + .3 * var(--zk)); }
   .lp-idea__stage { opacity: clamp(0, calc((var(--zk) - .6) * 2.5), 1); scale: calc(.35 + .65 * var(--zk)); }
-  .lp-idea[data-live="0"] { pointer-events: none; }
+  /* the run starts over the hero, so until the scene is live it must not catch the hero's clicks or hover */
+  .lp-idea-run, .lp-idea-pin { pointer-events: none; }
+  .lp-idea[data-live="1"] { pointer-events: auto; }
   .lp-idea-pin { position: sticky; top: 0; height: 100svh; display: flex; align-items: center; padding-block: calc(var(--lp-nav-h) + .5rem) 2rem; }
   .lp-idea { width: 100%; }
   .lp-ledger--static { display: none; }

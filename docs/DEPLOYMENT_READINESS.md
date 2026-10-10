@@ -4,6 +4,7 @@
 
 - Target network: GIWA Sepolia, chain ID `91342`, native gas currency `ETH` ([official connection details](https://docs.giwa.io/giwa-chain/en/get-started/connect-to-giwa)).
 - Project-owned contracts: **not deployed**. There are no project deployment addresses or GIWA transaction receipts in the repository.
+- `GovernedDojangAccess` is now implemented and locally tested; it is not included in the existing core or lending deployment transactions.
 - Deployment scripts: prepared in `contracts/script/`; Foundry scripts simulate by default and only send when passed `--broadcast`.
 - Local deployment gas observation: `12,059,491` EVM execution gas for nine contract deployments plus one issuer-role grant, measured with the local Anvil estimator. This is not a GIWA fee quote and does not include the rollup data fee.
 - Source verification: not submitted. The GIWA Explorer is documented as Blockscout; endpoint behavior and verification results remain unconfirmed.
@@ -22,7 +23,7 @@
 | LendingPool and ControlledTestToken | Project-owned fixed-price lending demo and capped test assets; not production lending. |
 | GIWA Explorer | External public evidence view. Its network-wide transaction, address, and fee totals must never be reported as application activity. |
 
-The current Dojang config uses GIWA’s documented GIWA Sepolia Upbit Korea attester address and its documented attester ID ([official Dojang contract table](https://docs.giwa.io/giwa-chain/en/giwa-ecosystem/dojang/contracts)). This replaces a stale address that did not match the official contract table. The RPC could not be queried from this environment to independently read the attester book, so confirm the mapping again during the live preflight.
+The Dojang integration uses GIWA’s documented `DojangScroll`, `DojangAttesterBook`, EAS, Upbit Korea attester ID, and Verified Address schema ([official Dojang contract table](https://docs.giwa.io/giwa-chain/en/giwa-ecosystem/dojang/contracts)). The frontend and governance contract resolve the trusted attester with `getAttester(attesterId)` instead of relying on a copied issuer value. The documentation's displayed Upbit Korea address omits a leading zero nibble; the padded EVM address in the app is `0x04097bf3Cb731AEb3e501b910b33B2Af9Fa68E38`. The RPC could not be queried from this environment to independently read the attester book, so confirm that mapping during live preflight.
 
 ## Contract graph and deployment parameters
 
@@ -39,6 +40,7 @@ Deploy the two generated-verifier libraries before the verifier. Then deploy the
 | `ControlledTestToken` lending asset | `("GIWA Demo Lending Dollar", "gUSD", 6, 10^15, admin)` | Capped at `10^15` base units; total supply starts at zero. Admin receives minter and admin roles. |
 | `ControlledTestToken` collateral asset | `("GIWA Demo Collateral", "gCOL", 18, 10^27, admin)` | Capped at `10^27` base units; total supply starts at zero. Admin receives minter and admin roles. |
 | `LendingPool` | Same registry, same verifier adapter, lending asset, collateral asset | Requires both distinct assets to have code and the controlled-demo marker. Fixed 1:1 price, 50% LTV, zero interest; no oracle or liquidation. |
+| `GovernedDojangAccess` | Official DojangScroll, DojangAttesterBook, EAS, Upbit Korea attester ID, Verified Address schema UID, voting period, absolute quorum, execution window, initial minimum remaining validity | Independent of the project credential registry and ZK verifier. Proposal/vote membership is checked live through official Dojang/EAS. The only executable action changes the policy consumed by this contract's `performProtectedAction`; there is no arbitrary call path. |
 
 The registry accepts nonzero policy IDs and issuer-authorized commitments. The demo vault checks policy `1`; the lending pool checks policy `2`, version `1`, threshold `1,000`, current issuer authorization, expiry, revocation, chain ID, and the proof’s vault field bound to the pool address. Credential records store commitments, not private values or salts. Dojang credentials do not implicitly issue these project registry records.
 
@@ -55,6 +57,10 @@ export GIWA_RPC_URL="https://sepolia-rpc.giwa.io"
 export GIWA_ACCOUNT="<Foundry keystore name>"
 export GIWA_ADMIN_ADDRESS="0x..."
 export GIWA_ISSUER_ADDRESS="0x..."
+export GIWA_GOVERNANCE_VOTING_PERIOD="604800"
+export GIWA_GOVERNANCE_QUORUM="2"
+export GIWA_GOVERNANCE_EXECUTION_WINDOW="604800"
+export GIWA_GOVERNANCE_INITIAL_MIN_VALIDITY="0"
 ```
 
 1. Build and run local regressions first: `bun run contracts:build`, `bun run contracts:test`, `bun run lending:anvil`, and `bun run deployment:gas-local`.
@@ -100,9 +106,17 @@ export GIWA_ISSUER_ADDRESS="0x..."
    ```
 
    Only an explicitly authorized broadcast should add `--broadcast`. Record the token and pool addresses and all receipts. Do not use addresses printed by a simulation as deployed addresses.
-7. Read back every address, constructor link, issuer role, token cap, decimals, and pool constants from GIWA RPC before configuring the app.
+7. Simulate the separate governance deployment with the standard official Dojang configuration:
 
-`contracts/script/DeployGIWASepolia.s.sol` and `contracts/script/DeployLendingGIWASepolia.s.sol` enforce chain ID `91342`. They do not contain keys. Library linking remains an explicit input to `forge create` and explorer verification.
+   ```sh
+   forge script --root contracts --use contracts/solc-wrapper.sh script/DeployGovernanceGIWASepolia.s.sol:DeployGovernanceGIWASepolia \
+     --rpc-url "$GIWA_RPC_URL" --account "$GIWA_ACCOUNT" --sender "$GIWA_ADMIN_ADDRESS"
+   ```
+
+   The script rejects missing official contract code, fixes the external Dojang addresses/attester ID/schema UID, and requires a voting period of at least one hour. It simulates by default; add `--broadcast` only after separate explicit authorization. Record the DAO address and deployment receipt. Its constructor has no registry, demo issuer, ZK verifier, vault, or lending dependency.
+8. Read back every address, constructor link, issuer role, token cap, decimals, pool constants, governance parameters, Dojang mapping, and official credential status from GIWA RPC before configuring the app.
+
+`contracts/script/DeployGIWASepolia.s.sol`, `contracts/script/DeployLendingGIWASepolia.s.sol`, and `contracts/script/DeployGovernanceGIWASepolia.s.sol` enforce chain ID `91342`. They do not contain keys. Library linking remains an explicit input to `forge create` and explorer verification. The governance script does not accept fixture or demo credential addresses.
 
 ## Source verification and explorer evidence
 
@@ -135,6 +149,7 @@ Use `cast abi-encode 'constructor(...)' ...` to supply the exact constructor byt
 - `RestrictedVault`: ABI-encoded registry and adapter addresses.
 - Each `ControlledTestToken`: exact name, symbol, decimals, cap, and admin constructor values above.
 - `LendingPool`: ABI-encoded registry, adapter, and both asset addresses.
+- `GovernedDojangAccess`: official DojangScroll, DojangAttesterBook, EAS, attester ID, Verified Address schema UID, voting period, quorum, execution window, and initial minimum remaining validity.
 - `DemoCredentialRegistry` and the two libraries: no constructor arguments.
 
 Verify source only after the deployment record is complete. If Blockscout rejects the custom API endpoint, use its contract verification page with the Foundry standard JSON compiler input; do not mark verification complete until the explorer shows an exact match.
@@ -148,6 +163,7 @@ NEXT_PUBLIC_DEMO_CREDENTIAL_REGISTRY_CONTRACT=0x...
 NEXT_PUBLIC_PROOF_VERIFIER_CONTRACT=0x...
 NEXT_PUBLIC_RESTRICTED_VAULT_CONTRACT=0x...
 NEXT_PUBLIC_LENDING_POOL_CONTRACT=0x...
+NEXT_PUBLIC_DAO_GOVERNANCE_CONTRACT=0x...
 ```
 
 `NEXT_PUBLIC_PROOF_VERIFIER_CONTRACT` points to `EligibilityVerifierAdapter`. The adapter exposes the generated verifier address on-chain. `LendingPool` exposes its token addresses on-chain; token addresses do not need separate frontend environment entries. Never configure local Anvil addresses as GIWA contracts. The public RPC is rate-limited; use an operator-managed endpoint for sustained app traffic.
@@ -162,6 +178,8 @@ The new read-only service at [`chain-evidence.ts`](../src/lib/protocol/chain-evi
 - `readProjectTransactionEvidence(client, hash)`: retrieves a real receipt and filters its logs to configured project contracts.
 - `readProjectProtocolLogs(client, { fromBlock, toBlock })`: scans an explicit block range for configured project contracts and the lending assets discovered through the pool. The range is chunked; the output is not a network-wide count.
 - `protocolEventAbi(contract)`: returns the event ABI for decoding raw log topics and data. Credential committed/revoked and role grant/revoke events are now included in the registry ABI.
+
+The DAO adapter at [`service.ts`](../src/lib/governance/service.ts) reads governance parameters, official Dojang membership, proposal state/counts, and bounded `ProposalCreated` event ranges. `useDaoGovernance` simulates every write, waits for a receipt, and verifies a proposal/vote/finalization/execution/protected-action readback. DAO events are project-owned evidence only after a real governance address is configured.
 
 The adapter requires chain `91342`; unconfigured addresses stay unconfigured. Caller-supplied block ranges determine log coverage. Store the deployment block and transaction receipts when available so later scans can start at the correct block. For application usage statistics, derive counts only from project contract events and state. Do not use GIWA-wide transaction counts, address counts, gas totals, or explorer charts as product activity.
 
