@@ -12,7 +12,7 @@ export const officialDojang = {
   eas: "0x4200000000000000000000000000000000000021" as Address,
   upbitKoreaAttesterId:
     "0xd99b42e778498aa3c9c1f6a012359130252780511687a35982e8e52735453034" as Hex,
-  upbitKoreaAttester: "0x09B170CA2A006081042992bCE7379B85a02149C6" as Address,
+  upbitKoreaAttester: "0x4097bF3Cb731AEB3E501b910B33B2aF9Fa68E38" as Address,
   verifiedAddressSchemaUid:
     "0x072d75e18b2be4f89a13a7147240477481c4b526d5795802acba59046b426e08" as Hex,
   testnetFaucetAttesterId:

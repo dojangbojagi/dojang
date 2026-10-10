@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { StateChip } from "@/components/protocol-state";
+import { explainLendingFailure } from "@/components/lending/errors";
 import { formatAmount, shortAddress } from "@/components/lending/format";
 import type { LendingMarket } from "@/components/lending/types";
 import { GIWA_EXPLORER_URL } from "@/lib/config/chain";
@@ -164,7 +165,7 @@ export function TransactionPanel({ market, action, evidence }: { market: Lending
               )}
             </p>
           )}
-          {tx.error && <p className="callout callout--caution protocol-notice" role="status">{tx.error}</p>}
+          {tx.error && <p className="callout callout--caution protocol-notice" role="status">{explainLendingFailure(tx.error)}</p>}
         </div>
       )}
       {evidence.length > 0 && (

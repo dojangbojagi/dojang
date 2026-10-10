@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { explainLendingFailure } from "@/components/lending/errors";
 import { StateChip, TransactionSummary } from "@/components/protocol-state";
 import { useLendingCredential, useLendingCredentialIssuance } from "@/hooks/use-lending-credential";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import { projectContracts } from "@/lib/config/contracts";
 import { LENDING_ELIGIBILITY_THRESHOLD, LENDING_POLICY_ID } from "@/lib/lending/config";
-import { explainProtocolError } from "@/lib/protocol/errors";
 import type { DemoCredentialWitness } from "@/lib/credential/witness";
 
 function defaultExpiry() {
@@ -47,7 +47,7 @@ export function LendingIssuerTools({ onIssued }: { onIssued: (witness: DemoCrede
       setPrivateValue("");
       setMessage("Credential confirmed by the registry readback. Its private witness is held in this browser session only; it was not displayed or exported.");
     } catch (cause) {
-      setError(explainProtocolError(cause));
+      setError(explainLendingFailure(cause));
     }
   }
 

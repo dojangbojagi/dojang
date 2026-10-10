@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useBalance } from "wagmi";
 import { BorrowView } from "@/components/lending/borrow-view";
+import { explainLendingFailure } from "@/components/lending/errors";
 import { LimitationsNotice, MarketOverview, PositionPanel, TransactionPanel, type EvidenceEntry } from "@/components/lending/lending-panels";
 import { SupplyView } from "@/components/lending/supply-view";
 import type { ActionRunner } from "@/components/lending/types";
@@ -13,7 +14,6 @@ import { useLendingMarket } from "@/hooks/use-lending-market";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import { GIWA_CHAIN_ID } from "@/lib/config/chain";
 import type { DemoCredentialWitness } from "@/lib/credential/witness";
-import { explainProtocolError } from "@/lib/protocol/errors";
 
 type Tab = "supply" | "borrow";
 const TABS: readonly { id: Tab; label: string; note: string }[] = [
@@ -83,7 +83,7 @@ export function LendingWorkspace() {
         await market.refetch();
         return true;
       } catch (error) {
-        setBanner({ tone: "error", text: explainProtocolError(error) });
+        setBanner({ tone: "error", text: explainLendingFailure(error) });
         return false;
       }
     },

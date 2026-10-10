@@ -91,9 +91,67 @@ export const credentialRegistryAbi = [
       },
     ],
   },
+  {
+    type: "event",
+    name: "CredentialCommitted",
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: "wallet", type: "address" },
+      { indexed: true, name: "policyId", type: "uint256" },
+      { indexed: true, name: "version", type: "uint64" },
+      { indexed: false, name: "commitment", type: "bytes32" },
+      { indexed: false, name: "issuer", type: "address" },
+      { indexed: false, name: "expiresAt", type: "uint64" },
+    ],
+  },
+  {
+    type: "event",
+    name: "CredentialRevoked",
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: "wallet", type: "address" },
+      { indexed: true, name: "policyId", type: "uint256" },
+      { indexed: true, name: "version", type: "uint64" },
+      { indexed: false, name: "issuer", type: "address" },
+    ],
+  },
+  {
+    type: "event",
+    name: "RoleGranted",
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: "role", type: "bytes32" },
+      { indexed: true, name: "account", type: "address" },
+      { indexed: true, name: "sender", type: "address" },
+    ],
+  },
+  {
+    type: "event",
+    name: "RoleRevoked",
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: "role", type: "bytes32" },
+      { indexed: true, name: "account", type: "address" },
+      { indexed: true, name: "sender", type: "address" },
+    ],
+  },
 ] as const;
 
 export const restrictedVaultAbi = [
+  {
+    type: "function",
+    name: "registry",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+  },
+  {
+    type: "function",
+    name: "verifier",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+  },
   {
     type: "function",
     name: "threshold",
@@ -132,6 +190,8 @@ export const restrictedVaultAbi = [
 ] as const;
 
 export const lendingPoolAbi = parseAbi([
+  "function registry() view returns (address)",
+  "function verifier() view returns (address)",
   "function LENDING_POLICY_ID() view returns (uint256)",
   "function LENDING_POLICY_VERSION() view returns (uint256)",
   "function ELIGIBILITY_THRESHOLD() view returns (uint256)",
@@ -165,10 +225,21 @@ export const lendingPoolAbi = parseAbi([
 ]);
 
 export const controlledTokenAbi = parseAbi([
+  "function name() view returns (string)",
+  "function decimals() view returns (uint8)",
+  "function totalSupply() view returns (uint256)",
+  "function mintCap() view returns (uint256)",
+  "function MINTER_ROLE() view returns (bytes32)",
+  "function hasRole(bytes32 role, address account) view returns (bool)",
   "function approve(address spender, uint256 amount) returns (bool)",
   "function allowance(address owner, address spender) view returns (uint256)",
   "function balanceOf(address account) view returns (uint256)",
   "function symbol() view returns (string)",
+  "event Transfer(address indexed from, address indexed to, uint256 value)",
+]);
+
+export const eligibilityVerifierAdapterAbi = parseAbi([
+  "function honkVerifier() view returns (address)",
 ]);
 
 export const credentialIssuerRoleAbi = parseAbi([
