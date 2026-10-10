@@ -6,9 +6,8 @@
 
    Palette
      ink      near-black navy page
-     ice blue #7DD3FC  = public, on-chain, trusted state
-     lime     #C8FF6A  = private, the proof, primary actions (dark label on it)
-     champagne #D6C08D = a rare highlight; cool blue #60A5FA = demo
+     champagne #EADCB6 = public, on-chain, trusted state (warm, never blue or cyan)
+     lime      #C8FF6A = private, the proof, primary actions (dark label on it)
    Obsidian ground (#07090D), never purple. Glass is dark, never white-ish.
 
    How the cover works
@@ -33,12 +32,10 @@
   --lp-text: #F3F6FA;
   --lp-muted: #94A3B8;
   --lp-dim: #6B7A8F;
-  --lp-ice: #7DD3FC;
-  --lp-ice-hi: #B3E6FD;
+  --lp-champagne: #EADCB6;
+  --lp-champagne-hi: #F6EDD3;
   --lp-lime: #C8FF6A;
   --lp-lime-hi: #DDFF9A;
-  --lp-cool: #60A5FA;
-  --lp-champagne: #D6C08D;
   --lp-line: rgba(255, 255, 255, 0.1);
   --lp-line-2: rgba(255, 255, 255, 0.17);
   --lp-gutter: clamp(1.25rem, 0.6rem + 3vw, 3.5rem);
@@ -84,12 +81,12 @@
 .lp [data-spot] { position: relative; isolation: isolate; }
 .lp [data-spot]::before {
   content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
-  background: radial-gradient(380px circle at var(--sx, 50%) var(--sy, 50%), color-mix(in srgb, var(--sc, var(--lp-ice)) 22%, transparent), transparent 62%);
+  background: radial-gradient(380px circle at var(--sx, 50%) var(--sy, 50%), color-mix(in srgb, var(--sc, var(--lp-champagne)) 22%, transparent), transparent 62%);
   opacity: 0; transition: opacity .5s ease;
 }
 .lp [data-spot]::after {
   content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
-  background: radial-gradient(260px circle at var(--sx, 50%) var(--sy, 50%), var(--sc, var(--lp-ice)), transparent 70%);
+  background: radial-gradient(260px circle at var(--sx, 50%) var(--sy, 50%), var(--sc, var(--lp-champagne)), transparent 70%);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor; mask-composite: exclude;
   opacity: 0; transition: opacity .5s ease;
@@ -193,7 +190,7 @@
 .lp[data-phase="dark"] .lp-pill--ok { background: rgba(255, 255, 255, .08); border-color: var(--lp-line-2); }
 .lp .lp-pill--ok:hover { background: #1a1f2e; box-shadow: none; }
 .lp[data-phase="dark"] .lp-pill--ok:hover { background: rgba(255, 255, 255, .14); }
-.lp-pill--ok i { width: .5rem; height: .5rem; border-radius: 50%; background: var(--lp-ice); box-shadow: 0 0 0 3px rgba(125, 211, 252, .25); }
+.lp-pill--ok i { width: .5rem; height: .5rem; border-radius: 50%; background: var(--lp-champagne); box-shadow: 0 0 0 3px rgba(234, 220, 182, 0.2); }
 .lp .lp-pill--warn { background: transparent; color: var(--lp-lime); border-color: var(--lp-lime); text-shadow: none; }
 .lp .lp-pill--warn:hover { background: rgba(200, 255, 106, .12); box-shadow: none; }
 .lp-pill__short { display: none; }
@@ -318,7 +315,7 @@
 }
 .lp-light i {
   position: absolute; left: 0; top: 0; width: 760px; height: 620px; margin: -310px 0 0 -380px;
-  background: radial-gradient(closest-side, rgba(125, 211, 252, .14), transparent);
+  background: radial-gradient(closest-side, rgba(234, 220, 182, 0.112), transparent);
   opacity: 0; transition: opacity 1.8s ease; will-change: transform, opacity; /* moved and faded by the compositor, never repainted */
 }
 .lp-light[data-on="1"] i { opacity: 1; transition-duration: .35s; }
@@ -341,7 +338,7 @@
 }
 .lp-outline::before {
   content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1.5px;
-  background: linear-gradient(135deg, #D7F3FF 0%, rgba(255, 255, 255, .85) 14%, #7DD3FC 42%, #C8FF6A 78%, #EAFFC4 100%);
+  background: linear-gradient(135deg, #F6EDD2 0%, rgba(255, 255, 255, .85) 14%, #EADCB6 42%, #C8FF6A 78%, #EAFFC4 100%);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor; mask-composite: exclude;
 }
@@ -350,8 +347,8 @@
 /* the glow is a static shadow: painted once per element, then only moved, never repainted */
 .lp-sparks i { position: absolute; left: 0; top: 0; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: #DDFF9A; box-shadow: 0 0 7px 1px rgba(200, 255, 106, .75); opacity: 0; will-change: transform, opacity; }
 .lp-sparks i:nth-child(3n + 2) { background: #C8FF6A; box-shadow: 0 0 7px 1px rgba(200, 255, 106, .75); }
-.lp-sparks i:nth-child(3n) { background: #7DD3FC; box-shadow: 0 0 7px 1px rgba(125, 211, 252, .8); }
-.lp-sparks i:nth-child(7n) { background: #B3E6FD; box-shadow: 0 0 7px 1px rgba(179, 230, 253, .8); }
+.lp-sparks i:nth-child(3n) { background: #EADCB6; box-shadow: 0 0 7px 1px rgba(234, 220, 182, 0.64); }
+.lp-sparks i:nth-child(7n) { background: #F6EDD3; box-shadow: 0 0 7px 1px rgba(235, 221, 180, .8); }
 
 /* The clouds of characters: zoom out from the middle of the opening, and rush past when the camera pushes in */
 .lp-field {
@@ -365,15 +362,14 @@
 .lp-field canvas.lp-form { /* the hero's form needs a square, not the whole screen: less to clear and hand to the compositor */
   inset: auto; left: 50%; top: 36%; width: min(100vw, 100svh); height: min(100vw, 100svh); translate: -50% -50%;
 }
-@media (min-aspect-ratio: 5 / 4) { .lp-field canvas.lp-form { left: 60%; top: 50%; } }
 .lp-glow {
   position: absolute; inset: 0; z-index: 1; pointer-events: none;
   opacity: calc(1 - var(--q));
   background:
-    radial-gradient(60% 52% at 84% 4%, rgba(125, 211, 252, .2), transparent 70%),
+    radial-gradient(60% 52% at 84% 4%, rgba(234, 220, 182, 0.16), transparent 70%),
     radial-gradient(52% 50% at 6% 100%, rgba(200, 255, 106, .2), transparent 70%),
-    radial-gradient(380px 310px at 62% 42%, rgba(125, 211, 252, .14), transparent),
-    radial-gradient(44% 22% at 50% 21%, rgba(125, 211, 252, .1), transparent 72%),
+    radial-gradient(460px 400px at var(--fx, 50%) var(--fy, 38%), rgba(234, 220, 182, .12), transparent),
+    radial-gradient(44% 22% at 50% 21%, rgba(234, 220, 182, 0.08), transparent 72%),
     radial-gradient(44% 18% at 50% 81%, rgba(200, 255, 106, .12), transparent 72%),
     linear-gradient(to bottom, rgba(7, 9, 13, .72), transparent 16%, transparent 82%, rgba(7, 9, 13, .8));
 }
@@ -429,7 +425,7 @@
   transform: translateY(calc((1 - var(--in)) * 118%));
 }
 .lp-h b { font-weight: inherit; white-space: nowrap; }
-.lp-h__public { color: var(--lp-ice); }
+.lp-h__public { color: var(--lp-champagne); }
 .lp-h__private { color: var(--lp-lime); }
 .lp-h__l1 { --in: clamp(0, calc((var(--c) - .06) * 3.2), 1); }
 .lp-h__l2 { --in: clamp(0, calc((var(--c) - .22) * 3.2), 1); }
@@ -489,7 +485,7 @@
 .lp .lp-btn--ghost { color: #fff; border-color: rgba(255, 255, 255, .28); background: linear-gradient(180deg, rgba(255, 255, 255, .09), rgba(255, 255, 255, .02)), rgba(10, 14, 20, .88); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .16); }
 .lp .lp-btn--ghost:hover {
   border-color: transparent;
-  background: linear-gradient(rgba(14, 19, 27, .92), rgba(14, 19, 27, .92)) padding-box, linear-gradient(120deg, #7DD3FC, #C8FF6A) border-box;
+  background: linear-gradient(rgba(14, 19, 27, .92), rgba(14, 19, 27, .92)) padding-box, linear-gradient(120deg, #EADCB6, #C8FF6A) border-box;
 }
 
 /* Marquee: the stack this is built on. Stays put across both phases. */
@@ -560,6 +556,19 @@
   .lp-h { font-size: clamp(2rem, min(5.7cqw, 9.4svh), 6.2rem); }
 }
 
+/* Two sides: on wide landscape screens the words sit on the left and the 3D form has the right half to itself
+   (it was hidden behind the headline). Only where things sit changes: the zoom, the fades and the entrance
+   still read --e --c --q exactly as before. Phones and portrait tablets keep the stacked, centred layout. */
+@media (min-width: 861px) and (min-aspect-ratio: 1 / 1) {
+  .lp-glow { --fx: 72%; --fy: 49%; }
+  .lp-hero { justify-content: flex-start; }
+  .lp-hero__col { max-width: 56%; }
+  .lp-h { font-size: clamp(2rem, min(4.6cqw, 8.6svh), 5.4rem); }
+  .lp-cta { flex-direction: column; align-items: flex-start; gap: 1.3rem; } /* the words and the buttons stay under the headline, clear of the form */
+  .lp-lede { flex: none; }
+  .lp-field canvas.lp-form { left: 72%; top: 49%; width: min(60vw, 100svh); height: min(60vw, 100svh); }
+}
+
 /* ============================ SECTIONS ================================== */
 .lp-sec { position: relative; padding: clamp(5rem, 3rem + 8vw, 10rem) var(--lp-gutter); }
 .lp-sec + .lp-sec, .lp-idea-run + .lp-sec { border-top: 1px solid var(--lp-line); }
@@ -575,7 +584,7 @@
   font: 700 clamp(2rem, 1.1rem + 3.6vw, 4.6rem) / 1.04 var(--lp-font-display);
   letter-spacing: -.028em; text-transform: uppercase; text-wrap: balance;
 }
-.lp-h2 em { font-style: normal; color: var(--lp-ice); }
+.lp-h2 em { font-style: normal; color: var(--lp-champagne); }
 .lp-h2 em.o { color: var(--lp-lime); }
 .lp-lead { max-width: 52ch; margin-top: 1.5rem; font-size: clamp(1.05rem, 1rem + .4vw, 1.3rem); color: var(--lp-muted); }
 .lp-body { max-width: 56ch; margin-top: 1.1rem; color: var(--lp-muted); }
@@ -613,7 +622,7 @@
 .lp-idea { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.06fr); gap: clamp(2.5rem, 6vw, 6rem); align-items: center; }
 
 .lp-ledger {
-  --sc: var(--lp-ice);
+  --sc: var(--lp-champagne);
   border: 1px solid var(--lp-line-2); border-radius: 22px; overflow: hidden;
   background: linear-gradient(180deg, rgba(255, 255, 255, .045), rgba(255, 255, 255, .012));
   box-shadow: 0 50px 100px -50px rgba(0, 0, 0, .9);
@@ -625,9 +634,9 @@
 .lp-lrow__view { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; font: 500 .95rem/1 var(--lp-font-mono); color: var(--lp-muted); }
 .lp-lrow__view b { font-weight: 500; color: var(--lp-text); font-size: 1.15rem; }
 .lp-lrow__view u { text-decoration: none; color: var(--lp-dim); }
-.lp-lrow--proof { background: linear-gradient(90deg, rgba(125, 211, 252, .13), transparent 80%); box-shadow: inset 3px 0 0 var(--lp-ice); }
+.lp-lrow--proof { background: linear-gradient(90deg, rgba(234, 220, 182, 0.104), transparent 80%); box-shadow: inset 3px 0 0 var(--lp-champagne); }
 .lp-veil { display: inline-block; width: 7.5rem; height: 1.6rem; border-radius: 6px; border: 1px solid rgba(255, 255, 255, .24); background: #10151D var(--lp-veil) 0 0 / 120px 78px; }
-.lp-yes { padding: .28rem .7rem; border-radius: 6px; background: var(--lp-ice); color: var(--lp-ink); font-weight: 500; letter-spacing: .06em; text-transform: uppercase; font-size: .8rem; }
+.lp-yes { padding: .28rem .7rem; border-radius: 6px; background: var(--lp-champagne); color: var(--lp-ink); font-weight: 500; letter-spacing: .06em; text-transform: uppercase; font-size: .8rem; }
 .lp-chip {
   display: inline-flex; align-items: center; gap: .55rem; width: fit-content; padding: .42rem .8rem; border-radius: 999px;
   border: 1px solid currentColor; font: 500 .68rem/1 var(--lp-font-mono); letter-spacing: .1em; text-transform: uppercase;
@@ -635,7 +644,7 @@
 .lp-chip i { width: .45rem; height: .45rem; border-radius: 50%; background: currentColor; }
 .lp-chip[data-tone="warn"] { color: var(--lp-lime); }
 .lp-chip[data-tone="neutral"] { color: var(--lp-muted); }
-.lp-chip[data-tone="valid"] { color: var(--lp-ice-hi); }
+.lp-chip[data-tone="valid"] { color: var(--lp-champagne-hi); }
 
 /* the pinned version: one card that changes its mind as you scroll */
 .lp-vcard, .lp-idea__steps { display: none; }
@@ -648,10 +657,10 @@
   transition: border-color .7s ease, box-shadow .7s ease;
 }
 .lp-vcard[data-s="1"] { --vc: var(--lp-muted); }
-.lp-vcard[data-s="2"] { --vc: var(--lp-ice); }
+.lp-vcard[data-s="2"] { --vc: var(--lp-champagne); }
 .lp-vcard__top { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 1.1rem 1.5rem; border-bottom: 1px solid var(--lp-line); }
 .lp-vcard__cap { font: 500 .7rem/1.5 var(--lp-font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--lp-dim); }
-.lp-vcard__eye { display: inline-flex; align-items: center; gap: .55rem; flex: none; font: 500 .66rem/1 var(--lp-font-mono); letter-spacing: .16em; text-transform: uppercase; color: var(--lp-ice-hi); }
+.lp-vcard__eye { display: inline-flex; align-items: center; gap: .55rem; flex: none; font: 500 .66rem/1 var(--lp-font-mono); letter-spacing: .16em; text-transform: uppercase; color: var(--lp-champagne-hi); }
 .lp-vcard__eye i { position: relative; width: .5rem; height: .5rem; border-radius: 50%; background: currentColor; }
 .lp-vcard__eye i::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 1px solid currentColor; animation: lp-ring 2.6s ease-out infinite; }
 .lp-vcard__body { display: grid; gap: 1.2rem; align-content: start; padding: 2rem 1.5rem 1.6rem; }
@@ -681,14 +690,14 @@
 .lp-idea__steps { position: relative; margin-top: 2.2rem; padding-left: 1.6rem; gap: .2rem; }
 .lp-idea__steps::before, .lp-idea__steps::after { content: ""; position: absolute; left: 0; top: .6rem; width: 2px; border-radius: 2px; }
 .lp-idea__steps::before { bottom: .6rem; background: var(--lp-line); }
-.lp-idea__steps::after { height: calc((100% - 1.2rem) * var(--ip, 0)); background: linear-gradient(to bottom, var(--lp-lime), var(--lp-ice)); }
+.lp-idea__steps::after { height: calc((100% - 1.2rem) * var(--ip, 0)); background: linear-gradient(to bottom, var(--lp-lime), var(--lp-champagne)); }
 .lp .lp-istep {
   --ac: var(--lp-lime);
   display: grid; grid-template-columns: 2.4rem minmax(0, 1fr); gap: .15rem .8rem; width: 100%; padding: .85rem .5rem .85rem 0;
   text-align: left; background: none; border: 0; opacity: .45; transition: opacity .45s ease;
 }
 .lp-idea__steps li:nth-child(2) .lp-istep { --ac: var(--lp-muted); }
-.lp-idea__steps li:nth-child(3) .lp-istep { --ac: var(--lp-ice); }
+.lp-idea__steps li:nth-child(3) .lp-istep { --ac: var(--lp-champagne); }
 .lp-istep[data-on="true"] { opacity: 1; }
 .lp-istep:hover { opacity: .85; }
 .lp-istep__n { font: 500 .78rem/1.6 var(--lp-font-mono); letter-spacing: .1em; color: var(--lp-dim); transition: color .4s ease; }
@@ -725,7 +734,7 @@
 .lp-legend span { display: inline-flex; align-items: center; gap: .6rem; }
 .lp-legend i { width: .6rem; height: .6rem; border-radius: 50%; }
 .lp-legend .pv i { background: var(--lp-lime); }
-.lp-legend .pb i { background: var(--lp-ice); }
+.lp-legend .pb i { background: var(--lp-champagne); }
 
 .lp-path { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: clamp(.8rem, 1.6vw, 1.4rem); row-gap: 0; margin-top: 3.5rem; }
 /* the rail draws itself as the list comes into view */
@@ -736,7 +745,7 @@
 .lp[data-js] .lp-path:not([data-rs="in"])::before { transform: scaleX(0); }
 /* each step spans four rows of the path grid (label, title, text, lists), so those rows line up across columns */
 .lp-step {
-  --ac: var(--lp-ice); --sc: var(--ac);
+  --ac: var(--lp-champagne); --sc: var(--ac);
   position: relative; display: grid; grid-template-rows: subgrid; grid-row: span 4; row-gap: 0; align-content: start;
   padding: 4.6rem 1.4rem 2.2rem; border-radius: 22px; border: 1px solid transparent;
   transition: background-color .4s ease, border-color .4s ease, transform .6s var(--lp-ease);
@@ -756,7 +765,7 @@
 .lp-lists { display: grid; align-content: start; gap: 1rem; margin-top: 1.5rem; padding-top: 1.2rem; border-top: 1px solid var(--lp-line); }
 .lp-lists h4 { font: 500 .68rem/1 var(--lp-font-mono); letter-spacing: .16em; text-transform: uppercase; color: var(--lp-dim); }
 .lp-lists li { position: relative; padding-left: 1rem; margin-top: .45rem; font-size: .9rem; line-height: 1.4; }
-.lp-lists li::before { content: ""; position: absolute; left: 0; top: .5em; width: .38rem; height: .38rem; background: var(--lp-ice); transition: transform .4s var(--lp-ease); }
+.lp-lists li::before { content: ""; position: absolute; left: 0; top: .5em; width: .38rem; height: .38rem; background: var(--lp-champagne); transition: transform .4s var(--lp-ease); }
 .lp-lists .priv li::before { background: var(--lp-lime); }
 .lp-step:hover .lp-lists li::before { transform: rotate(45deg) scale(1.2); }
 
@@ -764,7 +773,7 @@
 /* ---- 03 Two journeys: A (public, ice) and B (private, lime), each two pages in order; the technical row sits below ---- */
 .lp-jn { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(1rem, 2.4vw, 2rem); margin-top: 3.5rem; }
 .lp-jn__lane {
-  --ac: var(--lp-ice); --sc: var(--ac);
+  --ac: var(--lp-champagne); --sc: var(--ac);
   position: relative; display: grid; align-content: start; gap: 1.1rem; padding: clamp(1.4rem, 2.4vw, 2.2rem);
   border: 1px solid var(--lp-line-2); border-radius: 24px; overflow: hidden;
   background: linear-gradient(180deg, rgba(255, 255, 255, .045), rgba(255, 255, 255, .012));
@@ -835,7 +844,7 @@
 
 .lp-road__list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(.8rem, 1.6vw, 1.4rem); margin-top: 1.4rem; }
 .lp-phase {
-  --sc: var(--lp-ice);
+  --sc: var(--lp-champagne);
   position: relative; display: grid; align-content: start; gap: .9rem; padding: 1.5rem 1.4rem 1.7rem; border-radius: 22px;
   border: 1px solid var(--lp-line); background: linear-gradient(180deg, rgba(255, 255, 255, .04), rgba(255, 255, 255, .01));
   transition: background-color .4s ease, border-color .4s ease;
@@ -909,7 +918,7 @@
 .lp-final::before {
   content: ""; position: absolute; inset: 0; z-index: -1;
   background:
-    radial-gradient(60% 55% at 88% 4%, rgba(125, 211, 252, .22), transparent 70%),
+    radial-gradient(60% 55% at 88% 4%, rgba(234, 220, 182, 0.176), transparent 70%),
     radial-gradient(56% 56% at 4% 100%, rgba(200, 255, 106, .26), transparent 70%);
 }
 /* the footer rises into place as the curtain lifts (--fr is written by final-reveal.tsx) */
@@ -1009,4 +1018,4 @@ html.lenis, html.lenis body { height: auto; }
 
 /* the governance link carries a small blue dot: the flagship utility, easy to find */
 .lp-nav [data-flagship] { position: relative; }
-.lp-nav [data-flagship]::before { content: ""; position: absolute; top: .5rem; right: .6rem; width: .34rem; height: .34rem; border-radius: 50%; background: var(--lp-ice); } /* ::before, because ::after already draws the hover stitch */
+.lp-nav [data-flagship]::before { content: ""; position: absolute; top: .5rem; right: .6rem; width: .34rem; height: .34rem; border-radius: 50%; background: var(--lp-champagne); } /* ::before, because ::after already draws the hover stitch */

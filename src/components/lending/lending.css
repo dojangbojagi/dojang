@@ -1,7 +1,7 @@
 /* ==========================================================================
    Lending page (/lending)
    Same language as the rest of the app (theme.css): ink panels, thin lines, mono labels,
-   ice blue = public / on-chain, lime = actions. Everything is scoped under .lend.
+   champagne = public / on-chain, lime = actions. Everything is scoped under .lend.
    ========================================================================== */
 
 .lend { display: grid; gap: var(--space-5); }

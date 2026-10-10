@@ -8,10 +8,10 @@ import { useEffect, useRef } from "react";
      0  A public attestation          a sphere of readable characters. Everything is visible, including a few
                                       lime ones: the private value, exposed.
      1  A private note                a closed cube of grey sealed cells: private, but nothing can check it.
-     2  A sealed credential + proof   a lime core, still sealed, inside an ice-blue ring: the ring is the public
+     2  A sealed credential + proof   a lime core, still sealed, inside a champagne ring: the ring is the public
                                       proof. The chain checks the ring; the core is never shown.
 
-   Colour keeps the page's meaning: ice blue = public / on-chain, lime = private / on your device.
+   Colour keeps the page's meaning: champagne = public / on-chain, lime = private / on your device.
 
    Cost, because this page must stay light: about 500 sprites copied from a pre-rendered sheet (no text is laid
    out per frame), at most ~30 frames a second, and only while the canvas is on screen and the tab is visible.
@@ -30,11 +30,11 @@ const NG = GLYPHS.length;
 const COUNT = 486; /* 6 faces x 81 */
 const CORE = 216; /* 6 faces x 36: the sealed core of state 2; the other 270 points are the ring */
 const PALETTE: readonly (readonly [number, number, number])[] = [
-  [226, 240, 250], /* 0 public, ice white */
-  [125, 211, 252], /* 1 public, ice blue */
+  [252, 248, 236], /* 0 public, ivory */
+  [234, 220, 182], /* 1 public, champagne */
   [200, 255, 106], /* 2 private, lime */
   [148, 163, 184], /* 3 sealed, slate (drawn as a small closed cell, not as a character) */
-  [214, 192, 141], /* 4 champagne, a rare accent */
+  [233, 255, 184], /* 4 pale lime, a rare accent */
 ];
 const SEALED = 3;
 const MORPH_MS = 1500;

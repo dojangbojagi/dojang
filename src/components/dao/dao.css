@@ -1,5 +1,5 @@
 /* Governance page (/dao). Same language as the rest of the app: ink panels, thin lines, mono labels,
-   ice blue = public / on-chain. It reuses the .lend layout and panel styles from lending.css. */
+   champagne = public / on-chain. It reuses the .lend layout and panel styles from lending.css. */
 
 .dao-anchor { scroll-margin-top: calc(var(--header-h) + var(--space-4)); }
 .dao-notice { display: block; padding: var(--space-4) var(--space-5); }
@@ -44,7 +44,7 @@
 .dao-votes { display: grid; gap: .5rem; }
 .dao-bar { display: flex; height: .55rem; overflow: hidden; border-radius: 999px; background: rgba(255, 255, 255, .08); }
 .dao-bar span { display: block; height: 100%; }
-.dao-bar [data-k="for"], .dao-votes__counts [data-k="for"] i { background: var(--state-valid, #7DD3FC); }
+.dao-bar [data-k="for"], .dao-votes__counts [data-k="for"] i { background: var(--state-valid, #C8FF6A); }
 .dao-bar [data-k="against"], .dao-votes__counts [data-k="against"] i { background: var(--gold); }
 .dao-bar [data-k="abstain"], .dao-votes__counts [data-k="abstain"] i { background: var(--text-dim); }
 .dao-bar [data-k="none"] { background: transparent; }

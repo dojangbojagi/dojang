@@ -2,10 +2,11 @@
 
 import { useEffect, useRef } from "react";
 
-/* The hero's background: one object made of the same hex characters as the idea scene's, turning slowly
-   in 3D behind the headline. It has two forms and the scroll decides which one you see:
+/* The hero's picture: one object made of the same hex characters as the idea scene's, turning slowly
+   in 3D on the right of the headline (behind it on narrow screens). It has two forms and the scroll decides
+   which one you see:
 
-     A  "Knot"   a woven tube of characters in ice blue and white, with a few champagne ones: verified,
+     A  "Knot"   a woven tube of characters in champagne and ivory, with a few lime flecks: verified,
                  public state (Dojang -> DAO). It is what the hero opens on.
      B  "Gyro"   three tilting rings around a lime core: the private proof and the action it unlocks
                  (Bojagi -> Lending). The knot unspools into it while the camera pushes in.
@@ -30,11 +31,11 @@ const SIDE = 12; /* characters around its tube at each step */
 const COUNT = SEG * SIDE; /* 1320, shared by both forms: the knot's points become the gyro's */
 const RING_N = 330; /* characters per ring of the gyro; the last 330 are its core */
 const PALETTE: readonly (readonly [number, number, number])[] = [
-  [226, 240, 250], /* 0 ice white */
-  [125, 211, 252], /* 1 ice blue (public) */
+  [252, 248, 236], /* 0 ivory */
+  [234, 220, 182], /* 1 champagne (public) */
   [200, 255, 106], /* 2 lime (private) */
-  [96, 165, 250], /* 3 cool blue */
-  [214, 192, 141], /* 4 champagne, a rare accent */
+  [176, 156, 108], /* 3 bronze, for depth */
+  [233, 255, 184], /* 4 pale lime, a rare accent */
 ];
 const FRAME_MS = 40; /* ~25 frames a second while it drifts; the turn is slow, so it still looks smooth */
 const Q_GONE = 0.8; /* the zoom has faded the field out completely by here (see .lp-field), so there is nothing to draw */
@@ -127,10 +128,10 @@ function buildModel(): Model {
   const palA = new Uint8Array(COUNT);
   const palB = new Uint8Array(COUNT);
   for (let i = 0; i < COUNT; i++) {
-    palA[i] = rnd(i * 3) > 0.93 ? 4 : rnd(i * 5 + 1) > 0.5 ? 0 : 1;
+    palA[i] = rnd(i * 3) > 0.94 ? 2 : rnd(i * 5 + 1) > 0.5 ? 0 : 1;
     const g = (i / RING_N) | 0;
     const v = rnd(i * 7 + 2);
-    palB[i] = g === 0 ? (v > 0.2 ? 1 : 0) : g === 1 ? (v > 0.9 ? 4 : v > 0.78 ? 0 : 2) : g === 2 ? (v > 0.45 ? 3 : 1) : v > 0.2 ? 2 : 0;
+    palB[i] = g === 0 ? (v > 0.2 ? 1 : 0) : g === 1 ? (v > 0.9 ? 4 : 2) : g === 2 ? (v > 0.45 ? 3 : 1) : v > 0.2 ? 2 : 4;
   }
 
   /* Pair the points by where they are, not by their number: both forms are sorted by azimuth around the
@@ -209,6 +210,8 @@ export function GlyphField() {
     const stage = host.closest<HTMLElement>(".lp-stage") ?? host;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const live = !reduce;
+    /* wide screens put the form beside the headline (full strength); narrow ones put it behind, so it is dimmer */
+    const twoSide = window.matchMedia("(min-width: 861px) and (min-aspect-ratio: 1 / 1)");
 
     const M = buildModel();
     const cur = new Float32Array(3);
@@ -323,7 +326,7 @@ export function GlyphField() {
       const cy = Math.cos(yaw), sy_ = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
       const minDim = Math.min(w, h);
       /* the canvas is a square placed by CSS (see .lp-form), so the form is simply centred in it */
-      const Rr = minDim * 0.32;
+      const Rr = minDim * 0.34;
       const cxp = w / 2;
       const cyp = h / 2;
       const base = Math.min(22, Math.max(13, minDim / dpr / 42)) * dpr;
@@ -370,12 +373,13 @@ export function GlyphField() {
         }
         order[j + 1] = idx;
       }
+      const K = twoSide.matches ? 1 : 0.75;
       for (let n = 0; n < COUNT; n++) {
         const i = order[n];
         const dz = clamp01((sz[i] + 1.3) / 2.6);
         const s = CAMERA / (CAMERA - sz[i]);
         const dw = base * s * (0.62 + 0.5 * dz);
-        ctx.globalAlpha = 0.14 + 0.62 * Math.pow(dz, 1.25);
+        ctx.globalAlpha = K * (0.2 + 0.8 * Math.pow(dz, 1.25));
         ctx.drawImage(atlas, M.glyph[i] * cs, sc[i] * cs, cs, cs, sx[i] - dw / 2, sy[i] - dw / 2, dw, dw);
       }
       ctx.globalAlpha = 1;
