@@ -11,14 +11,15 @@
    Vivid, never pastel. Glass is dark, never white-ish.
 
    How the cover works
-     .lp-cover is a tall runway; .lp-stage is sticky inside it. Scroll position is
-     turned into four numbers written on the stage by cover-reveal.tsx:
+     .lp-cover is a tall runway; .lp-stage is sticky inside it. Scroll position is turned into
+     a few numbers written on the stage by cover-reveal.tsx:
        --e  how far the opening has grown (a dot, then a rounded square, then the screen)
-       --c  how far the hero copy has come in (starts once the opening nearly fills the screen)
-       --q  how far the hero copy has left again (after a short hold)
-     plus the clip of the opening (--clip) and its rectangle (--bx --by --bw --bh --crad). All motion below is CSS reading those values, so it also
-     runs in reverse when the visitor scrolls back up.
-     With prefers-reduced-motion the two phases simply stack.
+       --c  how far the hero has come in (starts once the opening nearly fills the screen)
+       --q  how far the camera has pushed into the hero (after a short hold): the hero zooms
+            and fades, and the next section rises in behind it
+     plus the clip of the opening (--clip) and its rectangle (--bx --by --bw --bh --crad).
+     All motion below is CSS reading those values, so it also runs in reverse when the visitor
+     scrolls back up. With prefers-reduced-motion the two phases simply stack.
    ========================================================================== */
 
 .lp {
@@ -41,7 +42,7 @@
   --lp-max: 1240px;
   --lp-nav-h: 76px;
   --lp-ease: cubic-bezier(0.16, 1, 0.3, 1);
-  --lp-run: 175svh;
+  --lp-run: 210svh;
   --lp-veil: url("/landing/veil.svg");
 
   position: relative;
@@ -296,10 +297,10 @@
   position: relative; width: 1px; height: 44px; background: linear-gradient(to bottom, rgba(10, 12, 18, .55), transparent); overflow: hidden;
 }
 .lp-hint i::after {
-  content: ""; position: absolute; left: 0; top: -40%; width: 1px; height: 40%; background: var(--lp-orange);
-  animation: lp-hint 2.2s ease-in-out infinite;
+  content: ""; position: absolute; left: 0; top: 0; width: 1px; height: 40%; background: var(--lp-orange);
+  transform: translateY(-100%); animation: lp-hint 2.2s ease-in-out infinite; will-change: transform;
 }
-@keyframes lp-hint { 0% { top: -40%; } 100% { top: 100%; } }
+@keyframes lp-hint { 0% { transform: translateY(-100%); } 100% { transform: translateY(250%); } }
 
 /* The opening. clip-path shows a window onto the dark hero: a dot, a rounded square, the screen. */
 .lp-box {
@@ -313,6 +314,7 @@
   content: ""; position: absolute; left: 0; top: 0; width: 760px; height: 620px; z-index: 1; pointer-events: none;
   background: radial-gradient(closest-side, rgba(59, 134, 255, .14), transparent);
   transform: translate3d(calc(var(--mx) - 380px), calc(var(--my) - 310px), 0); will-change: transform;
+  opacity: calc(1 - var(--q));
 }
 /* The dot is plain black, like the full stop it replaces; it turns into patchwork cloth, which dissolves into the hero */
 .lp-dot {
@@ -340,100 +342,125 @@
 /* Sparks: a pool of small elements animated by the compositor (see cover-reveal.tsx) */
 .lp-sparks { position: absolute; inset: 0; z-index: 7; pointer-events: none; overflow: clip; }
 /* the glow is a static shadow: painted once per element, then only moved, never repainted */
-.lp-sparks i { position: absolute; left: 0; top: 0; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 50%; background: #ff7a3d; box-shadow: 0 0 7px 1px rgba(255, 122, 61, .75); opacity: 0; will-change: transform, opacity; }
+.lp-sparks i { position: absolute; left: 0; top: 0; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: #ff7a3d; box-shadow: 0 0 7px 1px rgba(255, 122, 61, .75); opacity: 0; will-change: transform, opacity; }
 .lp-sparks i:nth-child(3n + 2) { background: #ef5f22; box-shadow: 0 0 7px 1px rgba(239, 95, 34, .75); }
 .lp-sparks i:nth-child(3n) { background: #3b86ff; box-shadow: 0 0 7px 1px rgba(59, 134, 255, .8); }
 .lp-sparks i:nth-child(7n) { background: #6ba3ff; box-shadow: 0 0 7px 1px rgba(107, 163, 255, .8); }
 
-/* The field of public characters, zooming out from the middle of the opening */
+/* The clouds of characters: zoom out from the middle of the opening, and rush past when the camera pushes in */
 .lp-field {
   position: absolute; inset: 0; z-index: 0; pointer-events: none;
-  transform: scale(calc(1.26 - var(--e) * .26 + var(--q) * .12));
+  transform: scale(calc(1.24 - var(--e) * .24 + var(--q) * var(--q) * 1.2));
   transform-origin: var(--ox, 50%) var(--oy, 50%);
-  opacity: calc(1 - var(--q) * .6);
+  opacity: calc(1 - clamp(0, (var(--q) - .2) * 1.7, 1));
   will-change: transform;
 }
 .lp-field canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .lp-glow {
   position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  opacity: calc(1 - var(--q));
   background:
-    radial-gradient(60% 52% at 82% 6%, rgba(59, 134, 255, .24), transparent 70%),
-    radial-gradient(52% 50% at 8% 100%, rgba(239, 95, 34, .24), transparent 70%),
-    radial-gradient(46% 38% at 50% 48%, rgba(6, 9, 18, .28), transparent 100%);
+    radial-gradient(60% 52% at 84% 4%, rgba(59, 134, 255, .2), transparent 70%),
+    radial-gradient(52% 50% at 6% 100%, rgba(239, 95, 34, .2), transparent 70%),
+    radial-gradient(44% 22% at 50% 21%, rgba(59, 134, 255, .1), transparent 72%),
+    radial-gradient(44% 18% at 50% 81%, rgba(239, 95, 34, .12), transparent 72%),
+    linear-gradient(to bottom, rgba(6, 9, 18, .72), transparent 16%, transparent 82%, rgba(6, 9, 18, .8));
 }
 
-/* Phase 2: the hero, centred. Each line slides up out of a mask, and back out through the top. */
+/* Phase 2: the hero. One left-aligned column, centred as a block, with a cloud of data above it and one below.
+   Each part comes in one after the other as the opening completes (--c) and goes out together as the
+   camera pushes in (--q): the column zooms from the middle of the headline, and fades. */
 .lp-hero {
   position: relative; z-index: 3; height: 100%;
-  display: flex; flex-direction: column; justify-content: center; align-items: center;
-  gap: clamp(1.3rem, 3.6svh, 2.4rem);
-  width: min(100%, 1240px); margin-inline: auto; container-type: inline-size;
-  padding: calc(var(--lp-nav-h) + 1rem) var(--lp-gutter) 7.5rem;
+  display: flex; align-items: center; justify-content: center;
+  width: min(100%, 1480px); margin-inline: auto; container-type: inline-size;
+  padding: calc(var(--lp-nav-h) + 1rem) var(--lp-gutter) 7rem;
 }
+.lp-hero__col {
+  display: grid; justify-items: start; gap: clamp(1.1rem, 2.8svh, 1.9rem);
+  width: fit-content; max-width: 100%;
+  transform-origin: 50% 40%;
+  transform: scale(calc(1 + var(--q) * var(--q) * 4.4)); /* slow at first, then it rushes */
+  will-change: transform;
+}
+
+/* the one line of honesty, as a small glass chip */
+.lp-badge {
+  --in: clamp(0, calc(var(--c) * 4), 1); --out: clamp(0, calc(var(--q) * 3.6), 1);
+  position: relative; display: inline-flex; align-items: center; flex-wrap: wrap; gap: .4rem 1rem;
+  padding: .55rem 1.1rem .55rem .95rem; border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .1), rgba(255, 255, 255, .025)), rgba(8, 12, 24, .92);
+  border: 1px solid rgba(255, 255, 255, .15);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18);
+  font: 500 .66rem/1.2 var(--lp-font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--lp-muted);
+  opacity: calc(var(--in) * (1 - var(--out)));
+  translate: 0 calc((1 - var(--in)) * 16px);
+}
+.lp-badge i { position: relative; width: .45rem; height: .45rem; flex: none; border-radius: 50%; background: var(--lp-orange); }
+.lp-badge i::after { /* the pulse is a ring that grows and fades: transform and opacity only, so it costs nothing */
+  content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 1px solid var(--lp-orange);
+  animation: lp-ring 2.6s ease-out infinite;
+}
+.lp-badge > span + span::before { content: ""; display: inline-block; width: 1px; height: .8em; margin-right: 1rem; background: var(--lp-line-2); vertical-align: -.1em; }
+@keyframes lp-ring { 0% { transform: scale(.6); opacity: .9; } 80%, 100% { transform: scale(1.9); opacity: 0; } }
+
 .lp-h {
   display: grid; justify-items: start; width: fit-content; max-width: 100%;
-  /* sized from the hero column: the widest line, with the third line pushed right, always fits */
-  font: 700 clamp(2.15rem, min(8.4cqw, 11svh), 6.6rem) / 1.02 var(--lp-font-display);
-  letter-spacing: -.028em; text-transform: uppercase; color: #fff;
-  text-shadow: 0 2px 40px rgba(6, 9, 18, .85);
+  /* sized from the width of the hero, and capped by its height, so the widest line (with the third one pushed right) always fits */
+  font: 700 clamp(2rem, min(5.7cqw, 9.4svh), 5.2rem) / 1.04 var(--lp-font-display);
+  letter-spacing: -.03em; text-transform: uppercase; color: #fff;
+  text-shadow: 0 2px 36px rgba(6, 9, 18, .9);
+  opacity: calc(1 - clamp(0, (var(--q) - .4) * 2.5, 1));
 }
 .lp-h__line { display: block; overflow: clip; padding: .07em .05em; margin: -.07em -.05em; }
 .lp-h__in {
   display: block; will-change: transform;
-  transform: translateY(calc((1 - var(--in)) * 118% - var(--out) * 118%));
+  transform: translateY(calc((1 - var(--in)) * 118%));
 }
 .lp-h b { font-weight: inherit; white-space: nowrap; }
 .lp-h__public { color: var(--lp-blue); }
 .lp-h__private { color: var(--lp-orange); }
-.lp-h__l1 { --in: clamp(0, calc(var(--c) * 2.8), 1); --out: clamp(0, calc(var(--q) * 3.2), 1); }
-.lp-h__l2 { --in: clamp(0, calc((var(--c) - .16) * 2.8), 1); --out: clamp(0, calc((var(--q) - .12) * 3.2), 1); }
-.lp-h__l3 { --in: clamp(0, calc((var(--c) - .32) * 2.8), 1); --out: clamp(0, calc((var(--q) - .24) * 3.2), 1); justify-self: end; }
+.lp-h__l1 { --in: clamp(0, calc((var(--c) - .06) * 3.2), 1); }
+.lp-h__l2 { --in: clamp(0, calc((var(--c) - .22) * 3.2), 1); }
+.lp-h__l3 { --in: clamp(0, calc((var(--c) - .38) * 3.2), 1); margin-left: 1.1em; } /* the indent widens the block, so the rows below line up with its right edge too */
 
-/* The lede and the actions sit on a dock of dark glass, so they stay readable over the glyphs */
-.lp-dock {
-  --in: clamp(0, calc((var(--c) - .5) * 3), 1); --out: clamp(0, calc((var(--q) - .3) * 3), 1);
-  --sc: var(--lp-orange);
-  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 1.2rem 2.2rem;
-  width: min(100%, 880px); padding: 1.15rem 1.2rem 1.15rem 1.8rem; border-radius: 28px;
-  background: rgba(8, 12, 24, .58); border: 1px solid rgba(255, 255, 255, .13);
-  -webkit-backdrop-filter: blur(18px) saturate(1.5); backdrop-filter: blur(18px) saturate(1.5);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), 0 36px 70px -34px rgba(0, 0, 0, .85);
+.lp-cta { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1.2rem 2.4rem; width: 100%; }
+.lp-lede, .lp-actions {
+  --out: clamp(0, calc(var(--q) * 3.6), 1);
   opacity: calc(var(--in) * (1 - var(--out)));
-  transform: translateY(calc((1 - var(--in)) * 30px - var(--out) * 30px));
+  translate: 0 calc((1 - var(--in)) * 18px);
 }
-.lp-lede { max-width: 46ch; font-size: clamp(.98rem, .93rem + .3vw, 1.15rem); color: #c9d0e0; }
-.lp-actions { display: flex; flex-wrap: wrap; gap: .8rem; }
-.lp-status {
-  --in: clamp(0, calc((var(--c) - .66) * 3), 1); --out: clamp(0, calc((var(--q) - .4) * 3), 1);
-  display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: .5rem 1.1rem;
-  padding: .7rem 1.3rem; border-radius: 999px; background: rgba(6, 9, 18, .62); border: 1px solid rgba(255, 255, 255, .08);
-  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
-  font: 500 .72rem/1.3 var(--lp-font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--lp-muted);
-  opacity: calc(var(--in) * (1 - var(--out)));
-  transform: translateY(calc((1 - var(--in)) * 18px - var(--out) * 18px));
+.lp-lede {
+  --in: clamp(0, calc((var(--c) - .5) * 3.4), 1);
+  flex: 1 1 18rem; max-width: 40ch; font-size: clamp(.95rem, .91rem + .26vw, 1.08rem); color: #c9d0e0;
+  text-shadow: 0 1px 22px rgba(6, 9, 18, .95);
 }
-.lp-status i { width: .5rem; height: .5rem; flex: none; border-radius: 50%; background: var(--lp-orange); box-shadow: 0 0 0 4px rgba(239, 95, 34, .22); animation: lp-pulse 2.4s ease-in-out infinite; }
-.lp-status span + span::before { content: ""; display: inline-block; width: 1px; height: .8em; margin-right: 1.1rem; background: var(--lp-line-2); vertical-align: -.1em; }
-@keyframes lp-pulse { 50% { box-shadow: 0 0 0 7px rgba(239, 95, 34, 0); } }
+.lp-actions { --in: clamp(0, calc((var(--c) - .62) * 3.4), 1); display: flex; flex-wrap: wrap; gap: .75rem; flex: none; }
 
 .lp-pointer-hint {
-  position: absolute; right: var(--lp-gutter); bottom: 6.1rem; z-index: 3;
-  font: 500 .68rem/1 var(--lp-font-mono); letter-spacing: .2em; text-transform: uppercase; color: var(--lp-dim);
-  opacity: calc((var(--c) - .4) * 2 * (1 - var(--q) * 3));
+  position: absolute; left: var(--lp-gutter); bottom: 6.2rem; z-index: 3; white-space: nowrap;
+  padding: .5rem .95rem; border-radius: 999px; background: rgba(8, 12, 24, .9); border: 1px solid rgba(255, 255, 255, .1);
+  font: 500 .62rem/1 var(--lp-font-mono); letter-spacing: .2em; text-transform: uppercase; color: var(--lp-dim);
+  opacity: calc(clamp(0, (var(--c) - .85) * 6, 1) * (1 - clamp(0, var(--q) * 6, 1)));
+  transition: visibility 0s .5s;
 }
+.lp-box[data-ptr="1"] .lp-pointer-hint { opacity: 0; visibility: hidden; }
 @media (pointer: coarse) { .lp-pointer-hint { display: none; } }
 
 .lp .lp-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: .65rem;
-  height: 3.3rem; padding: 0 1.7rem; border-radius: 999px; border: 1px solid transparent;
+  height: 3.1rem; padding: 0 1.55rem; border-radius: 999px; border: 1px solid transparent;
   font: 700 .8rem/1 var(--lp-font-display); letter-spacing: .07em; text-transform: uppercase; white-space: nowrap;
   transition: background-color .2s ease, box-shadow .3s ease, border-color .2s ease, transform .25s var(--lp-ease), scale .2s ease;
 }
 .lp-btn svg { transition: transform .35s var(--lp-ease); }
 .lp-btn:hover svg { transform: translateX(4px); }
-.lp .lp-btn--primary { background: var(--lp-orange); color: #fff !important; text-shadow: 0 1px 2px rgba(120, 35, 5, .4); }
+.lp .lp-btn--primary {
+  background: linear-gradient(180deg, #ff7a3d, var(--lp-orange) 58%, #e2501a); color: #fff !important; text-shadow: 0 1px 2px rgba(120, 35, 5, .4);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .34), 0 10px 28px -12px rgba(239, 95, 34, .7);
+}
 .lp .lp-btn--primary:hover { background: var(--lp-orange-hi); box-shadow: 0 14px 38px -10px rgba(239, 95, 34, .8), inset 0 1px 0 rgba(255, 255, 255, .35); }
-.lp .lp-btn--ghost { color: #fff; border-color: rgba(255, 255, 255, .28); background: rgba(255, 255, 255, .04); }
+.lp .lp-btn--ghost { color: #fff; border-color: rgba(255, 255, 255, .28); background: linear-gradient(180deg, rgba(255, 255, 255, .09), rgba(255, 255, 255, .02)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .16); }
 .lp .lp-btn--ghost:hover {
   border-color: transparent;
   background: linear-gradient(rgba(12, 18, 34, .92), rgba(12, 18, 34, .92)) padding-box, linear-gradient(120deg, #3b86ff, #ef5f22) border-box;
@@ -442,6 +469,7 @@
 /* Marquee: the stack this is built on. Stays put across both phases. */
 .lp-marq {
   position: absolute; left: 0; right: 0; bottom: 0; z-index: 6; height: 5.6rem;
+  opacity: clamp(0, calc(1 - var(--q) * 3.4), 1);
   display: flex; align-items: center; gap: clamp(1.2rem, 3vw, 3.4rem);
   padding-inline: var(--lp-gutter);
   color: var(--lp-ink); border-top: 1px solid transparent;
@@ -471,28 +499,39 @@
 
 /* Phones and tablets: the sentence stacks, the dot sits between the lines, words slide away vertically */
 @media (max-width: 860px) {
-  .lp { --lp-run: 150svh; }
   .lp-words { flex-direction: column; align-items: center; font-size: clamp(2rem, 11.5vw, 4.6rem); line-height: .98; }
   .lp-word--a, .lp-word--b { margin: 0; }
   .lp-stage { --push-x: 0px; --push-y: -30svh; }
   .lp-slot { width: .3em; height: .3em; margin-block: .16em; }
-  .lp-hero { justify-content: flex-end; padding-bottom: 7rem; gap: 1.1rem; }
-  .lp-h { justify-items: center; text-align: center; font-size: clamp(2.15rem, 9.6cqw, 4.4rem); }
+  .lp-hero { align-items: flex-end; padding-bottom: 6.6rem; }
+  .lp-hero__col { gap: 1.05rem; justify-items: center; text-align: center; }
+  .lp-badge { justify-content: center; flex-wrap: nowrap; gap: .4rem .7rem; font-size: .58rem; letter-spacing: .1em; padding: .5rem .9rem; }
+  .lp-badge > span + span::before { margin-right: .7rem; }
+  .lp-h { justify-items: center; text-align: center; font-size: clamp(1.8rem, 9.4cqw, 4.2rem); }
+  .lp-badge__more { display: none; }
   .lp-h__l3 { justify-self: center; }
-  .lp-dock { grid-template-columns: 1fr; padding: 1.1rem 1.2rem; text-align: center; border-radius: 24px; }
   .lp-lede { margin-inline: auto; }
+  .lp-cta { flex-direction: column; justify-content: center; gap: 1.1rem; }
+  .lp-lede { flex: none; }
   .lp-actions { justify-content: center; }
+  .lp-h__l3 { margin-left: 0; }
   .lp-p1 { padding-bottom: 7rem; }
   .lp-marq { height: 4.6rem; }
   .lp-marq__label { display: none; }
-  /* one fact per line: wrapped separators would start lines with a bar */
-  .lp-status { display: grid; grid-template-columns: auto 1fr; column-gap: .9rem; row-gap: .45rem; align-items: center; justify-content: center; justify-items: start; border-radius: 20px; padding: .95rem 1.2rem; }
-  .lp-status i { grid-row: 1; }
-  .lp-status span { grid-column: 2; }
-  .lp-status span + span::before { display: none; }
 }
-@media (max-height: 760px) and (max-width: 860px) {
-  .lp-status span:nth-of-type(n + 4) { display: none; }
+
+@media (max-width: 380px) {
+  .lp-badge { font-size: .52rem; letter-spacing: .08em; gap: .4rem .55rem; padding-inline: .75rem; }
+  .lp-badge > span + span::before { margin-right: .55rem; }
+}
+/* tall screens that are still narrow (tablets held upright): centre the column instead of dropping it to the bottom */
+@media (max-width: 860px) and (min-height: 880px) {
+  .lp-hero { align-items: center; padding-bottom: 7rem; }
+}
+/* big monitors: the hero grows with them instead of staying a column in the middle */
+@media (min-width: 1800px) {
+  .lp-hero { width: min(100%, 1720px); }
+  .lp-h { font-size: clamp(2rem, min(5.7cqw, 9.4svh), 6.2rem); }
 }
 
 /* ============================ SECTIONS ================================== */
@@ -540,7 +579,10 @@
 .lp-fact { --tx-own: background-color .35s ease; }
 
 /* ---- 01 The idea: what a verifier sees. A sticky scene on big screens, plain rows elsewhere. ---- */
-.lp-idea-run { position: relative; }
+/* it starts under the end of the zoom, so the next section is already rising as the hero goes */
+.lp-idea-run { position: relative; z-index: 2; margin-top: -42svh; }
+/* each block fades in and rises as it climbs from the bottom of the screen; --k is written by idea-scene.tsx */
+.lp-ie { --k: 1; opacity: var(--k); translate: 0 calc((1 - var(--k)) * 64px); }
 .lp-idea-pin { padding: clamp(5rem, 3rem + 8vw, 10rem) var(--lp-gutter); }
 .lp-idea { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.06fr); gap: clamp(2.5rem, 6vw, 6rem); align-items: center; }
 
@@ -584,7 +626,8 @@
 .lp-vcard__top { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 1.1rem 1.5rem; border-bottom: 1px solid var(--lp-line); }
 .lp-vcard__cap { font: 500 .7rem/1.5 var(--lp-font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--lp-dim); }
 .lp-vcard__eye { display: inline-flex; align-items: center; gap: .55rem; flex: none; font: 500 .66rem/1 var(--lp-font-mono); letter-spacing: .16em; text-transform: uppercase; color: var(--lp-blue-hi); }
-.lp-vcard__eye i { width: .5rem; height: .5rem; border-radius: 50%; background: currentColor; animation: lp-pulse 2.4s ease-in-out infinite; }
+.lp-vcard__eye i { position: relative; width: .5rem; height: .5rem; border-radius: 50%; background: currentColor; }
+.lp-vcard__eye i::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 1px solid currentColor; animation: lp-ring 2.6s ease-out infinite; }
 .lp-vcard__body { display: grid; gap: 1.7rem; align-content: start; padding: 2rem 1.5rem 1.6rem; }
 .lp-vtitles { position: relative; height: 3.4rem; }
 .lp-vtitles h3 {
@@ -827,19 +870,33 @@
   .lp-field { transform: none; opacity: 1; }
   .lp-veil-cover, .lp-dot, .lp-outline, .lp-sparks, .lp-hint { display: none; }
   .lp-hero { min-height: 100svh; height: auto; }
+  .lp-hero__col { transform: none; will-change: auto; }
+  .lp-glow, .lp-marq { opacity: 1; }
+  .lp-stage { background: var(--lp-bg); }
+  .lp-p1 { background: var(--lp-white); }
   .lp-pointer-hint { opacity: 1; }
-  .lp-marq { position: relative; background: var(--lp-bg); color: var(--lp-muted); border-top-color: rgba(255, 255, 255, .07); }
+  .lp[data-phase] .lp-marq { position: relative; background: var(--lp-bg); color: var(--lp-muted); border-top-color: rgba(255, 255, 255, .07); }
   .lp-marq__track { animation: none; }
-  .lp-status i, .lp-hint i::after, .lp-veil::after, .lp-vval__veil::after, .lp-vcard__eye i { animation: none; }
+  .lp-badge i::after, .lp-hint i::after, .lp-veil::after, .lp-vval__veil::after, .lp-vcard__eye i::after { animation: none; }
   .lp[data-js] [data-lp-reveal], .lp[data-js] [data-lp-reveal][data-rs] { opacity: 1; translate: none; scale: none; filter: none; transition: none; }
   .lp[data-js] .lp-path::before { transform: none; }
   .lp-spacer { display: none; }
   .lp-final { position: relative; height: auto; padding-top: 5rem; padding-bottom: 2rem; }
   .lp-final__main, .lp-final__foot { opacity: 1; transform: none; }
   .lp-curtain { box-shadow: none; }
-  .lp-idea-run { height: auto; }
+  .lp-idea-run { height: auto; margin-top: 0; }
   .lp-idea-pin { position: static; height: auto; }
+  .lp-ie { --k: 1 !important; }
   .lp-ledger--static { display: block; }
   .lp-vcard, .lp-idea__steps { display: none; }
   .lp .lp-btn, .lp .lp-pill { transition: none; }
 }
+
+/* ============================ SMOOTH SCROLL (Lenis) ===================== */
+/* Present only while smooth scrolling is running (the class is set by the library on <html>);
+   these are the rules it asks for. Native smooth scrolling must not fight it. */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+.lenis.lenis-stopped { overflow: clip; }
+.lenis.lenis-smooth iframe { pointer-events: none; }

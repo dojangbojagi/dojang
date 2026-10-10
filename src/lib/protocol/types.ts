@@ -113,9 +113,99 @@ export type VaultState =
   | "previously-granted"
   | "read-error";
 
+export type LendingMarketState =
+  | "unconfigured"
+  | "disconnected"
+  | "wrong-network"
+  | "checking"
+  | "ready"
+  | "read-error";
+
+export type LendingCredentialState =
+  | "unconfigured"
+  | "disconnected"
+  | "checking"
+  | "missing"
+  | "active"
+  | "expired"
+  | "revoked"
+  | "issuer-untrusted"
+  | "read-error";
+
+export type LendingProofState =
+  | "unconfigured"
+  | "disconnected"
+  | "wrong-network"
+  | "checking-credential"
+  | "credential-required"
+  | "credential-expired"
+  | "credential-revoked"
+  | "issuer-untrusted"
+  | "witness-required"
+  | "ready-to-prove"
+  | "generating"
+  | "proof-ready"
+  | "invalid";
+
+export interface LendingAssetInfo {
+  address: Address;
+  symbol: string;
+  decimals: number;
+}
+
+export interface LendingMarketSummary {
+  lendingAsset: LendingAssetInfo;
+  collateralAsset: LendingAssetInfo;
+  availableLiquidity: bigint;
+  totalSupplierLiquidity: bigint;
+  totalDebt: bigint;
+}
+
+export interface LendingUserPosition {
+  lendingAssetBalance: bigint;
+  lendingAssetAllowance: bigint;
+  collateralAssetBalance: bigint;
+  collateralAssetAllowance: bigint;
+  supplierPosition: bigint;
+  collateralBalance: bigint;
+  collateralValue: bigint;
+  debtBalance: bigint;
+  borrowingCapacity: bigint;
+  remainingBorrowCapacity: bigint;
+}
+
+export type LendingContractErrorName =
+  | "UnsupportedChain"
+  | "InvalidMarketAsset"
+  | "UnsupportedTokenDecimals"
+  | "ZeroAmount"
+  | "InsufficientSupplierPosition"
+  | "InsufficientLiquidity"
+  | "InsufficientCollateral"
+  | "BorrowingCapacityExceeded"
+  | "RepayExceedsDebt"
+  | "UnsafeCollateralWithdrawal"
+  | "UnsupportedTokenBehavior"
+  | "MissingCredential"
+  | "CredentialRevoked"
+  | "CredentialNotYetValid"
+  | "CredentialExpired"
+  | "IssuerNotAuthorized"
+  | "WrongSubject"
+  | "WrongCommitment"
+  | "WrongPolicy"
+  | "WrongPolicyVersion"
+  | "WrongThreshold"
+  | "WrongCredentialVersion"
+  | "WrongExpiry"
+  | "WrongChain"
+  | "WrongLendingPool"
+  | "InvalidProof";
+
 export type ProtocolErrorCode =
   | "WALLET_REQUIRED"
   | "WRONG_NETWORK"
+  | "INVALID_AMOUNT"
   | "CONTRACTS_UNCONFIGURED"
   | "INVALID_CREDENTIAL"
   | "ISSUER_NOT_AUTHORIZED"
@@ -125,6 +215,11 @@ export type ProtocolErrorCode =
   | "CREDENTIAL_EXPIRED"
   | "CREDENTIAL_REVOKED"
   | "INVALID_PROOF"
+  | "LENDING_NOT_CONFIGURED"
+  | "INSUFFICIENT_LIQUIDITY"
+  | "INSUFFICIENT_COLLATERAL"
+  | "BORROWING_CAPACITY_EXCEEDED"
+  | "TRANSACTION_STATE_UNCONFIRMED"
   | "ALREADY_GRANTED"
   | "TRANSACTION_REJECTED"
   | "INSUFFICIENT_FUNDS"

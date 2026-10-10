@@ -130,3 +130,48 @@ export const restrictedVaultAbi = [
     ],
   },
 ] as const;
+
+export const lendingPoolAbi = parseAbi([
+  "function LENDING_POLICY_ID() view returns (uint256)",
+  "function LENDING_POLICY_VERSION() view returns (uint256)",
+  "function ELIGIBILITY_THRESHOLD() view returns (uint256)",
+  "function MAX_LTV_BPS() view returns (uint256)",
+  "function INTEREST_RATE_BPS() view returns (uint256)",
+  "function lendingAsset() view returns (address)",
+  "function collateralAsset() view returns (address)",
+  "function lendingAssetDecimals() view returns (uint8)",
+  "function collateralAssetDecimals() view returns (uint8)",
+  "function totalSupplierLiquidity() view returns (uint256)",
+  "function totalDebt() view returns (uint256)",
+  "function supplierBalance(address supplier) view returns (uint256)",
+  "function collateralBalance(address borrower) view returns (uint256)",
+  "function debtBalance(address borrower) view returns (uint256)",
+  "function collateralValue(address borrower) view returns (uint256)",
+  "function borrowingCapacity(address borrower) view returns (uint256)",
+  "function remainingBorrowCapacity(address borrower) view returns (uint256)",
+  "function availableLiquidity() view returns (uint256)",
+  "function supply(uint256 amount)",
+  "function withdrawSupply(uint256 amount)",
+  "function depositCollateral(uint256 amount)",
+  "function withdrawCollateral(uint256 amount)",
+  "function borrow(uint256 amount, bytes proof, uint256[9] publicInputs)",
+  "function repay(uint256 amount)",
+  "event LiquiditySupplied(address indexed supplier, uint256 amount, uint256 supplierPosition)",
+  "event LiquidityWithdrawn(address indexed supplier, uint256 amount, uint256 supplierPosition)",
+  "event CollateralDeposited(address indexed borrower, uint256 amount, uint256 collateralBalance)",
+  "event CollateralWithdrawn(address indexed borrower, uint256 amount, uint256 collateralBalance)",
+  "event Borrowed(address indexed borrower, uint256 amount, uint256 outstandingDebt, uint64 credentialVersion, bytes32 commitment)",
+  "event Repaid(address indexed borrower, uint256 amount, uint256 outstandingDebt)",
+]);
+
+export const controlledTokenAbi = parseAbi([
+  "function approve(address spender, uint256 amount) returns (bool)",
+  "function allowance(address owner, address spender) view returns (uint256)",
+  "function balanceOf(address account) view returns (uint256)",
+  "function symbol() view returns (string)",
+]);
+
+export const credentialIssuerRoleAbi = parseAbi([
+  "function ISSUER_ROLE() view returns (bytes32)",
+  "function hasRole(bytes32 role, address account) view returns (bool)",
+]);

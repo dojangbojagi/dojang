@@ -24,6 +24,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_DEMO_CREDENTIAL_REGISTRY_CONTRACT: optionalAddress,
   NEXT_PUBLIC_PROOF_VERIFIER_CONTRACT: optionalAddress,
   NEXT_PUBLIC_RESTRICTED_VAULT_CONTRACT: optionalAddress,
+  NEXT_PUBLIC_LENDING_POOL_CONTRACT: optionalAddress,
 });
 
 const result = envSchema.safeParse({
@@ -36,6 +37,7 @@ const result = envSchema.safeParse({
     process.env.NEXT_PUBLIC_DEMO_CREDENTIAL_REGISTRY_CONTRACT,
   NEXT_PUBLIC_PROOF_VERIFIER_CONTRACT: process.env.NEXT_PUBLIC_PROOF_VERIFIER_CONTRACT,
   NEXT_PUBLIC_RESTRICTED_VAULT_CONTRACT: process.env.NEXT_PUBLIC_RESTRICTED_VAULT_CONTRACT,
+  NEXT_PUBLIC_LENDING_POOL_CONTRACT: process.env.NEXT_PUBLIC_LENDING_POOL_CONTRACT,
 });
 
 if (!result.success) {
@@ -52,5 +54,6 @@ export const appEnv = {
     credentialRegistry: result.data.NEXT_PUBLIC_DEMO_CREDENTIAL_REGISTRY_CONTRACT,
     proofVerifier: result.data.NEXT_PUBLIC_PROOF_VERIFIER_CONTRACT,
     restrictedVault: result.data.NEXT_PUBLIC_RESTRICTED_VAULT_CONTRACT,
+    lendingPool: result.data.NEXT_PUBLIC_LENDING_POOL_CONTRACT,
   },
 } as const;

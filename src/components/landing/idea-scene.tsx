@@ -1,12 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { scrollToY } from "./smooth-scroll";
 
 /* 01 · The idea. The same fact, seen three ways by a verifier.
 
    On big screens this is a sticky scene: the section is a tall runway, the content is
    pinned, and scrolling moves one card through its three states. Everywhere else (phones,
-   short windows, reduced motion) the three states are plain rows, from the same copy. */
+   short windows, reduced motion) the three states are plain rows, from the same copy.
+
+   It also comes in behind the hero: each block marked .lp-ie fades in and rises (64px) as it
+   travels up from the bottom of the screen, scrubbed by scroll position, so it reverses too. */
+
+const RISE = 64; /* px; keep in sync with .lp-ie in landing.css */
+const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
 
 const STATES = [
   { name: "A public attestation", note: "Easy to trust, impossible to keep private.", tone: "warn", chip: "Trusted, but exposed" },
@@ -27,11 +34,33 @@ export function IdeaScene() {
     const run = runRef.current;
     if (!run) return;
     const pinned = window.matchMedia(PIN_QUERY);
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const items = Array.from(run.querySelectorAll<HTMLElement>(".lp-ie"));
+    const lastK = items.map(() => -1);
+    const lift = items.map(() => 0); /* the translate each block has now, so its layout position can be read without it */
     let raf = 0;
     let lastP = -1;
 
+    /* Each block's progress comes from where it is on screen: 0 while it is below the fold, 1 once
+       it has climbed to 55% of the screen height. Reads first, writes after, so layout runs once. */
+    const scrub = () => {
+      if (reduced) return;
+      const vh = window.innerHeight;
+      const r = run.getBoundingClientRect();
+      if (r.bottom < -vh * 0.5 || r.top > vh * 2.2) return;
+      const tops = items.map((el, i) => el.getBoundingClientRect().top - lift[i]);
+      for (let i = 0; i < items.length; i++) {
+        const k = clamp01((vh * 0.985 - tops[i]) / (vh * 0.43));
+        if (Math.abs(k - lastK[i]) < 0.004) continue;
+        lastK[i] = k;
+        lift[i] = (1 - k) * RISE;
+        items[i].style.setProperty("--k", k.toFixed(3));
+      }
+    };
+
     const update = () => {
       raf = 0;
+      scrub();
       if (!pinned.matches) {
         run.style.setProperty("--ip", "0");
         return;
@@ -74,7 +103,7 @@ export function IdeaScene() {
     const travel = run.offsetHeight - window.innerHeight;
     const centre = i === 0 ? 0.12 : i === 1 ? 0.5 : 0.88;
     const top = run.getBoundingClientRect().top + window.scrollY + travel * centre;
-    window.scrollTo({ top, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    scrollToY(top);
   };
 
   return (
@@ -82,22 +111,22 @@ export function IdeaScene() {
       <div className="lp-idea-pin">
         <div className="lp-wrap lp-idea">
           <div className="lp-idea__copy">
-            <p className="lp-eyebrow" data-lp-reveal style={{ ["--ac" as string]: "var(--lp-blue)" }}>
+            <p className="lp-eyebrow lp-ie" style={{ ["--ac" as string]: "var(--lp-blue)" }}>
               <i aria-hidden="true" />
               01 — The idea
             </p>
-            <h2 className="lp-h2" id="idea-title" data-lp-reveal style={{ ["--i" as string]: 1 }}>
+            <h2 className="lp-h2 lp-ie" id="idea-title">
               Verifiable facts should not require <em>public</em> data.
             </h2>
-            <p className="lp-lead" data-lp-reveal style={{ ["--i" as string]: 2 }}>
+            <p className="lp-lead lp-ie">
               Most on-chain checks work by publishing the fact itself. That makes the fact easy to trust and impossible to keep private. Private data has the opposite problem: no one else can rely on it.
             </p>
-            <p className="lp-body" data-lp-reveal style={{ ["--i" as string]: 3 }}>
+            <p className="lp-body lp-ie">
               This protocol pairs the two. A trusted issuer seals a fact in an <strong>attestation</strong>. You then prove that the sealed fact meets a rule, without showing the fact. The rule is enforced by a smart contract, so anyone can inspect that it was applied.
             </p>
 
             {/* sticky mode only: where you are in the scene */}
-            <ol className="lp-idea__steps" aria-label="Three views of the same fact">
+            <ol className="lp-idea__steps lp-ie" aria-label="Three views of the same fact">
               {STATES.map((s, i) => (
                 <li key={s.name}>
                   <button type="button" className="lp-istep" data-on={state === i} onClick={() => goTo(i)}>
@@ -110,7 +139,7 @@ export function IdeaScene() {
             </ol>
           </div>
 
-          <div className="lp-idea__stage" data-lp-reveal="right" style={{ ["--i" as string]: 2 }}>
+          <div className="lp-idea__stage lp-ie">
             {/* sticky mode: one card, three states */}
             <div className="lp-vcard" data-s={state} data-spot>
               <div className="lp-vcard__top">

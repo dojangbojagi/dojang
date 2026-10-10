@@ -24,6 +24,7 @@ export const projectContracts = {
   credentialRegistry: checkedAddress(appEnv.contracts.credentialRegistry),
   proofVerifier: checkedAddress(appEnv.contracts.proofVerifier),
   restrictedVault: checkedAddress(appEnv.contracts.restrictedVault),
+  lendingPool: checkedAddress(appEnv.contracts.lendingPool),
 } as const;
 
 export const invalidContractConfig = Object.entries(appEnv.contracts)

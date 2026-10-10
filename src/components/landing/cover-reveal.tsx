@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useRef } from "react";
-import { GIWA_CHAIN_ID } from "@/lib/config/chain";
 import { Arrow } from "./arrow";
 import { GlyphField } from "./glyph-field";
+import { scrollToId } from "./smooth-scroll";
 
-/* Phase 1 is the claim on white. The full stop after "more" is a black dot, like the one after "less"; scrolling
-   swells it into a rounded square and then into the whole screen, and phase 2, the hero,
-   was inside it all along. After a short hold the hero leaves again, line by line.
+/* Phase 1 is the claim on white. The full stop after "more" is a black dot, like the one after "less";
+   scrolling swells it into a rounded square and then into the whole screen, and phase 2, the hero,
+   was inside it all along. After a short hold the camera pushes into the headline: it zooms in
+   until the hero is gone, and the next section rises in behind it.
 
    The cover is a tall runway with a sticky stage. Scroll position becomes a handful of
    numbers written on the stage (see the header of landing.css), and every animated value
@@ -22,9 +23,11 @@ function splitTagline(tagline: string): [string, string] {
   return m ? [m[1], m[2]] : [tagline.trim(), ""];
 }
 
-/* The runway, as fractions: the opening grows, the hero holds, then the hero leaves. */
-const OPEN = 0.56;
-const HOLD = 0.16;
+/* The runway, as fractions of its length: the opening grows, the hero holds, then the camera
+   pushes in. (--lp-run is 210svh on desktop: about a screen to open, a quarter of one to hold,
+   and nine tenths of one to zoom.) */
+const OPEN = 0.47;
+const HOLD = 0.11;
 const NAV_H = 76;
 
 const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
@@ -88,11 +91,11 @@ function createSparks(layer: HTMLElement) {
         el.getAnimations().forEach((a) => a.cancel());
         el.animate(
           [
-            { transform: `translate3d(${x.toFixed(0)}px, ${y.toFixed(0)}px, 0) scale(1.3)`, opacity: 1, offset: 0 },
+            { transform: `translate3d(${x.toFixed(0)}px, ${y.toFixed(0)}px, 0) scale(1.5)`, opacity: 1, offset: 0 },
             { opacity: 0.9, offset: 0.55 },
-            { transform: `translate3d(${(x + dx).toFixed(0)}px, ${(y + dy).toFixed(0)}px, 0) scale(0.45)`, opacity: 0, offset: 1 },
+            { transform: `translate3d(${(x + dx).toFixed(0)}px, ${(y + dy).toFixed(0)}px, 0) scale(0.7)`, opacity: 0, offset: 1 },
           ],
-          { duration: 520 + Math.random() * 480, easing: "cubic-bezier(0.1, 0.75, 0.25, 1)" },
+          { duration: 520 + Math.random() * 480, easing: "cubic-bezier(0.2, 0.6, 0.3, 1)" },
         );
       }
     },
@@ -105,10 +108,9 @@ function createSparks(layer: HTMLElement) {
 /* ------------------------------------------------------------- component */
 type Props = {
   tagline: string;
-  contractsLabel: string;
 };
 
-export function CoverReveal({ tagline, contractsLabel }: Props) {
+export function CoverReveal({ tagline }: Props) {
   const coverRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const slotRef = useRef<HTMLSpanElement>(null);
@@ -212,14 +214,15 @@ export function CoverReveal({ tagline, contractsLabel }: Props) {
       s.setProperty("--bh", `${bh.toFixed(1)}px`);
       s.setProperty("--crad", `${radius.toFixed(1)}px`);
 
-      /* the glyph field only draws while the hero is mostly open */
-      const live = e > 0.45 ? "1" : "0";
+      /* the glyph field only works while the hero is mostly open and not yet zoomed away */
+      const live = e > 0.45 && q < 0.85 ? "1" : "0";
       if (box.dataset.live !== live) {
         box.dataset.live = live;
         box.dispatchEvent(new Event("lp-live"));
       }
 
-      setHero(e > 0.6 && q < 0.9);
+      /* the buttons are gone by q = .28, so from then on nothing in the hero can be clicked or tabbed to by mistake */
+      setHero(e > 0.6 && q < 0.22);
       setPhase(t < NAV_H * 0.8 && b < 96);
 
       /* sparks leave the rim while the opening is being scrolled, in either direction */
@@ -281,48 +284,46 @@ export function CoverReveal({ tagline, contractsLabel }: Props) {
         </div>
 
         {/* ---- The opening, and phase 2 inside it ---- */}
-        <div className="lp-box" ref={boxRef} data-lp-box>
+        <div className="lp-box" ref={boxRef} data-lp-box data-live="0">
           <GlyphField />
           <div className="lp-glow" aria-hidden="true" />
 
           <div className="lp-hero" ref={heroRef} inert>
-            <h2 className="lp-h">
-              <span className="lp-h__line lp-h__l1"><span className="lp-h__in">Verify the <b className="lp-h__public">fact</b></span></span>
-              <span className="lp-h__line lp-h__l2"><span className="lp-h__in">Prove it <b className="lp-h__private">privately</b></span></span>
-              <span className="lp-h__line lp-h__l3"><span className="lp-h__in">Unlock <b className="lp-h__public">on-chain</b></span></span>
-            </h2>
-            <div className="lp-dock" data-spot>
-              <p className="lp-lede">
-                The exact value stays on your device. Only a proof that it met the rule is checked <span style={{ whiteSpace: "nowrap" }}>on-chain</span>.
+            {/* One left-aligned column, centred as a block. Everything in it zooms together when the camera pushes in. */}
+            <div className="lp-hero__col">
+              <p className="lp-badge">
+                <i aria-hidden="true" />
+                <span>Testnet<span className="lp-badge__more"> demonstration</span></span>
+                <span>Not audited</span>
+                <span>No funds held</span>
               </p>
-              <div className="lp-actions">
-                <Link className="lp-btn lp-btn--primary" href="/dojang">
-                  Try the demo
-                  <Arrow />
-                </Link>
-                <a
-                  className="lp-btn lp-btn--ghost"
-                  href="#how"
-                  onClick={(e) => {
-                    /* a long way down: glide there unless the visitor prefers reduced motion */
-                    const target = document.getElementById("how");
-                    if (!target) return;
-                    e.preventDefault();
-                    target.scrollIntoView({ behavior: motionQuery().matches ? "auto" : "smooth", block: "start" });
-                  }}
-                >
-                  How it works
-                </a>
+              <h2 className="lp-h">
+                <span className="lp-h__line lp-h__l1"><span className="lp-h__in">Verify the <b className="lp-h__public">fact</b></span></span>
+                <span className="lp-h__line lp-h__l2"><span className="lp-h__in">Prove it <b className="lp-h__private">privately</b></span></span>
+                <span className="lp-h__line lp-h__l3"><span className="lp-h__in">Unlock <b className="lp-h__public">on-chain</b></span></span>
+              </h2>
+              <div className="lp-cta">
+                <p className="lp-lede">
+                  The exact value stays on your device. Only a proof that it met the rule is checked <span style={{ whiteSpace: "nowrap" }}>on-chain</span>.
+                </p>
+                <div className="lp-actions">
+                  <Link className="lp-btn lp-btn--primary" href="/dojang">
+                    Try the demo
+                    <Arrow />
+                  </Link>
+                  <a
+                    className="lp-btn lp-btn--ghost"
+                    href="#how"
+                    onClick={(e) => {
+                      /* a long way down: glide there (smooth scroll when it is on, native otherwise) */
+                      if (scrollToId("how")) e.preventDefault();
+                    }}
+                  >
+                    How it works
+                  </a>
+                </div>
               </div>
             </div>
-            <p className="lp-status">
-              <i aria-hidden="true" />
-              <span>Testnet demonstration</span>
-              <span>GIWA Sepolia · {GIWA_CHAIN_ID}</span>
-              <span>Not audited</span>
-              <span>No funds held</span>
-              <span>Contracts: {contractsLabel}</span>
-            </p>
           </div>
 
           <p className="lp-pointer-hint" aria-hidden="true">Move the pointer · seal the data</p>
