@@ -1,5 +1,7 @@
 import "./contracts.css";
 import { PageGlyphFigure } from "@/components/page-glyph";
+import { ChainEvidenceLookup } from "@/components/evidence/chain-evidence-lookup";
+import { GovernanceDependencies, ProjectContractRows, type ContractRow } from "@/components/evidence/project-contract-rows";
 import { LendingAssetRows } from "@/components/lending/lending-asset-rows";
 import { GIWA_CHAIN_ID, GIWA_EXPLORER_URL } from "@/lib/config/chain";
 import { invalidContractConfig, officialDojang, projectContracts } from "@/lib/config/contracts";
@@ -15,7 +17,7 @@ const PROJECT_CONTRACTS = [
   },
   {
     key: "proofVerifier",
-    name: "EligibilityVerifier",
+    name: "EligibilityVerifierAdapter",
     role: "Adapter in front of the generated UltraHonk verifier; the vault and the pool are wired to it when they are deployed",
     env: "NEXT_PUBLIC_PROOF_VERIFIER_CONTRACT",
   },
@@ -31,21 +33,21 @@ const PROJECT_CONTRACTS = [
     role: "The demo lending market: supplier principal, collateral and debt, with proof-gated borrowing",
     env: "NEXT_PUBLIC_LENDING_POOL_CONTRACT",
   },
+  {
+    key: "daoGovernance",
+    name: "GovernedDojangAccess (DAO governance)",
+    role: "Verified governance: official Dojang membership, public votes, and one policy it controls itself (minimum remaining credential validity). It does not govern the pool or the vault",
+    env: "NEXT_PUBLIC_DAO_GOVERNANCE_CONTRACT",
+  },
 ] as const;
 
-function Status({ state }: { state: "configured" | "unset" | "invalid" }) {
-  const tone = state === "configured" ? "valid" : state === "invalid" ? "invalid" : "warn";
-  const label = state === "configured" ? "Address configured" : state === "invalid" ? "Invalid address" : "Not configured";
-  return <span className="status" data-state={tone}><i className="status__dot" aria-hidden="true" />{label}</span>;
-}
-
 export default function ContractsPage() {
-  const rows = PROJECT_CONTRACTS.map((contract) => {
+  const rows: ContractRow[] = PROJECT_CONTRACTS.map((contract) => {
     const address = projectContracts[contract.key];
-    const state = invalidContractConfig.includes(contract.key) ? "invalid" : address ? "configured" : "unset";
-    return { ...contract, address, state } as const;
+    const config = invalidContractConfig.includes(contract.key) ? "invalid" : address ? "configured" : "unset";
+    return { ...contract, config, address } as const;
   });
-  const configured = rows.filter((row) => row.state === "configured").length;
+  const configured = rows.filter((row) => row.config === "configured").length;
 
   return (
     <main className="page">
@@ -63,34 +65,33 @@ export default function ContractsPage() {
         <h2 id="project-contracts-heading">Project contracts</h2>
         <p className="contract-summary">{configured} of {rows.length} addresses configured</p>
         <dl className="contract-list">
-          {rows.map((row) => (
-            <div className="contract-row" key={row.key}>
-              <dt>
-                <strong>{row.name}</strong>
-                <span className="xsmall muted">{row.role}</span>
-              </dt>
-              <dd>
-                <Status state={row.state} />
-                {row.state === "configured" && row.address && (
-                  <a href={`${GIWA_EXPLORER_URL}/address/${row.address}`} target="_blank" rel="noopener noreferrer"><code>{row.address}</code><span className="visually-hidden"> (opens in a new tab)</span></a>
-                )}
-                {row.state === "invalid" && <span className="xsmall muted">The value in the environment is not a valid address, so it is ignored.</span>}
-                {row.state === "unset" && <span className="xsmall muted">No address and no deployment is claimed.</span>}
-                <span className="contract-env">{row.env}</span>
-              </dd>
-            </div>
-          ))}
+          <ProjectContractRows rows={rows.slice(0, 2)} />
+          <ProjectContractRows
+            rows={[{ key: "honkVerifier", name: "HonkVerifier (generated)", role: "The generated UltraHonk verifier behind the adapter, found on-chain from it, with two linked libraries (ZKTranscriptLib, RelationsLib) that are not configured separately" }]}
+          />
+          <ProjectContractRows rows={rows.slice(2)} />
           <LendingAssetRows />
         </dl>
-        <p className="notice">
-          No GIWA Sepolia deployment or transaction evidence is configured for this project. Local Foundry tests and a local Anvil lending run exist; they
-          are not deployments, and no local address or transaction hash is shown here as if it were one.
-        </p>
+        {configured === 0 ? (
+          <p className="notice">
+            No GIWA Sepolia deployment or transaction evidence is configured for this project. Local Foundry tests and local Anvil runs exist; they
+            are not deployments, and no local address or transaction hash is shown here as if it were one.
+          </p>
+        ) : (
+          <p className="notice">
+            Addresses come from configuration. A chip says what the chain returned for each: code present, or no code. Code present is not source
+            verification, and source verification is not established for any project contract. Local Foundry and Anvil results are not GIWA Sepolia evidence.
+          </p>
+        )}
         <p className="notice">
           The vault tests use a local test-only verifier fixture, which is not a cryptographic ZK verifier. The lending pool is a demonstration market:
-          controlled test tokens, a fixed 1:1 price, zero interest, no liquidation and no oracle.
+          controlled test tokens, a fixed 1:1 price, zero interest, no liquidation and no oracle. Governance changes only its own policy; it does not
+          control the pool or the vault.
         </p>
+        <GovernanceDependencies />
       </section>
+
+      <ChainEvidenceLookup />
 
       <section className="panel" aria-labelledby="official-heading">
         <h2 id="official-heading">Official GIWA references (not project-owned)</h2>

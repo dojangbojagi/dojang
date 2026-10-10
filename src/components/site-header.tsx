@@ -10,7 +10,7 @@ import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import { GIWA_CHAIN_ID } from "@/lib/config/chain";
 
 const LINKS = [
-  ["home", "Home", "/"], ["dojang", "Dojang", "/dojang"], ["bojagi", "Bojagi", "/bojagi"],
+  ["home", "Home", "/"], ["dojang", "Dojang", "/dojang"], ["dao", "DAO", "/dao"], ["bojagi", "Bojagi", "/bojagi"],
   ["vault", "Vault", "/vault"], ["lending", "Lending", "/lending"], ["contracts", "Contracts", "/contracts"], ["docs", "Docs", "/docs"],
 ] as const;
 
@@ -52,7 +52,7 @@ export function SiteHeader() {
         <nav className="nav" aria-label="Primary">
           <ul className="nav__list">
             {LINKS.map(([key, label, href]) => (
-              <li key={key}><Link className="nav__link" href={href} aria-current={pathname === href ? "page" : undefined}>{label}</Link></li>
+              <li key={key}><Link className="nav__link" href={href} data-flagship={key === "dao" ? "" : undefined} aria-current={pathname === href ? "page" : undefined}>{label}</Link></li>
             ))}
           </ul>
         </nav>

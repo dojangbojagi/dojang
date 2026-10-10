@@ -5,7 +5,7 @@ import { ProtocolPage } from "@/components/protocol-page";
 export default function LendingPage() {
   return (
     <ProtocolPage
-      index={5}
+      page="lending"
       tone="vault"
       accent="gold"
       status="Proof-gated demo market"

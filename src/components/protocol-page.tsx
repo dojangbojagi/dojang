@@ -3,17 +3,21 @@ import type { CSSProperties, ReactNode } from "react";
 import { PageGlyphFigure, type PageGlyph } from "@/components/page-glyph";
 
 const PAGES = [
-  { label: "Home", href: "/" },
-  { label: "Dojang", href: "/dojang" },
-  { label: "Bojagi", href: "/bojagi" },
-  { label: "Vault", href: "/vault" },
-  { label: "Lending", href: "/lending" },
-  { label: "Contracts", href: "/contracts" },
-  { label: "Docs", href: "/docs" },
+  { key: "home", label: "Home", href: "/" },
+  { key: "dojang", label: "Dojang", href: "/dojang" },
+  { key: "dao", label: "DAO", href: "/dao" },
+  { key: "bojagi", label: "Bojagi", href: "/bojagi" },
+  { key: "vault", label: "Vault", href: "/vault" },
+  { key: "lending", label: "Lending", href: "/lending" },
+  { key: "contracts", label: "Contracts", href: "/contracts" },
+  { key: "docs", label: "Docs", href: "/docs" },
 ] as const;
 
+/** The page being shown. The pager at the foot follows the order of PAGES. */
+export type PageKey = Exclude<(typeof PAGES)[number]["key"], "home">;
+
 export function ProtocolPage({
-  index,
+  page,
   tone,
   accent,
   status,
@@ -22,7 +26,7 @@ export function ProtocolPage({
   lead,
   children,
 }: {
-  index: 2 | 3 | 4 | 5 | 6 | 7;
+  page: PageKey;
   tone: "dojang" | "bojagi" | "vault" | "neutral";
   accent: "celadon" | "periwinkle" | "gold";
   status: string;
@@ -31,7 +35,7 @@ export function ProtocolPage({
   lead: string;
   children: ReactNode;
 }) {
-  const pageIndex = index - 1;
+  const pageIndex = PAGES.findIndex((entry) => entry.key === page);
   const previous = PAGES[pageIndex - 1];
   const next = PAGES[pageIndex + 1];
   const style = { "--accent": `var(--${accent})` } as CSSProperties;

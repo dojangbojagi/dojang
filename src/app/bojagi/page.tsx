@@ -6,7 +6,7 @@ import { WalletNetworkCard } from "@/components/wallet-network-card";
 export default function BojagiPage() {
   return (
     <ProtocolPage
-      index={3}
+      page="bojagi"
       tone="bojagi"
       accent="periwinkle"
       status="Private eligibility · browser proof"
@@ -56,6 +56,7 @@ export default function BojagiPage() {
 
         <div className="protocol-actions">
           <Link className="btn btn--secondary" href="/dojang">Check credential ↗</Link>
+          <Link className="btn btn--secondary" href="/lending">Use it for lending ↗</Link>
           <Link className="btn btn--primary" href="/vault">Review vault action ↗</Link>
         </div>
       </div>

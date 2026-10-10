@@ -23,6 +23,7 @@ Colour keeps the product's meaning. **Blue/white = public, on-chain. Orange = pr
 | `rings` | two linked rings, blue and orange | `/lending` | supply and borrow, joined by a proof |
 | `stack` | four slabs of characters | `/contracts` | evidence, layer by layer |
 | `book` | open book of text lines, sways | `/docs` | the written trust model |
+| `assembly` | tiered half-circle seating, sways | `/dao` | a governing body voting in public |
 
 ## 3. Files
 

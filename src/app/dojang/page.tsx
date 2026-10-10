@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { CredentialWitnessImporter } from "@/components/credential-witness-importer";
 import { DemoCredentialTools } from "@/components/demo-credential-tools";
@@ -22,7 +23,7 @@ export default function DojangPage() {
 
   return (
     <ProtocolPage
-      index={2}
+      page="dojang"
       tone="dojang"
       accent="celadon"
       status="Official read + project demo credential"
@@ -62,6 +63,7 @@ export default function DojangPage() {
             )}
 
             <div className="protocol-actions">
+              <Link className="btn btn--secondary" href="/dao">Use it in DAO governance ↗</Link>
               <button className="btn btn--secondary" type="button" onClick={() => { setReadRequested(true); void dojang.refetch(); }} disabled={!wallet.address || dojang.isLoading}>
                 {dojang.isLoading ? "Checking…" : "Refresh official status"}
               </button>

@@ -5,6 +5,7 @@ import { StateChip } from "@/components/protocol-state";
 import { explainLendingFailure } from "@/components/lending/errors";
 import { formatAmount, shortAddress } from "@/components/lending/format";
 import type { LendingMarket } from "@/components/lending/types";
+import type { TransactionLifecycle } from "@/lib/protocol/types";
 import { GIWA_EXPLORER_URL } from "@/lib/config/chain";
 import { LENDING_INTEREST_RATE_BPS, LENDING_MAX_LTV_BPS } from "@/lib/lending/config";
 
@@ -133,8 +134,7 @@ const STEP_LABEL: Record<(typeof STEPS)[number], string> = {
 
 const FAILED_LABEL = { reverted: "Reverted on-chain", rejected: "Rejected in wallet", "rpc-error": "Not completed" } as const;
 
-export function TransactionPanel({ market, action, evidence }: { market: LendingMarket; action: string; evidence: EvidenceEntry[] }) {
-  const tx = market.transaction;
+export function TransactionPanel({ transaction: tx, action, evidence }: { transaction: TransactionLifecycle; action: string; evidence: EvidenceEntry[] }) {
   const order = ["idle", ...STEPS];
   const currentIndex = order.indexOf(tx.state);
   const failed = tx.state === "reverted" || tx.state === "rejected" || tx.state === "rpc-error";
