@@ -31,8 +31,8 @@
 
   /* The protocol colours, re-pointed (the names come from the prototype and are kept so nothing else changes):
      --celadon  = public / trusted (Dojang): white
-     --periwinkle = a soft rose, for the vault and cloth accents
-     --gold     = the accent as TEXT, line and ring: rose (burgundy lit up so it reads on black)
+     --periwinkle = a deeper wine, for the vault and cloth accents
+     --gold     = the accent as LINE, ring and dot: wine red (burgundy lit up so it reads on black; small text stays white)
      fills (buttons, tabs) use the burgundy directly: --burgundy, with a white label (--gold-ink). */
   --celadon: #F7F3F4;
   --celadon-deep: #BDB3B6;

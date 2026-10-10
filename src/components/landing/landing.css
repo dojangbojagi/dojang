@@ -1,6 +1,6 @@
 /* ==========================================================================
    Landing (/)
-   Onboarding cover -> pointer-field hero -> sticky story -> curtain footer.
+   Onboarding cover -> two-side hero (words left, 3D form right) -> sticky story -> curtain footer.
 
    Everything is scoped under .lp, so no other route is affected.
 
@@ -375,7 +375,7 @@
     linear-gradient(to bottom, rgba(6, 4, 5, .72), transparent 16%, transparent 82%, rgba(6, 4, 5, .8));
 }
 
-/* Phase 2: the hero. One left-aligned column, centred as a block, with a cloud of data above it and one below.
+/* Phase 2: the hero. One left-aligned column (centred as a block on narrow screens, on the left beside the 3D form on wide ones).
    Each part comes in one after the other as the opening completes (--c) and goes out together as the
    camera pushes in (--q): the column zooms from the middle of the headline, and fades. */
 .lp-hero {
@@ -560,7 +560,7 @@
 
 /* Two sides: on wide landscape screens the words sit on the left and the 3D form has the right half to itself
    (it was hidden behind the headline). Only where things sit changes: the zoom, the fades and the entrance
-   still read --e --c --q exactly as before. Phones and portrait tablets keep the stacked, centred layout. */
+   still read --e --c --h --q exactly as before. Phones and portrait tablets keep the stacked, centred layout. */
 @media (min-width: 861px) and (min-aspect-ratio: 1 / 1) {
   .lp-hero { justify-content: flex-start; }
   .lp-hero__col { max-width: 56%; }
