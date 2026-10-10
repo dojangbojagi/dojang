@@ -24,10 +24,11 @@ function splitTagline(tagline: string): [string, string] {
 }
 
 /* The runway, as fractions of its length: the opening grows, the hero holds, then the camera
-   pushes in. (--lp-run is 210svh on desktop: about a screen to open, a quarter of one to hold,
-   and nine tenths of one to zoom.) */
-const OPEN = 0.47;
-const HOLD = 0.11;
+   pushes in. (--lp-run is 237svh on desktop: about a screen to open, half a screen to hold while
+   the hero's picture turns from its first form into its second, and nine tenths of a screen to zoom.
+   The opening and the zoom take the same distance as before; only the hold got longer.) */
+const OPEN = 0.4165;
+const HOLD = 0.211;
 const NAV_H = 76;
 
 const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
@@ -182,8 +183,9 @@ export function CoverReveal({ tagline }: Props) {
       const run = r.height - geo.sh;
       const scrolled = -r.top;
       const p = clamp01(scrolled / (run * OPEN));
+      const h = clamp01((scrolled - run * OPEN) / (run * HOLD)); /* how far through the hold: the picture changes form now */
       const q = clamp01((scrolled - run * (OPEN + HOLD)) / (run * (1 - OPEN - HOLD)));
-      const key = p + q * 2;
+      const key = p + h + q * 2;
       if (Math.abs(key - last) < 0.0005) return;
       last = key;
 
@@ -206,6 +208,7 @@ export function CoverReveal({ tagline }: Props) {
       const s = stage.style;
       s.setProperty("--e", e.toFixed(4));
       s.setProperty("--c", clamp01((e - 0.6) / 0.34).toFixed(4));
+      s.setProperty("--h", h.toFixed(4));
       s.setProperty("--q", q.toFixed(4));
       s.setProperty("--clip", `inset(${t.toFixed(1)}px ${ri.toFixed(1)}px ${b.toFixed(1)}px ${l.toFixed(1)}px round ${radius.toFixed(1)}px)`);
       s.setProperty("--bx", `${l.toFixed(1)}px`);

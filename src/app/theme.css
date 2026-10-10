@@ -7,7 +7,7 @@
    the prototype files stay untouched. It loads after them (see layout.tsx).
 
    Same language as the landing (components/landing/landing.css), the approved black / burgundy / white:
-     black ink, white = public / on-chain, burgundy (#6D001A, rose #E0405F as text and line) = private /
+     black ink, white = public / on-chain, burgundy (#6D001A, rose #BE1A38 as text and line) = private /
      the proof / primary actions (with a white label). Sora for headings, Hanken Grotesk for text, JetBrains Mono for labels.
    ========================================================================== */
 
@@ -36,16 +36,16 @@
      fills (buttons, tabs) use the burgundy directly: --burgundy, with a white label (--gold-ink). */
   --celadon: #F7F3F4;
   --celadon-deep: #BDB3B6;
-  --periwinkle: #F3A6B6;
-  --periwinkle-deep: #A8324F;
-  --gold: #E0405F;
+  --periwinkle: #A8183A;
+  --periwinkle-deep: #6D001A;
+  --gold: #BE1A38;
   --gold-deep: #8F1332;
   --gold-ink: #FFFFFF;
   --burgundy: #6D001A;
   --burgundy-hi: #8F1332;
 
   --state-valid: #F7F3F4;
-  --state-pending: #F3A6B6;
+  --state-pending: #D9CED2;
   --state-invalid: #FF5C5C;
   --state-warn: #E0A95A;
   --state-demo: #B8AEB1;
@@ -118,7 +118,7 @@ h4 { font-weight: 600; }
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
-.proto-bar strong { color: var(--gold); }
+.proto-bar strong { color: var(--text); }
 
 /* A solid bar: page content scrolls under the sticky header, and a see-through header let it run through the
    logo and the links. Blur is cheap here (one 76px strip on simple pages). */
@@ -234,23 +234,23 @@ h4 { font-weight: 600; }
 .btn:hover { transform: translateY(-2px); }
 .btn:active { transform: translateY(0) scale(0.98); }
 .btn--sm { min-height: 2.6rem; padding: 0.6rem 1.15rem; font-size: 0.7rem; }
-.btn--primary { background: linear-gradient(180deg, #9A1637 0%, var(--burgundy) 55%, #4F0012 100%); color: var(--gold-ink); border-color: rgba(255, 255, 255, 0.16); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 12px 30px -12px rgba(190, 28, 68, 0.85); }
-.btn--primary:hover { background: linear-gradient(180deg, #B01D42 0%, #82001F 55%, #5E0015 100%); box-shadow: 0 16px 40px -10px rgba(214, 36, 80, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.34); }
+.btn--primary { background: linear-gradient(180deg, #7E0F2B 0%, var(--burgundy) 55%, #470010 100%); color: var(--gold-ink); border-color: rgba(255, 255, 255, 0.16); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 12px 30px -12px rgba(130, 10, 38, 0.85); }
+.btn--primary:hover { background: linear-gradient(180deg, #951A38 0%, #7C0A24 55%, #55001A 100%); box-shadow: 0 16px 40px -10px rgba(150, 14, 44, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.34); }
 .btn--secondary { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.24); color: var(--text); }
 .btn--secondary:hover {
   border-color: transparent;
-  background: linear-gradient(rgba(14, 9, 12, 0.92), rgba(14, 9, 12, 0.92)) padding-box, linear-gradient(120deg, #FFFFFF, #E0405F) border-box;
+  background: linear-gradient(rgba(14, 9, 12, 0.92), rgba(14, 9, 12, 0.92)) padding-box, linear-gradient(120deg, #FFFFFF, #BE1A38) border-box;
 }
 .btn--ghost:hover { background: rgba(255, 255, 255, 0.07); }
 
 /* the wallet button is the landing's burgundy pill; its state still decides the colour */
-.btn--wallet { background: linear-gradient(180deg, #9A1637 0%, var(--burgundy) 55%, #4F0012 100%); border-color: rgba(255, 255, 255, 0.14); color: var(--gold-ink); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.26), 0 8px 22px -10px rgba(170, 22, 60, 0.8); }
-.btn--wallet:hover { background: linear-gradient(180deg, #B01D42 0%, #82001F 55%, #5E0015 100%); border-color: rgba(255, 255, 255, 0.14); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32), 0 12px 30px -8px rgba(210, 34, 78, 0.85); }
+.btn--wallet { background: linear-gradient(180deg, #7E0F2B 0%, var(--burgundy) 55%, #470010 100%); border-color: rgba(255, 255, 255, 0.14); color: var(--gold-ink); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.26), 0 8px 22px -10px rgba(120, 8, 34, 0.8); }
+.btn--wallet:hover { background: linear-gradient(180deg, #951A38 0%, #7C0A24 55%, #55001A 100%); border-color: rgba(255, 255, 255, 0.14); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32), 0 12px 30px -8px rgba(150, 14, 44, 0.85); }
 .btn--wallet[data-wallet="connected"] { background: rgba(255, 255, 255, 0.08); border-color: var(--line-strong); color: #fff; text-shadow: none; box-shadow: none; }
 .btn--wallet[data-wallet="connected"]:hover { background: rgba(255, 255, 255, 0.14); box-shadow: none; }
 .btn--wallet[data-wallet="connected"] .btn__dot { background: var(--celadon); box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2); }
-.btn--wallet[data-wallet="wrong-network"] { background: transparent; border-color: var(--gold); color: var(--gold); text-shadow: none; }
-.btn--wallet[data-wallet="wrong-network"]:hover { background: rgba(224, 64, 95, 0.12); box-shadow: none; }
+.btn--wallet[data-wallet="wrong-network"] { background: rgba(190, 26, 56, 0.2); border-color: var(--gold); color: #fff; text-shadow: none; }
+.btn--wallet[data-wallet="wrong-network"]:hover { background: rgba(190, 26, 56, 0.12); box-shadow: none; }
 .btn--wallet[data-wallet="connecting"] { background: rgba(255, 255, 255, 0.06); border-color: var(--line-strong); color: var(--text-muted); text-shadow: none; }
 .btn--wallet .btn__dot { display: none; }
 .btn--wallet[data-wallet="connected"] .btn__dot,
@@ -258,7 +258,7 @@ h4 { font-weight: 600; }
 
 .text-link { font-family: var(--font-display); font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase; }
 .protocol-inline-link { font-family: var(--font-display); font-size: 0.74rem; letter-spacing: 0.06em; text-transform: uppercase; transition: color 0.25s ease, transform 0.4s var(--ease-out); }
-.protocol-inline-link:hover { color: var(--gold); transform: translateX(3px); }
+.protocol-inline-link:hover { color: #fff; transform: translateX(3px); }
 
 /* ---- Status, panels, lists --------------------------------------------- */
 .status {
@@ -315,12 +315,12 @@ h4 { font-weight: 600; }
   right: 0;
   bottom: -0.25em;
   height: 1px;
-  background: #F3A6B6;
+  background: #BE1A38;
   transform: scaleX(0);
   transform-origin: right;
   transition: transform 0.45s var(--ease-out);
 }
-.site-footer li a:hover { color: #F3A6B6; transform: translateX(4px); }
+.site-footer li a:hover { color: #fff; transform: translateX(4px); }
 .site-footer li a:hover::after { transform: scaleX(1); transform-origin: left; }
 .site-footer__legal { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.04em; border-top-style: solid; border-top-color: var(--line); }
 
@@ -393,7 +393,7 @@ h4 { font-weight: 600; }
 .stub__glyph li { display: inline-flex; align-items: center; gap: .45rem; }
 .stub__glyph li::before { content: ""; width: .5rem; height: .5rem; border-radius: 50%; background: var(--k); }
 .stub__glyph li[data-k="public"] { --k: #F7F3F4; }
-.stub__glyph li[data-k="private"] { --k: #E0405F; }
+.stub__glyph li[data-k="private"] { --k: #BE1A38; }
 .stub__glyph li[data-k="sealed"] { --k: #A89DA1; }
 @keyframes stub-glyph-in { from { opacity: 0; scale: .9; } to { opacity: 1; scale: 1; } }
 @media (max-width: 900px) {

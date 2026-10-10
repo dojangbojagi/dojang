@@ -71,7 +71,7 @@
 .protocol-article__section { display: grid; gap: var(--space-3); padding-bottom: var(--space-5); border-bottom: 1px solid var(--line); scroll-margin-top: calc(var(--header-h) + 1.5rem); }
 .protocol-toc { display: grid; gap: .75rem; margin: 0; padding: 0; list-style: none; }
 .protocol-toc a { color: var(--text-muted); text-decoration: none; font-size: var(--fs-sm); }
-.protocol-toc a:hover { color: var(--gold); }
+.protocol-toc a:hover { color: #fff; }
 .protocol-reveal { opacity: 1; transform: none; }
 
 @keyframes cloth-settle { 0%, 100% { transform: rotate(-8deg) translateY(0); } 50% { transform: rotate(-5deg) translateY(-7px); } }

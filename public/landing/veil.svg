@@ -4,8 +4,8 @@
        Tiles seamlessly. -->
   <defs>
     <linearGradient id="b1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#D9D1D4"/></linearGradient>
-    <linearGradient id="b2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8F1332"/><stop offset="1" stop-color="#4F0012"/></linearGradient>
-    <linearGradient id="o1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#A81C40"/><stop offset="1" stop-color="#6D001A"/></linearGradient>
+    <linearGradient id="b2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8F1332"/><stop offset="1" stop-color="#470010"/></linearGradient>
+    <linearGradient id="o1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8C1030"/><stop offset="1" stop-color="#6D001A"/></linearGradient>
     <linearGradient id="o2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6D001A"/><stop offset="1" stop-color="#3A000C"/></linearGradient>
     <linearGradient id="n1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1A1215"/><stop offset="1" stop-color="#0A0708"/></linearGradient>
     <linearGradient id="w1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F7F3F4"/><stop offset="1" stop-color="#CDB6BB"/></linearGradient>

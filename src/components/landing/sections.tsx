@@ -9,7 +9,7 @@ import { Arrow } from "./arrow";
 
 function Eyebrow({ n, children, ac }: { n: string; children: string; ac?: "blue" | "orange" }) {
   return (
-    <p className="lp-eyebrow" data-lp-reveal style={{ ["--ac" as string]: ac === "blue" ? "var(--lp-public)" : "var(--lp-rose)" }}>
+    <p className="lp-eyebrow" data-lp-reveal style={{ ["--ac" as string]: ac === "blue" ? "var(--lp-public)" : "var(--lp-wine)" }}>
       <i aria-hidden="true" />
       {n} — {children}
     </p>

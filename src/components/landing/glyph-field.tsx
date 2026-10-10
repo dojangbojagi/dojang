@@ -6,14 +6,15 @@ import { useEffect, useRef } from "react";
    in 3D on the right of the headline (behind it on narrow screens). It has two forms and the scroll decides
    which one you see:
 
-     A  "Knot"   a woven tube of white and silver characters, with a few ruby flecks: verified,
+     A  "Knot"   a woven tube of white and silver characters, with a few wine-red flecks: verified,
                  public state (Dojang -> DAO). It is what the hero opens on.
-     B  "Gyro"   three tilting rings around a ruby core: the private proof and the action it unlocks
+     B  "Gyro"   three tilting rings around a wine-red core: the private proof and the action it unlocks
                  (Bojagi -> Lending). The knot unspools into it while the camera pushes in.
 
-   The scroll is not touched by any of this. cover-reveal.tsx already writes how far the camera has
-   pushed in (--q, 0 -> 1) on the stage; this file only reads that number, and the form is a pure function
-   of it, so it runs in reverse on its own. The zoom itself (scale, fade) is the CSS on .lp-field, unchanged.
+   The form is a pure function of numbers the scroll code already writes on the stage, so it runs in reverse on
+   its own: --h (0 -> 1 across the hold, while the hero stands still) turns the knot into the gyro, so the second
+   form is complete before the camera starts to push in; --q (0 -> 1, the push-in itself) only keeps it turning.
+   The zoom (scale, fade) is the CSS on .lp-field, unchanged.
 
    Mouse: grab the hero and drag to turn the form (the automatic drift keeps its own clock, the hand adds
    an offset, a flick glides); without a button the form leans a little towards the pointer. Touch is left
@@ -33,15 +34,15 @@ const RING_N = 330; /* characters per ring of the gyro; the last 330 are its cor
 const PALETTE: readonly (readonly [number, number, number])[] = [
   [250, 247, 248], /* 0 white (public) */
   [205, 196, 200], /* 1 silver (public) */
-  [224, 64, 95], /* 2 ruby: burgundy lit up so it reads on black (private) */
-  [150, 22, 52], /* 3 burgundy, for depth */
-  [243, 166, 182], /* 4 pale rose, a rare fleck */
+  [190, 26, 56], /* 2 wine red: burgundy lit up so it reads on black (private) */
+  [138, 16, 44], /* 3 burgundy, for depth */
+  [206, 38, 66], /* 4 bright garnet, a rare fleck */
 ];
 const FRAME_MS = 40; /* ~25 frames a second while it drifts; the turn is slow, so it still looks smooth */
 const Q_GONE = 0.8; /* the zoom has faded the field out completely by here (see .lp-field), so there is nothing to draw */
 const CAMERA = 5; /* distance for the perspective; larger = flatter */
-const Q_FROM = 0; /* the camera has not moved yet: form A, fully formed */
-const Q_TO = 0.44; /* form B is complete here, while the field is still two thirds visible */
+const H_FROM = 0.05; /* the hold has just begun: form A, fully formed */
+const H_TO = 0.88; /* form B is complete here, a little before the push-in begins */
 const SPREAD = 0.24; /* how far apart in time the points leave */
 const TAU = Math.PI * 2;
 
@@ -230,6 +231,7 @@ export function GlyphField() {
     let raf = 0;
     let lastDraw = 0;
     let lastQ = -1;
+    let lastH = -1;
     /* Turning by hand. The automatic motion keeps its own clock and the hand adds an offset on top, so letting
        go never changes how the form drifts; it just carries on from where it was left. */
     let clock = 0;
@@ -249,6 +251,7 @@ export function GlyphField() {
     let leanTY = 0;
 
     const readQ = () => parseFloat(stage.style.getPropertyValue("--q")) || 0;
+    const readH = () => parseFloat(stage.style.getPropertyValue("--h")) || 0;
 
     function readFont() {
       const probe = document.createElement("span");
@@ -318,10 +321,12 @@ export function GlyphField() {
       leanY += (leanTY - leanY) * lk;
 
       const q = live ? readQ() : 0;
+      const hp = live ? readH() : 0;
       lastQ = q;
-      const m = live ? clamp01((q - Q_FROM) / (Q_TO - Q_FROM)) : 0;
+      lastH = hp;
+      const m = live ? clamp01((hp - H_FROM) / (H_TO - H_FROM)) : 0;
       const t = live ? clock : 0.6;
-      const yaw = 0.35 + (live ? autoYaw + q * 2.4 : 0) + userYaw + leanX * 0.45;
+      const yaw = 0.35 + (live ? autoYaw + hp * 1.1 + q * 2.4 : 0) + userYaw + leanX * 0.45;
       const pitch = 0.42 + (live ? Math.sin(clock * 0.35) * 0.05 : 0) + userPitch + leanY * 0.25;
       const cy = Math.cos(yaw), sy_ = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
       const minDim = Math.min(w, h);
@@ -380,7 +385,7 @@ export function GlyphField() {
         const s = CAMERA / (CAMERA - sz[i]);
         const dw = base * s * (0.62 + 0.5 * dz);
         ctx.globalAlpha = K * (0.2 + 0.8 * Math.pow(dz, 1.25));
-        /* the far side of the form falls into burgundy, like silk in shadow; ruby and rose flecks keep their colour */
+        /* the far side of the form falls into burgundy, like silk in shadow; wine and garnet flecks keep their colour */
         const col = sc[i] <= 1 && dz < 0.36 ? 3 : sc[i];
         ctx.drawImage(atlas, M.glyph[i] * cs, col * cs, cs, cs, sx[i] - dw / 2, sy[i] - dw / 2, dw, dw);
       }
@@ -402,12 +407,12 @@ export function GlyphField() {
       }
     };
 
-    /* While --q moves, draw right after cover-reveal has written it (a microtask after its frame callback),
+    /* While --h or --q move, draw right after cover-reveal has written them (a microtask after its frame callback),
        so the form is always in step with the zoom and never a frame behind. */
     const qWatch = live
       ? new MutationObserver(() => {
           if (!canRun() || !atlas) return;
-          if (Math.abs(readQ() - lastQ) > 0.0004) draw(performance.now());
+          if (Math.abs(readQ() - lastQ) > 0.0004 || Math.abs(readH() - lastH) > 0.0004) draw(performance.now());
         })
       : null;
     qWatch?.observe(stage, { attributes: true, attributeFilter: ["style"] });
