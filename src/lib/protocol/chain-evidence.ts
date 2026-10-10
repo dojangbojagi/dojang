@@ -379,6 +379,10 @@ export async function readProjectProtocolLogs(
     );
   }
 
+  const latestBlock = await client.getBlockNumber();
+  const boundedToBlock = toBlock < latestBlock ? toBlock : latestBlock;
+  if (fromBlock > boundedToBlock) return [];
+
   const deployment = await inspectProjectDeployment(client);
   const contracts = deployment.contracts.filter(
     (entry): entry is ContractCodeEvidence & { address: Address } => entry.codeState === "present" && Boolean(entry.address),
@@ -387,8 +391,8 @@ export async function readProjectProtocolLogs(
 
   for (const contract of contracts) {
     let start = fromBlock;
-    while (start <= toBlock) {
-      const end = start + chunkSize - 1n < toBlock ? start + chunkSize - 1n : toBlock;
+    while (start <= boundedToBlock) {
+      const end = start + chunkSize - 1n < boundedToBlock ? start + chunkSize - 1n : boundedToBlock;
       const logs = await client.getLogs({ address: contract.address, fromBlock: start, toBlock: end });
       events.push(...logs.map((log) => makeEventLog(contract.name, log)));
       start = end + 1n;

@@ -244,8 +244,12 @@ export async function readGovernanceProposalIds(
   }
 
   const proposalIds = new Set<bigint>();
-  for (let start = fromBlock; start <= toBlock;) {
-    const end = start + blockChunkSize - 1n < toBlock ? start + blockChunkSize - 1n : toBlock;
+  const latestBlock = await client.getBlockNumber();
+  const boundedToBlock = toBlock < latestBlock ? toBlock : latestBlock;
+  if (fromBlock > boundedToBlock) return [];
+
+  for (let start = fromBlock; start <= boundedToBlock;) {
+    const end = start + blockChunkSize - 1n < boundedToBlock ? start + blockChunkSize - 1n : boundedToBlock;
     const logs = await client.getLogs({
       address,
       event: proposalCreatedEvent,

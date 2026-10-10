@@ -8,6 +8,7 @@ import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import { GIWA_CHAIN_ID, GIWA_EXPLORER_URL } from "@/lib/config/chain";
 import { projectContracts } from "@/lib/config/contracts";
 import { daoGovernanceAbi } from "@/lib/contracts/abis";
+import { daoGovernanceQueryKey } from "@/lib/governance/query-key";
 import { readGovernanceSnapshot } from "@/lib/governance/service";
 import { explainProtocolError } from "@/lib/protocol/errors";
 import {
@@ -48,7 +49,7 @@ export function useDaoGovernance(proposalId?: bigint) {
   const contractAddress = projectContracts.daoGovernance;
   const [transaction, setTransaction] = useState<TransactionLifecycle>({ state: "idle" });
   const queryKey = useMemo(
-    () => ["dao-governance", contractAddress, account.address, proposalId] as const,
+    () => daoGovernanceQueryKey(contractAddress, account.address, proposalId),
     [account.address, contractAddress, proposalId],
   );
 
