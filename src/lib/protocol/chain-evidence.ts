@@ -5,22 +5,26 @@ import {
   type Hex,
   type PublicClient,
 } from "viem";
-import { GIWA_CHAIN_ID } from "@/lib/config/chain";
-import { projectContracts } from "@/lib/config/contracts";
+import { GIWA_CHAIN_ID, GIWA_EXPLORER_URL } from "@/lib/config/chain";
+import { officialDojang, projectContracts } from "@/lib/config/contracts";
 import {
   controlledTokenAbi,
   credentialRegistryAbi,
+  daoGovernanceAbi,
   eligibilityVerifierAdapterAbi,
   lendingPoolAbi,
   restrictedVaultAbi,
 } from "@/lib/contracts/abis";
 import { ProtocolError } from "@/lib/protocol/types";
 
+const MAX_EVIDENCE_LOG_RANGE = 100_000n;
+
 export type EvidenceContractName =
   | "credentialRegistry"
   | "proofVerifier"
   | "restrictedVault"
   | "lendingPool"
+  | "daoGovernance"
   | "honkVerifier"
   | "lendingAsset"
   | "collateralAsset";
@@ -31,11 +35,20 @@ export interface ContractCodeEvidence {
   configuredBy: "environment" | "on-chain" | "unconfigured";
   codeState: "unconfigured" | "no-code" | "present";
   runtimeCodeHash?: Hex;
+  explorerUrl?: string;
 }
 
 export interface ContractDependencyEvidence {
-  from: "proofVerifier" | "restrictedVault" | "lendingPool";
-  relation: "honkVerifier" | "registry" | "verifier" | "lendingAsset" | "collateralAsset";
+  from: "proofVerifier" | "restrictedVault" | "lendingPool" | "daoGovernance";
+  relation:
+    | "honkVerifier"
+    | "registry"
+    | "verifier"
+    | "lendingAsset"
+    | "collateralAsset"
+    | "dojangScroll"
+    | "attesterBook"
+    | "eas";
   address: Address;
   matchesConfiguredAddress?: boolean;
 }
@@ -59,6 +72,7 @@ export interface ProjectEventLog {
   logIndex: number | null;
   topics: readonly Hex[];
   data: Hex;
+  explorerUrl?: string;
 }
 
 export interface ProjectTransactionEvidence {
@@ -70,6 +84,7 @@ export interface ProjectTransactionEvidence {
   status: "success" | "reverted";
   gasUsed: bigint;
   effectiveGasPrice: bigint;
+  explorerUrl: string;
   projectEvents: readonly ProjectEventLog[];
 }
 
@@ -81,7 +96,16 @@ const configuredAddresses: ReadonlyArray<{
   { name: "proofVerifier", address: projectContracts.proofVerifier },
   { name: "restrictedVault", address: projectContracts.restrictedVault },
   { name: "lendingPool", address: projectContracts.lendingPool },
+  { name: "daoGovernance", address: projectContracts.daoGovernance },
 ];
+
+function addressExplorerUrl(address: Address): string {
+  return `${GIWA_EXPLORER_URL}/address/${address}`;
+}
+
+function transactionExplorerUrl(hash: Hash): string {
+  return `${GIWA_EXPLORER_URL}/tx/${hash}`;
+}
 
 function addDependency(
   dependencies: ContractDependencyEvidence[],
@@ -116,6 +140,7 @@ function makeEventLog(
     logIndex: log.logIndex,
     topics: log.topics,
     data: log.data,
+    explorerUrl: log.transactionHash ? transactionExplorerUrl(log.transactionHash) : undefined,
   };
 }
 
@@ -155,6 +180,7 @@ export async function inspectProjectDeployment(
       configuredBy: "environment",
       codeState: code && code !== "0x" ? "present" : "no-code",
       runtimeCodeHash: code && code !== "0x" ? keccak256(code) : undefined,
+      explorerUrl: addressExplorerUrl(address),
     });
   }
 
@@ -167,6 +193,7 @@ export async function inspectProjectDeployment(
   const verifier = projectContracts.proofVerifier;
   const vault = projectContracts.restrictedVault;
   const pool = projectContracts.lendingPool;
+  const dao = projectContracts.daoGovernance;
 
   if (verifier && isConfiguredContractLive("proofVerifier")) {
     try {
@@ -189,6 +216,7 @@ export async function inspectProjectDeployment(
           configuredBy: "on-chain",
           codeState: hasCode ? "present" : "no-code",
           runtimeCodeHash: hasCode ? keccak256(code!) : undefined,
+          explorerUrl: addressExplorerUrl(honkVerifier),
         });
       }
       if (hasCode) codeByAddress.set(honkVerifier.toLowerCase(), code!);
@@ -255,11 +283,42 @@ export async function inspectProjectDeployment(
           configuredBy: "on-chain",
           codeState: hasCode ? "present" : "no-code",
           runtimeCodeHash: hasCode ? keccak256(code!) : undefined,
+          explorerUrl: addressExplorerUrl(address),
         });
         if (hasCode) codeByAddress.set(address.toLowerCase(), code!);
       }
     } catch {
       discoveryWarnings.push({ contract: "lendingPool", reason: "read-failed" });
+    }
+  }
+
+  if (dao && isConfiguredContractLive("daoGovernance")) {
+    try {
+      const [dojangScroll, attesterBook, eas] = await Promise.all([
+        client.readContract({ address: dao, abi: daoGovernanceAbi, functionName: "dojangScroll" }),
+        client.readContract({ address: dao, abi: daoGovernanceAbi, functionName: "attesterBook" }),
+        client.readContract({ address: dao, abi: daoGovernanceAbi, functionName: "eas" }),
+      ]);
+      addDependency(dependencies, {
+        from: "daoGovernance",
+        relation: "dojangScroll",
+        address: dojangScroll,
+        matchesConfiguredAddress: sameAddress(dojangScroll, officialDojang.dojangScroll),
+      });
+      addDependency(dependencies, {
+        from: "daoGovernance",
+        relation: "attesterBook",
+        address: attesterBook,
+        matchesConfiguredAddress: sameAddress(attesterBook, officialDojang.dojangAttesterBook),
+      });
+      addDependency(dependencies, {
+        from: "daoGovernance",
+        relation: "eas",
+        address: eas,
+        matchesConfiguredAddress: sameAddress(eas, officialDojang.eas),
+      });
+    } catch {
+      discoveryWarnings.push({ contract: "daoGovernance", reason: "read-failed" });
     }
   }
 
@@ -289,6 +348,7 @@ export async function readProjectTransactionEvidence(
     status: receipt.status,
     gasUsed: receipt.gasUsed,
     effectiveGasPrice: receipt.effectiveGasPrice,
+    explorerUrl: transactionExplorerUrl(receipt.transactionHash),
     projectEvents: receipt.logs.flatMap((log) => {
       const contract = contractByAddress.get(log.address.toLowerCase());
       return contract ? [makeEventLog(contract, log)] : [];
@@ -307,8 +367,16 @@ export async function readProjectProtocolLogs(
   await requireGiwaChain(client);
   const { fromBlock, toBlock } = input;
   const chunkSize = input.blockChunkSize ?? 1_000n;
-  if (fromBlock < 0n || toBlock < fromBlock || chunkSize < 1n || chunkSize > 10_000n) {
-    throw new RangeError("Use an ordered non-negative block range and a chunk size from 1 to 10,000.");
+  if (
+    fromBlock < 0n ||
+    toBlock < fromBlock ||
+    toBlock - fromBlock + 1n > MAX_EVIDENCE_LOG_RANGE ||
+    chunkSize < 1n ||
+    chunkSize > 10_000n
+  ) {
+    throw new RangeError(
+      `Use an ordered non-negative range of at most ${MAX_EVIDENCE_LOG_RANGE} blocks and a chunk size from 1 to 10,000.`,
+    );
   }
 
   const deployment = await inspectProjectDeployment(client);
@@ -340,6 +408,7 @@ export async function readProjectProtocolLogs(
 export function protocolEventAbi(contract: EvidenceContractName) {
   switch (contract) {
     case "credentialRegistry": return credentialRegistryAbi;
+    case "daoGovernance": return daoGovernanceAbi;
     case "restrictedVault": return restrictedVaultAbi;
     case "lendingPool": return lendingPoolAbi;
     case "lendingAsset":

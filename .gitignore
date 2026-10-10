@@ -31,6 +31,7 @@ contracts/lib/
 !/docs/DAO_GOVERNANCE_ARCHITECTURE.md
 !/docs/DAO_FRONTEND_HANDOFF.md
 !/docs/GLYPH_SOLID_3D_HANDOFF.md
+!/docs/FRONTEND_FINAL_INTEGRATION_MAP.md
 
 # Playwright output
 playwright-report/

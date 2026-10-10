@@ -114,6 +114,7 @@ export function useDaoGovernance(proposalId?: bigint) {
       }
 
       await queryClient.invalidateQueries({ queryKey: ["dao-governance", contractAddress] });
+      await queryClient.invalidateQueries({ queryKey: ["dao-proposal-feed", contractAddress] });
       setTransaction({ state: "confirmed", hash, explorerUrl });
       return { result: simulation.result, receipt };
     } catch (error) {

@@ -216,6 +216,29 @@ export interface GovernanceSnapshot {
   proposal?: GovernanceProposal;
 }
 
+export type GovernanceProposalFeedState =
+  | "unconfigured"
+  | "checking"
+  | "ready"
+  | "no-code"
+  | "read-error";
+
+export interface GovernanceProposalPage {
+  proposals: readonly GovernanceProposal[];
+  /** Total number of proposal IDs currently stored by the contract. */
+  totalProposals: bigint;
+  /** Exclusive upper-bound cursor for the next page; pass it as `beforeId`. */
+  nextCursor?: bigint;
+  votingPeriod: bigint;
+  quorum: bigint;
+  executionWindow: bigint;
+  minimumRemainingValidity: bigint;
+}
+
+export type GovernanceProposalPageResult =
+  | { state: "ready"; page: GovernanceProposalPage }
+  | { state: "no-code" };
+
 export interface GovernanceWriteResult<TResult = undefined> {
   result: TResult;
   receipt: TransactionReceipt;
