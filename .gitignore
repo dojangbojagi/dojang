@@ -20,6 +20,9 @@ contracts/lib/
 .env.*.local
 !.env.example
 
+# Local Vercel project metadata
+.vercel/
+
 # OS & Editor files
 .DS_Store
 
