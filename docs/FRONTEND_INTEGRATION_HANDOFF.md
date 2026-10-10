@@ -1,10 +1,10 @@
 # Frontend Integration Handoff
 
-**Checkpoint (2026-10-09):** the six-route Next.js app, wallet providers, credential issue/read paths, browser proof hook, generated Solidity verifier, vault authorization, and local conformance tests are implemented. A real-browser proof completed the full local Anvil vault flow. Project contract addresses are not configured and no project contracts are deployed to GIWA Sepolia. This file is the interface contract for presentation work.
+**Checkpoint update (2026-10-10):** the existing six-route app and protocol are extended with a separate policy-2 lending market, dedicated credential/proof hooks, and supplier/collateral/borrow/repay interfaces. Lending is locally tested only; the LendingPool, registry, verifier, and controlled assets are not deployed to GIWA Sepolia. The integration points below do not require changes to Solidity or ZK internals.
 
 ## Ownership boundary
 
-Codex owns `src/lib/config/`, `src/lib/contracts/`, `src/lib/protocol/`, `src/lib/credential/`, `src/lib/zk/`, `src/hooks/`, `contracts/`, `circuits/`, and this document. Claude may replace the six `src/app/**/page.tsx` scaffolds and presentation components, while keeping route names, providers, hook contracts, and status meanings. Preserve the original HTML, CSS, JavaScript, fonts, and images in `docs/`.
+Codex owns `src/lib/config/`, `src/lib/contracts/`, `src/lib/protocol/`, `src/lib/credential/`, `src/lib/zk/`, `src/lib/lending/`, `src/hooks/`, `contracts/`, `circuits/`, and this document. Claude may replace the six `src/app/**/page.tsx` scaffolds and presentation components, while keeping route names, providers, hook contracts, and status meanings. Preserve the original HTML, CSS, JavaScript, fonts, and images in `docs/`.
 
 Keep all credential checks, commitment construction, proof creation and verification, transaction simulation, writes, receipt handling, and error mapping in the hooks and protocol modules. Presentation components should call these interfaces and render their results.
 
@@ -15,7 +15,7 @@ Keep all credential checks, commitment construction, proof creation and verifica
 | `/` | `src/app/page.tsx`, `WalletNetworkCard` | `useWalletNetwork()`; explain testnet and demo limitations; link into credential and proof flow |
 | `/dojang` | `src/app/dojang/page.tsx`, `CredentialWitnessImporter` | `useDojangVerification(wallet)`, `useDemoCredential(wallet?)`, `useDemoCredentialIssuance()`; official Dojang and project demo credentials are separate sources |
 | `/bojagi` | `src/app/bojagi/page.tsx`, `ProofGenerationPanel` | `useEligibilityProof()`; show witness readiness, proof generation, and local verification separately from on-chain verification |
-| `/vault` | `src/app/vault/page.tsx`, `VaultActionPanel` | `useVaultAccess()` and `useEligibilityProof()`; submit only the current locally verified proof and show access only after receipt plus contract readback |
+| `/vault` | `src/app/vault/page.tsx`, `VaultActionPanel` | `useVaultAccess()` and `useEligibilityProof()` for vault; `useLendingMarket()`, `useLendingCredential()`, and `useLendingEligibilityProof()` are available for a future presentation integration without a new route or protocol rewrite |
 | `/contracts` | `src/app/contracts/page.tsx` | `officialDojang`, `projectContracts`, and `invalidContractConfig`; separate official GIWA addresses from unconfigured project deployments |
 | `/docs` | `src/app/docs/page.tsx` | Explain issuer trust, commitment privacy, local proof status, deployment status, and that this demo vault does not hold funds |
 
@@ -152,6 +152,85 @@ The browser loads the compiled circuit artifact from `/circuits/private_eligibil
 
 `eligible` means a locally verified proof matches the connected wallet, current credential, chain, and configured vault. `enterVault` checks the proof context and public inputs, simulates the call, requests a wallet signature, waits for the transaction receipt, and reads `hasAccess` back. Only a successful receipt and positive readback set the current-session state to `access-granted`. The contract's access flag is permanent for that wallet in this demo.
 
+### Lending policy credential and proof hooks
+
+Lending uses registry policy `2`, version `1`, threshold `1,000`, and the configured LendingPool address as the proof target. This is intentionally separate from the vault's policy `1`; a vault credential or proof cannot be reused to borrow. The current lending credential is an authorized issuer-created **demo** commitment. Official Dojang Verified Address remains informational and does not assert a private balance.
+
+`useLendingCredential(wallet?)` reads `DemoCredentialRegistry.getCredential(wallet, 2)` and checks whether its issuer currently has `ISSUER_ROLE`:
+
+```ts
+{
+  state: LendingCredentialState; // unconfigured | disconnected | checking | missing |
+                               // active | expired | revoked | issuer-untrusted | read-error
+  record?: DemoCredentialRecord;
+  issuerAuthorized: boolean;
+  error?: Error;
+  refetch: () => Promise<unknown>;
+  hasRegistry: boolean;
+}
+```
+
+`useLendingCredentialIssuance()` is for the controlled demo issuer only. The connected wallet must hold the on-chain issuer role. It creates a commitment for policy `2` and the configured pool address, simulates and submits `recordCredential`, then checks the receipt and registry readback before returning the private witness:
+
+```ts
+{
+  issueCredential: (input: {
+    wallet: Address;
+    privateValue: string;
+    expiresAt: bigint;
+  }) => Promise<DemoCredentialWitness>;
+  transaction: TransactionLifecycle;
+  isSubmitting: boolean;
+}
+```
+
+The returned witness contains the private value and salt. Deliver it securely; do not log, upload, put it in a URL, or send it to analytics. A controlled demo issuer must not be described as Dojang, an exchange, or a financial institution.
+
+`useLendingEligibilityProof(witness?)` generates the existing circuit proof against the current policy-2 record and pool. It verifies the proof locally and checks the public inputs before returning it:
+
+```ts
+{
+  state: LendingProofState; // unconfigured | disconnected | wrong-network |
+                            // checking-credential | credential-required |
+                            // credential-expired | credential-revoked |
+                            // issuer-untrusted | witness-required | ready-to-prove |
+                            // generating | proof-ready | invalid
+  proof?: EligibilityProof;
+  error?: string;
+  generateProof: (witnessOverride?: DemoCredentialWitness) => Promise<EligibilityProof>;
+}
+```
+
+`proof-ready` means only local verification and matching current context. Solidity independently verifies the proof again inside `LendingPool.borrow`.
+
+### `useLendingMarket()`
+
+The hook reads the configured pool's assets, symbols, decimals, available liquidity, supplier principal, debt, and the connected wallet's balances and position. It exposes the following typed shape:
+
+```ts
+{
+  state: LendingMarketState; // unconfigured | disconnected | wrong-network |
+                             // checking | ready | read-error
+  summary?: LendingMarketSummary; // assets, decimals, available liquidity, total supplier principal, total debt
+  position?: LendingUserPosition; // wallet balances/allowances, supplier position, collateral, debt, capacity
+  transaction: TransactionLifecycle;
+  isSubmitting: boolean;
+  refetch: () => Promise<void>;
+  approveLendingAsset: (amount: bigint) => Promise<void>;
+  approveCollateralAsset: (amount: bigint) => Promise<void>;
+  supply: (amount: bigint) => Promise<void>;
+  withdrawSupply: (amount: bigint) => Promise<void>;
+  depositCollateral: (amount: bigint) => Promise<void>;
+  withdrawCollateral: (amount: bigint) => Promise<void>;
+  borrow: (amount: bigint, proof: EligibilityProof) => Promise<void>;
+  repay: (amount: bigint) => Promise<void>;
+}
+```
+
+All amounts use the relevant token's base units. Use `summary.*Asset.decimals` when parsing or displaying amounts. Approvals are explicit and token-specific. Each write is simulated first, sent through the existing wagmi wallet, receipt-checked, and confirmed by a corresponding state readback. If a receipt succeeds but expected state is not observable, the hook reports `rpc-error` with the transaction hash instead of claiming the action is complete. `borrow` rejects locally verified proofs that do not bind the connected wallet, active policy-2 commitment/version, chain `91342`, threshold, expiry, and configured LendingPool; the contract repeats these checks.
+
+This hook does not mint assets or issue credentials. Lending and collateral assets are read from the configured pool, so no sample deployment address is built into the UI. Current market settings are fixed at 1:1 demo asset price, 50% LTV, and zero interest; these are not production oracle or yield guarantees. See [LENDING_MVP_ARCHITECTURE.md](LENDING_MVP_ARCHITECTURE.md) for limitations and local evidence.
+
 ## Credential verification, proof, and transaction states
 
 | Concern | States | Meaning |
@@ -161,7 +240,10 @@ The browser loads the compiled circuit artifact from `/circuits/private_eligibil
 | Witness | no witness, metadata matched, circuit checked | Metadata match is not cryptographic proof; the circuit checks the opening during generation |
 | Proof | `credential-required`, `ready-to-prove`, `generating`, `ready-to-submit`, `invalid`, `contract-unconfigured` | `ready-to-submit` is local proof verification only |
 | Vault | `locked`, `eligible`, `access-granted`, `previously-granted`, `read-error`, `unconfigured`, `disconnected`, `checking` | `eligible` is local proof readiness; access states come from the contract |
-| Transaction | `idle`, `simulating`, `awaiting-signature`, `submitted`, `confirming`, `confirmed`, `reverted`, `rejected`, `rpc-error` | `confirmed` is receipt status; vault access additionally requires readback |
+| Lending credential | `checking`, `active`, `missing`, `expired`, `revoked`, `issuer-untrusted`, `read-error`, `unconfigured`, `disconnected` | `active` includes current issuer-role verification |
+| Lending proof | `checking-credential`, `credential-required`, `credential-expired`, `credential-revoked`, `issuer-untrusted`, `witness-required`, `ready-to-prove`, `generating`, `proof-ready`, `invalid`, `unconfigured`, `disconnected`, `wrong-network` | `proof-ready` is local proof verification only; `borrow` requires Solidity verification |
+| Lending market | `unconfigured`, `disconnected`, `wrong-network`, `checking`, `ready`, `read-error` | `ready` means configured reads completed; it does not indicate user eligibility or available credit |
+| Transaction | `idle`, `simulating`, `awaiting-signature`, `submitted`, `confirming`, `confirmed`, `reverted`, `rejected`, `rpc-error` | Lending `confirmed` requires receipt plus expected state readback; `rpc-error` can retain a successfully mined hash if readback failed |
 
 ## Circuit, commitment, and contract interface
 
@@ -209,7 +291,7 @@ The generated EVM verifier is `contracts/src/generated/EligibilityHonkVerifier.s
 | UPBIT KOREA attester | `0x09B170CA2A006081042992bCE7379B85a02149C6` | Official GIWA Sepolia registry result and attester |
 | UPBIT KOREA attester ID | `0xd99b42e778498aa3c9c1f6a012359130252780511687a35982e8e52735453034` | Official GIWA ID |
 | Verified Address schema | `0x072d75e18b2be4f89a13a7147240477481c4b526d5795802acba59046b426e08` | Official GIWA testnet schema |
-| Demo registry, verifier, vault | unset | Not deployed; no project transaction has been broadcast |
+| Demo registry, verifier, vault, lending pool | unset | Not deployed; no project transaction has been broadcast |
 
 Official references: [GIWA Sepolia network setup](https://docs.giwa.io/giwa-chain/en/get-started/connect-to-giwa), [Dojang contracts](https://docs.giwa.io/giwa-chain/en/giwa-ecosystem/dojang/contracts), and [Verified Address integration](https://docs.giwa.io/giwa-chain/en/giwa-ecosystem/dojang/verified-address).
 
@@ -222,6 +304,7 @@ Copy `.env.example` to `.env.local` (or update the local `.env`) and configure:
 - `NEXT_PUBLIC_DEMO_CREDENTIAL_REGISTRY_CONTRACT`: deployed demo registry address.
 - `NEXT_PUBLIC_PROOF_VERIFIER_CONTRACT`: verifier address for configuration display; the vault itself is wired to its immutable verifier in its constructor.
 - `NEXT_PUBLIC_RESTRICTED_VAULT_CONTRACT`: deployed vault address. Credential commitments and proofs bind to it.
+- `NEXT_PUBLIC_LENDING_POOL_CONTRACT`: deployed lending market address. Lending credentials and proofs bind to this pool; the hook reads both token addresses from it.
 - `GIWA_RPC_URL`: reserved server-only setting; current hook reads use the public RPC.
 - `NEXT_PUBLIC_APP_NAME`, `NEXT_PUBLIC_APP_DESCRIPTION`, `NEXT_PUBLIC_APP_TAGLINE`: app copy.
 
@@ -229,17 +312,18 @@ Contract addresses are not defaulted to example values. Invalid local placeholde
 
 ## Error types
 
-`ProtocolError` exposes stable `code` and user-readable `message`. Codes are `WALLET_REQUIRED`, `WRONG_NETWORK`, `CONTRACTS_UNCONFIGURED`, `INVALID_CREDENTIAL`, `ISSUER_NOT_AUTHORIZED`, `CREDENTIAL_VERSION_CHANGED`, `CREDENTIAL_REQUIRED`, `CREDENTIAL_MISMATCH`, `CREDENTIAL_EXPIRED`, `CREDENTIAL_REVOKED`, `INVALID_PROOF`, `ALREADY_GRANTED`, `TRANSACTION_REJECTED`, `INSUFFICIENT_FUNDS`, and `RPC_ERROR`. `explainProtocolError(error)` maps common wallet, registry, vault, and network errors to UI copy. Presentation components should show the returned message and not infer success from a submitted transaction hash.
+`ProtocolError` exposes stable `code` and user-readable `message`. Codes include `WALLET_REQUIRED`, `WRONG_NETWORK`, `CONTRACTS_UNCONFIGURED`, `LENDING_NOT_CONFIGURED`, `INVALID_AMOUNT`, `INVALID_CREDENTIAL`, `ISSUER_NOT_AUTHORIZED`, `CREDENTIAL_VERSION_CHANGED`, `CREDENTIAL_REQUIRED`, `CREDENTIAL_MISMATCH`, `CREDENTIAL_EXPIRED`, `CREDENTIAL_REVOKED`, `INVALID_PROOF`, `INSUFFICIENT_LIQUIDITY`, `INSUFFICIENT_COLLATERAL`, `BORROWING_CAPACITY_EXCEEDED`, `TRANSACTION_STATE_UNCONFIRMED`, `ALREADY_GRANTED`, `TRANSACTION_REJECTED`, `INSUFFICIENT_FUNDS`, and `RPC_ERROR`. Lending custom errors are represented by `LendingContractErrorName` in `src/lib/protocol/types.ts`; `explainProtocolError(error)` maps common wallet, registry, vault, market, and network errors to UI copy. Presentation components should show the returned message and not infer success from a submitted transaction hash.
 
 ## Checkpoint and evidence
 
 - **Implemented:** six App Router routes, Bun manifest/lockfile, environment schema, GIWA Sepolia chain, RainbowKit/wagmi/viem providers, official Dojang read hook, demo credential issue/read/revoke hooks and contracts, typed protocol hooks, Noir circuit/artifact, browser prover integration, generated verifier/adapter, and vault transaction/readback flow.
-- **Stable frontend checkpoint:** `bun run typecheck` and `bun run build` passed; Next.js prerendered `/`, `/dojang`, `/bojagi`, `/vault`, `/contracts`, and `/docs`. `bun run zk:compile` and `bun run contracts:build` also passed. No project `lint` script is configured.
+- **Previously recorded frontend checkpoint (2026-10-09):** the six routes had passed typecheck/build. On this lending checkpoint, `bun run typecheck` and the TypeScript stage of `bun run build` fail at `src/components/reference-effects.tsx:15` with `TS18048: 'revealObserver' is possibly 'undefined'`. Next.js production compilation itself completed before that typecheck failure. This visual-effects file was left untouched under the protocol-only scope; do not present the earlier checkpoint as a current passing build.
 - **Verified read-only on GIWA Sepolia:** `bun run dojang:check` returned chain ID `91342` and UPBIT attester `0x09B170CA2A006081042992bCE7379B85a02149C6`. For synthetic `0x…dEaD`, `isVerified` returned false and its absent-UID lookup reverted as expected. EAS returned `false` for the zero UID and a zero UID record. The script also checks valid and malformed ABI-encoded `bool isVerified` payloads. No wallet was supplied, so no positive personal credential result is claimed.
-- **Locally verified, proof generation:** `bun run zk:conformance` generated and locally verified an 8,000-byte proof with nine public inputs. Noir/Barretenberg rejected under-threshold, mismatched-commitment, and wrong-wallet witnesses. The checked-in synthetic public proof fixture contains no private witness.
-- **Foundry tests:** `bun run contracts:test` passed all 24 tests: 21 registry/vault boundary checks and 3 generated-verifier conformance checks. Foundry reports non-fatal lint warnings in generated verifier code and timestamp comparisons.
+- **Lending proof fixture:** `bun run lending:proof-fixture` generated an 8,000-byte proof with nine public inputs and locally verified it with Barretenberg. The circuit rejected a correctly commitment-bound under-threshold witness. The public fixture contains no private value or salt.
+- **Foundry tests:** `bun run contracts:test` passed all 44 tests: 21 registry/vault boundary tests, 3 generated-verifier conformance tests, and 20 lending integration tests using the generated verifier and real proof fixture. `bun run contracts:build` passed. Foundry prints non-fatal warnings in generated verifier code and existing timestamp comparisons, plus a marker typecast and event-order warning in the new lending contracts.
+- **Local Anvil lending lifecycle:** `bun run lending:anvil` dynamically deployed the real verifier, adapter, registry, controlled tokens, and pool to a local chain with ID `91342`; generated a proof for that ephemeral pool; verified it locally and on-chain; then supplied, deposited, borrowed, partially repaid, withdrew collateral, fully repaid, and withdrew supplier principal. Under-threshold witness, corrupted proof, and above-LTV borrowing were rejected. The borrower finished with zero debt and no collateral held by the pool; the supplier recovered all principal. Example local borrow receipt: `0x2d19ff4709264bb9b0a965be40840d33c627cc3542d61e9aadcc78c13d470ca5`, local block `17`. This is local-only evidence, not a GIWA transaction.
 - **Verified in a real browser and local Anvil:** `bun run test:browser` passed against the freshly compiled artifact. The browser generated and locally verified an 8,000-byte proof in 16.2 seconds. The generated Solidity verifier accepted it and the local RestrictedVault receipt/readback granted access. Under-threshold witnesses, invalid proof bytes, wrong-wallet use, a missing credential, unauthorized issuance, and replay were rejected. The local Anvil transaction was `0x3eb955cbd528ac1782afb4bcdbbf3c3d70a39298cc08db6cb65da2c4cb51cfd8` at local block 10; it is not a GIWA transaction.
-- **Not deployed to GIWA Sepolia:** project registry, generated verifier, adapter and vault addresses remain unset. No project credential or vault transaction has been broadcast to GIWA. Live RPC evidence above covers read-only Dojang/EAS calls only.
+- **Not deployed to GIWA Sepolia:** project registry, generated verifier, adapter, vault, controlled assets, and LendingPool addresses remain unset. No lending credential or transaction has been broadcast to GIWA. The only live RPC evidence above covers read-only Dojang/EAS calls.
 - **Local test fixtures:** `TestOnlyVerifierFixture` is a Boolean double used only for vault boundary tests. It is not proof evidence and must never be deployed. Generated-verifier conformance and browser E2E use the actual generated verifier.
 - **Compiler setup:** Foundry uses pinned `solc-js` 0.8.28 through `contracts/solc-wrapper.sh` because the native compiler download endpoint was unavailable. Noir conformance downloads public Barretenberg SRS data into ignored `circuits/cache/`, separate from Foundry's cache.
 - **Foundry warning:** Foundry could not write its global signature cache under the user's home directory; the local tests and build still pass.
@@ -253,6 +337,8 @@ bun run typecheck
 bun run build
 bun run contracts:build
 bun run contracts:test
+bun run lending:proof-fixture
+bun run lending:anvil
 bun run zk:compile
 bun run zk:conformance
 bun run dojang:check

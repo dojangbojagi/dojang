@@ -24,7 +24,8 @@ contracts/lib/
 .DS_Store
 
 # Documentation & Handoffs (keep the source-controlled Next.js /docs route)
-/docs/
+/docs/*
+!/docs/LENDING_MVP_ARCHITECTURE.md
 
 # Playwright output
 playwright-report/
