@@ -201,6 +201,20 @@ The adapter requires chain `91342`; unconfigured addresses stay unconfigured. Ca
 | Registry issuer-role grant | 51,484 |
 | **Total local execution gas** | **12,059,491** |
 
+The standalone DAO deployment and lifecycle were also measured from mined receipts on local Anvil with test-only Dojang/EAS fixtures:
+
+| Local governance transaction | Gas used |
+| --- | ---: |
+| `GovernedDojangAccess` deployment | 1,944,302 |
+| Proposal creation | 172,229 |
+| For vote (proposer) | 112,951 |
+| For vote (second wallet) | 95,851 |
+| Proposal finalization | 58,118 |
+| Protected action before policy change | 94,188 |
+| Proposal execution | 61,243 |
+
+The measured governance deployment excludes fixture deployment/setup writes. These are local execution-gas observations, not GIWA fee estimates.
+
 This is a local execution-gas baseline, not the ETH balance requirement. GIWA is an OP Stack L2; the actual total includes the live L2 execution price and rollup data fee. The GIWA RPC could not be resolved from this environment, so no current fee quote or remote `eth_estimateGas` result is claimed. Before deployment, quote each transaction against GIWA RPC, total the actual fees including L1 data fees, and fund the admin with an explicit safety buffer. GIWA documents a 60 million block gas limit in its [Ethereum differences guide](https://docs.giwa.io/giwa-chain/en/network-information/diffs-ethereum-giwa); this does not guarantee the transaction estimate or fee.
 
 The current artifacts target `prague`, while the official GIWA network docs do not state the active EVM fork in the connection guide. Confirm the compiled deployment bytecode with GIWA `eth_estimateGas` before broadcast. If the target must change, rebuild all contracts and scripts and rerun proof conformance; the lending fixture binds the verifier target address and may need regeneration.
@@ -217,7 +231,8 @@ Use separate admin, credential issuer, supplier, borrower, and (if needed) a sec
 4. Connect the issuer wallet and issue a policy `1` credential for the vault flow, then confirm registry state and `CredentialCommitted` receipt logs. Generate and locally verify the proof, enter the vault, then verify `VaultAccessGranted`, `hasAccess`, and the receipt on the explorer.
 5. For lending, issue a separate policy `2` credential with the existing lending credential hook. The issuer must currently hold `ISSUER_ROLE`. Generate a proof bound to the exact pool address; approve and supply gUSD, approve and deposit gCOL, borrow within the fixed 50% LTV, repay, and withdraw collateral and supplier liquidity.
 6. After each write, require a successful receipt, expected event, and contract-state readback. Exercise a wrong proof, wrong wallet, revoked/expired credential, and over-capacity borrow using disposable test accounts; expected failures must remain failures.
-7. Save the real address manifest, transaction hashes, block numbers, code-verification links, issuer/admin addresses, and test receipts. Clearly label any action never performed.
+7. For governance, connect two wallets with current official Verified Address credentials; verify an unverified wallet cannot create/vote; create a bounded minimum-validity proposal, check one vote per wallet and quorum, finalize, execute, and confirm the new policy through `minimumRemainingValidity` and `performProtectedAction`. Revoke or wait for expiry on a disposable credential to confirm live eligibility checks fail closed.
+8. Save the real address manifest, transaction hashes, block numbers, code-verification links, issuer/admin addresses, and test receipts. Clearly label any action never performed.
 
 ## Remaining blockers
 

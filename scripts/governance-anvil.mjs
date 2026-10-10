@@ -56,6 +56,7 @@ async function main() {
       if (attempt === 79) throw new Error("Local Anvil did not become ready.");
       await new Promise((resolve) => setTimeout(resolve, 250));
     }
+    process.stdout.write("Local Anvil is ready; deploying Dojang/EAS fixtures and governance.\n");
 
     const response = await fetch(rpcUrl, {
       method: "POST",
@@ -121,7 +122,7 @@ async function main() {
 
     const latestBlock = await publicClient.getBlock();
     const issuedAt = latestBlock.timestamp;
-    const expiresAt = issuedAt + 30n * 24n * 60n * 60n;
+    const expiresAt = issuedAt + 1n * 24n * 60n * 60n;
     const memberUids = new Map([[proposer, toHex(1n, { size: 32 })], [voterTwo, toHex(2n, { size: 32 })]]);
     for (const [wallet, uid] of memberUids) {
       await send(deployerWallet, {
@@ -147,6 +148,7 @@ async function main() {
       7n * 24n * 60n * 60n,
       0n,
     ]);
+    process.stdout.write("Fixture credentials and governance contract deployed.\n");
     const isVerifiedMember = (wallet) => publicClient.readContract({
       address: governance,
       abi: governanceAbi,
@@ -167,6 +169,7 @@ async function main() {
       "unverified proposal creation unexpectedly succeeded",
     );
     const createReceipt = await send(proposerWallet, createProposalCall, "proposal:create");
+    process.stdout.write("Proposal created; checking start gate and collecting votes.\n");
     const proposalEvents = parseEventLogs({ abi: governanceAbi, logs: createReceipt.logs, eventName: "ProposalCreated" });
     assert.equal(proposalEvents.length, 1, "ProposalCreated event was not emitted");
     const proposalId = proposalEvents[0].args.proposalId;
@@ -222,6 +225,7 @@ async function main() {
       functionName: "castVote",
       args: [proposalId, 1],
     }, "vote:for:voter-two");
+    process.stdout.write("Eligible votes confirmed; finalizing and executing the policy action.\n");
     assert.ok(voteReceiptOne.blockNumber < voteReceiptTwo.blockNumber, "votes were not mined separately");
 
     await publicClient.request({ method: "evm_increaseTime", params: [61] });

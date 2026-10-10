@@ -1,4 +1,5 @@
 import "./contracts.css";
+import { PageGlyphFigure } from "@/components/page-glyph";
 import { LendingAssetRows } from "@/components/lending/lending-asset-rows";
 import { GIWA_CHAIN_ID, GIWA_EXPLORER_URL } from "@/lib/config/chain";
 import { invalidContractConfig, officialDojang, projectContracts } from "@/lib/config/contracts";
@@ -48,12 +49,15 @@ export default function ContractsPage() {
 
   return (
     <main className="page">
-      <p className="eyebrow">Evidence · Project contracts and deployment status</p>
-      <h1>Contract evidence</h1>
-      <p className="page-lead">
-        Network: GIWA Sepolia · Chain ID {GIWA_CHAIN_ID}. These are the contracts this project owns, and whether an address is configured for each.
-        A configured address is not proof of a verified deployment: check it on the explorer.
-      </p>
+      <header className="page-head">
+        <PageGlyphFigure glyph={{ shape: "stack", label: "Four stacked slabs of characters: the project's contracts, each to be checked on the explorer.", caption: "Evidence, layer by layer", legend: ["public"] }} />
+        <p className="eyebrow">Evidence · Project contracts and deployment status</p>
+        <h1>Contract evidence</h1>
+        <p className="page-lead">
+          Network: GIWA Sepolia · Chain ID {GIWA_CHAIN_ID}. These are the contracts this project owns, and whether an address is configured for each.
+          A configured address is not proof of a verified deployment: check it on the explorer.
+        </p>
+      </header>
 
       <section className="panel" aria-labelledby="project-contracts-heading">
         <h2 id="project-contracts-heading">Project contracts</h2>

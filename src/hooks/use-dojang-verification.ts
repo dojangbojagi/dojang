@@ -131,6 +131,9 @@ export function useDojangVerification(wallet?: `0x${string}`) {
       const status = await statusQuery.refetch();
       if (status.data !== true) return status;
       const [uidResult] = await Promise.all([uidQuery.refetch(), trustedAttesterQuery.refetch()]);
+      if (uidResult.data && uidResult.data !== zeroHash) {
+        await Promise.all([attestationQuery.refetch(), validityQuery.refetch()]);
+      }
       return uidResult;
     },
   };

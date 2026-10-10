@@ -28,6 +28,9 @@ contracts/lib/
 !/docs/LENDING_MVP_ARCHITECTURE.md
 !/docs/DEPLOYMENT_READINESS.md
 !/docs/PROTOCOL_ROADMAP.md
+!/docs/DAO_GOVERNANCE_ARCHITECTURE.md
+!/docs/DAO_FRONTEND_HANDOFF.md
+!/docs/GLYPH_SOLID_3D_HANDOFF.md
 
 # Playwright output
 playwright-report/

@@ -374,11 +374,12 @@ h4 { font-weight: 600; }
    ========================================================================== */
 .stub__numeral { display: none; }
 .stub__glyph {
-  position: absolute; top: clamp(.5rem, 2.4vw, 2rem); right: var(--gutter); z-index: 0;
+  position: absolute; top: clamp(.5rem, 2.4vw, 2rem); right: var(--gutter); z-index: 1; /* above the text container, so the picture can be grabbed */
   width: clamp(14rem, 23vw, 22rem); margin: 0; pointer-events: none; user-select: none;
   animation: stub-glyph-in 1.1s var(--ease-out) both;
 }
-.stub__canvas { display: block; width: 100%; aspect-ratio: 1; }
+.stub__canvas { display: block; width: 100%; aspect-ratio: 1; pointer-events: auto; } /* the figure ignores the pointer; the picture itself can be grabbed */
+.stub__hint { color: var(--text-dim); opacity: .75; letter-spacing: .1em; }
 .stub__glyph figcaption {
   display: grid; justify-items: center; gap: .55rem; margin-top: -.8rem; text-align: center;
   font: 500 .66rem/1.4 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--text-dim);
@@ -388,6 +389,7 @@ h4 { font-weight: 600; }
 .stub__glyph li::before { content: ""; width: .5rem; height: .5rem; border-radius: 50%; background: var(--k); }
 .stub__glyph li[data-k="public"] { --k: #6ba3ff; }
 .stub__glyph li[data-k="private"] { --k: #ff7a3d; }
+.stub__glyph li[data-k="sealed"] { --k: #9aa4b8; }
 @keyframes stub-glyph-in { from { opacity: 0; scale: .9; } to { opacity: 1; scale: 1; } }
 @media (max-width: 900px) {
   /* no room beside the title: the picture sits above it, centred, with its caption */
@@ -406,3 +408,10 @@ h4 { font-weight: 600; }
 .protocol-grid--even > .protocol-panel > .protocol-actions { margin-top: auto; padding-top: var(--space-4); }
 .protocol-grid--stretch .protocol-cloth { flex: 1; }
 @media (max-width: 860px) { .protocol-grid--even { grid-template-columns: 1fr; } }
+
+/* ---- Header of the older page layout (vault, contracts, docs): the same picture, with room reserved for it ---- */
+.page-head { position: relative; }
+.page-head > * + * { margin-top: var(--space-5); }
+.page-head .stub__glyph { right: 0; top: 0; }
+@media (min-width: 901px) { .page-head { min-height: calc(clamp(14rem, 23vw, 22rem) + 3.2rem); } }
+@media (max-width: 900px) { .page-head .stub__glyph { position: relative; margin-bottom: var(--space-5); } }

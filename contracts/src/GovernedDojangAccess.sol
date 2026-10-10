@@ -342,7 +342,7 @@ contract GovernedDojangAccess {
         if (uid == bytes32(0)) return false;
 
         IEASDojang.Attestation memory attestation = _readAttestation(uid);
-        if (!_matchesOfficialAttestation(wallet, uid, attestation)) return false;
+        if (!_matchesOfficialAttestation(wallet, uid, attestation)) revert InvalidDojangAttestation();
 
         bool valid;
         try eas.isAttestationValid(uid) returns (bool result) {
@@ -353,7 +353,8 @@ contract GovernedDojangAccess {
         if (!valid || attestation.revocationTime != 0) return false;
         if (attestation.time > block.timestamp) return false;
         if (attestation.expirationTime != 0 && attestation.expirationTime <= block.timestamp) return false;
-        return _verifiedAddressData(attestation.data);
+        if (!_verifiedAddressData(attestation.data)) revert InvalidDojangAttestation();
+        return true;
     }
 
     function _verifiedAttestation(address wallet) private view returns (IEASDojang.Attestation memory attestation) {

@@ -16,11 +16,13 @@ import { useEffect, useRef } from "react";
    Cost, because this page must stay light: about 500 sprites copied from a pre-rendered sheet (no text is laid
    out per frame), at most ~30 frames a second, and only while the canvas is on screen and the tab is visible.
    It turns with the scroll position (the scene's --ip) and drifts slowly in between. The static variant used
-   in the stacked layout draws once. Decorative: the label describes the state in words. */
+   in the stacked layout draws once. You can grab it and turn it (drag); the drift carries on from where you left it.
+   Decorative: the label describes the state in words. */
 
 /* The shapes. sphere / cube / seal are the three states of the idea scene; orb is a sphere with no private
-   characters (an official, public record); rings is two linked rings (supply and borrow, joined by a proof). */
-export type ShapeId = "sphere" | "cube" | "seal" | "orb" | "rings";
+   characters (an official, public record); rings is two linked rings (supply and borrow, joined by a proof);
+   stack is four slabs (layers of on-chain evidence); book is an open book of text lines (documentation). */
+export type ShapeId = "sphere" | "cube" | "seal" | "orb" | "rings" | "stack" | "book";
 
 const GLYPHS = "0123456789ABCDEF";
 const NG = GLYPHS.length;
@@ -125,12 +127,37 @@ function linkedPoint(i: number, spin: number, out: Float32Array, o: number) {
   }
 }
 
+/* four slabs, one above the other */
+function stackPoint(i: number, out: Float32Array, o: number) {
+  if (i >= 484) { out[o] = 0; out[o + 1] = 0.9; out[o + 2] = 0; return; } /* the two spare points rest on top */
+  const plate = (i / 121) | 0;
+  const j = i % 121;
+  out[o] = ((j % 11) / 5 - 1) * 0.74;
+  out[o + 1] = (plate - 1.5) * 0.5;
+  out[o + 2] = (((j / 11) | 0) / 5 - 1) * 0.74;
+}
+
+/* an open book: two pages rising from a spine, 11 lines of 22 characters each */
+function bookPoint(i: number, out: Float32Array, o: number) {
+  if (i >= 484) { out[o] = 0; out[o + 1] = -0.4 + (i - 484) * 0.04; out[o + 2] = 0; return; }
+  const left = i < 242;
+  const k = left ? i : i - 242;
+  const u = ((k % 22) + 1) / 22; /* 0 at the spine, 1 at the outer edge */
+  const v = ((k / 22) | 0) / 10 * 2 - 1;
+  const a = 0.3;
+  out[o] = (left ? -1 : 1) * u * Math.cos(a) * 0.98;
+  out[o + 1] = u * Math.sin(a) * 0.98 - 0.12 + (1 - u) * -0.05;
+  out[o + 2] = v * 0.66;
+}
+
 /* which colour each point has */
 const palette = (fn: (i: number) => number) => Uint8Array.from({ length: COUNT }, (_, i) => fn(i));
 const PAL_SPHERE = palette((i) => (i % 9 === 0 ? 2 : rnd(i * 3) > 0.55 ? 0 : 1));
 const PAL_ORB = palette((i) => (rnd(i * 3) > 0.55 ? 0 : 1));
 const PAL_CUBE = palette(() => SEALED);
 const PAL_SEAL = palette((i) => (i < CORE ? 2 : rnd(i * 5) > 0.78 ? 0 : 1));
+const PAL_STACK = palette((i) => (rnd(i * 3) > 0.35 + ((i / 121) | 0) * 0.08 ? 1 : 0));
+const PAL_BOOK = palette((i) => (rnd(i * 3) > 0.5 ? 1 : 0));
 const PAL_RINGS = palette((i) => (i < HALF ? (rnd(i * 5) > 0.7 ? 0 : 1) : rnd(i * 7) > 0.88 ? 0 : 2));
 
 const P_SPHERE = sphereShape();
@@ -142,6 +169,8 @@ interface Shape {
   pal: Uint8Array;
   /** the angle it rests at when it is drawn once, not animated */
   yaw: number;
+  /** when set, it sways this far either side of its angle instead of turning all the way round (so a flat thing stays readable) */
+  sway?: number;
 }
 const copy3 = (p: Float32Array, i: number, out: Float32Array) => { out[0] = p[i * 3]; out[1] = p[i * 3 + 1]; out[2] = p[i * 3 + 2]; };
 const SHAPES: Record<ShapeId, Shape> = {
@@ -150,6 +179,8 @@ const SHAPES: Record<ShapeId, Shape> = {
   cube: { pos: (i, _s, out) => copy3(P_CUBE, i, out), pal: PAL_CUBE, yaw: 1.25 },
   seal: { pos: (i, spin, out) => (i < CORE ? copy3(P_CORE, i, out) : ringPoint(i - CORE, spin, out, 0)), pal: PAL_SEAL, yaw: 1.8 },
   rings: { pos: (i, spin, out) => linkedPoint(i, spin, out, 0), pal: PAL_RINGS, yaw: 0.9 },
+  stack: { pos: (i, _s, out) => stackPoint(i, out, 0), pal: PAL_STACK, yaw: 0.6 },
+  book: { pos: (i, _s, out) => bookPoint(i, out, 0), pal: PAL_BOOK, yaw: 0.45, sway: 0.75 },
 };
 
 interface Props {
@@ -199,7 +230,21 @@ export function GlyphSolid({ shape, animated = true, label, className }: Props) 
     let inView = false;
     let raf = 0;
     let lastFrame = 0;
-    const t0 = performance.now();
+    /* Turning by hand. The automatic motion keeps its own clock (auto*) and the hand adds an offset (user*) on top,
+       so letting go never changes how the object drifts; it just carries on from where it was left. */
+    let clock = 0; /* seconds of automatic motion; it stops while the object is held */
+    let autoYaw = 0;
+    let autoPhase = 0;
+    let lastDraw = 0;
+    let userYaw = 0;
+    let userPitch = 0;
+    let velYaw = 0;
+    let velPitch = 0;
+    let dragging = false;
+    let pointerId = -1;
+    let lastX = 0;
+    let lastY = 0;
+    let lastMoveAt = 0;
 
     const targetOf = (id: ShapeId, i: number, t: number, out: Float32Array) => SHAPES[id].pos(i, live ? t * 0.7 : 0.6, out);
 
@@ -258,13 +303,27 @@ export function GlyphSolid({ shape, animated = true, label, className }: Props) 
       const w = canvas.width;
       const h = canvas.height;
       ctx.clearRect(0, 0, w, h);
-      const t = (now - t0) / 1000;
+      const dt = lastDraw ? Math.min(0.1, (now - lastDraw) / 1000) : 0;
+      lastDraw = now;
+      if (live && !dragging) clock += dt;
+      const t = clock;
       const prog = live && run ? parseFloat(run.style.getPropertyValue("--ip")) || 0 : 0;
       const m = morphing ? clamp01((now - mStart) / MORPH_MS) : 1;
       if (morphing && m >= 1) morphing = false;
 
-      const yaw = live ? t * 0.28 + prog * 3.2 : SHAPES[to].yaw;
-      const pitch = live ? 0.5 + Math.sin(t * 0.35) * 0.06 : 0.5;
+      const sh = SHAPES[to];
+      if (!dragging) {
+        /* after a flick the turn glides to a stop, and a tilt given by hand eases back to level */
+        userYaw += velYaw * dt;
+        userPitch += velPitch * dt;
+        const k = Math.exp(-3 * dt);
+        velYaw *= k;
+        velPitch *= k;
+        userPitch *= Math.exp(-0.5 * dt);
+        if (live) { autoYaw += dt * 0.28; autoPhase += dt * 0.45; }
+      }
+      const yaw = (live ? (sh.sway ? sh.yaw + Math.sin(autoPhase) * sh.sway : autoYaw + prog * 3.2) : sh.yaw) + userYaw;
+      const pitch = (live ? 0.5 + Math.sin(t * 0.35) * 0.06 : 0.5) + userPitch;
       const cy = Math.cos(yaw), sy_ = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
       const minDim = Math.min(w, h);
       const R = minDim * 0.33;
@@ -328,6 +387,58 @@ export function GlyphSolid({ shape, animated = true, label, className }: Props) 
       }
     };
 
+    /* grab and drag to turn it (mouse: any direction; touch: sideways only, so the page can still scroll) */
+    const DRAG_RAD_PER_PX = 0.011;
+    let drawQueued = false;
+    const redrawNow = () => {
+      if (live || drawQueued) return;
+      drawQueued = true;
+      requestAnimationFrame(() => { drawQueued = false; if (inView && size()) draw(performance.now()); });
+    };
+    const onDown = (e: PointerEvent) => {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      dragging = true;
+      pointerId = e.pointerId;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      lastMoveAt = e.timeStamp;
+      velYaw = 0;
+      velPitch = 0;
+      canvas.setPointerCapture(e.pointerId);
+      canvas.style.cursor = "grabbing";
+      kick();
+    };
+    const onMove = (e: PointerEvent) => {
+      if (!dragging || e.pointerId !== pointerId) return;
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      const dts = Math.max(0.001, (e.timeStamp - lastMoveAt) / 1000);
+      lastX = e.clientX;
+      lastY = e.clientY;
+      lastMoveAt = e.timeStamp;
+      userYaw += dx * DRAG_RAD_PER_PX;
+      velYaw = velYaw * 0.6 + ((dx * DRAG_RAD_PER_PX) / dts) * 0.4;
+      if (e.pointerType === "mouse") {
+        userPitch = Math.max(-1.2, Math.min(1.2, userPitch - dy * DRAG_RAD_PER_PX));
+        velPitch = velPitch * 0.6 - ((dy * DRAG_RAD_PER_PX) / dts) * 0.4;
+      }
+      redrawNow();
+    };
+    const onUp = (e: PointerEvent) => {
+      if (!dragging || e.pointerId !== pointerId) return;
+      dragging = false;
+      if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+      canvas.style.cursor = "grab";
+      if (!live || e.timeStamp - lastMoveAt > 120) { velYaw = 0; velPitch = 0; } /* held still before letting go: no glide */
+      velYaw = Math.max(-6, Math.min(6, velYaw));
+      velPitch = Math.max(-6, Math.min(6, velPitch));
+      kick();
+    };
+    canvas.addEventListener("pointerdown", onDown);
+    canvas.addEventListener("pointermove", onMove);
+    canvas.addEventListener("pointerup", onUp);
+    canvas.addEventListener("pointercancel", onUp);
+
     /* a new state: the points leave where they are now and settle into the new shape */
     const setShape = (next: ShapeId) => {
       if (next === to) return;
@@ -388,6 +499,10 @@ export function GlyphSolid({ shape, animated = true, label, className }: Props) 
       io.disconnect();
       ro.disconnect();
       document.removeEventListener("visibilitychange", onVis);
+      canvas.removeEventListener("pointerdown", onDown);
+      canvas.removeEventListener("pointermove", onMove);
+      canvas.removeEventListener("pointerup", onUp);
+      canvas.removeEventListener("pointercancel", onUp);
     };
   }, [animated]);
 
@@ -395,5 +510,5 @@ export function GlyphSolid({ shape, animated = true, label, className }: Props) 
     setShapeRef.current?.(shape);
   }, [shape]);
 
-  return <canvas ref={canvasRef} className={className} role="img" aria-label={label} />;
+  return <canvas ref={canvasRef} className={className} role="img" aria-label={label} style={{ cursor: "grab", touchAction: "pan-y", userSelect: "none" }} />;
 }

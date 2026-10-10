@@ -212,11 +212,12 @@ contract GovernanceTest {
         IEASDojang.Attestation memory attestation = eas.getAttestation(uid);
         attestation.schema = keccak256("untrusted schema");
         eas.setAttestation(uid, attestation);
-        require(!governance.isVerifiedMember(PROPOSER), "wrong schema accepted");
+        vm.expectRevert(GovernedDojangAccess.InvalidDojangAttestation.selector);
+        governance.isVerifiedMember(PROPOSER);
 
         vm.warp(_startAt(proposalId));
         vm.prank(PROPOSER);
-        vm.expectRevert(abi.encodeWithSelector(GovernedDojangAccess.NotVerifiedMember.selector, PROPOSER));
+        vm.expectRevert(GovernedDojangAccess.InvalidDojangAttestation.selector);
         governance.castVote(proposalId, GovernedDojangAccess.VoteType.For);
     }
 

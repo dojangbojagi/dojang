@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageGlyphFigure } from "@/components/page-glyph";
 import { WalletNetworkCard } from "@/components/wallet-network-card";
 import { projectContracts } from "@/lib/config/contracts";
 
@@ -7,9 +8,12 @@ export default function DocsPage() {
   const total = Object.keys(projectContracts).length;
   return (
     <main className="page">
-      <p className="eyebrow">Protocol documentation</p>
-      <h1>Trust model and limitations</h1>
-      <p className="page-lead">Official Dojang status and project-issued demo eligibility are separate trust paths. The demo issuer is not GIWA or an identity-verification provider.</p>
+      <header className="page-head">
+        <PageGlyphFigure glyph={{ shape: "book", label: "An open book of lines of characters: the written trust model and its limits.", caption: "Written down, limits included", legend: ["public"] }} />
+        <p className="eyebrow">Protocol documentation</p>
+        <h1>Trust model and limitations</h1>
+        <p className="page-lead">Official Dojang status and project-issued demo eligibility are separate trust paths. The demo issuer is not GIWA or an identity-verification provider.</p>
+      </header>
       <WalletNetworkCard />
       <section className="panel">
         <h2>Current implementation boundary</h2>
