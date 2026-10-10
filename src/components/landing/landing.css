@@ -309,13 +309,16 @@
   clip-path: var(--clip, inset(50% 50% 50% 50%));
   will-change: clip-path;
 }
-.lp-box { --mx: 62vw; --my: 42svh; }
-.lp-box::after { /* faint light that follows the pointer; it is moved, not repainted */
-  content: ""; position: absolute; left: 0; top: 0; width: 760px; height: 620px; z-index: 1; pointer-events: none;
-  background: radial-gradient(closest-side, rgba(59, 134, 255, .14), transparent);
-  transform: translate3d(calc(var(--mx) - 380px), calc(var(--my) - 310px), 0); will-change: transform;
+.lp-light { /* the soft light behind the copy: it follows a moving pointer and fades once the pointer is still */
+  position: absolute; inset: 0; z-index: 2; pointer-events: none;
   opacity: calc(1 - var(--q));
 }
+.lp-light i {
+  position: absolute; left: 0; top: 0; width: 760px; height: 620px; margin: -310px 0 0 -380px;
+  background: radial-gradient(closest-side, rgba(59, 134, 255, .14), transparent);
+  opacity: 0; transition: opacity 1.8s ease; will-change: transform, opacity; /* moved and faded by the compositor, never repainted */
+}
+.lp-light[data-on="1"] i { opacity: 1; transition-duration: .35s; }
 /* The dot is plain black, like the full stop it replaces; it turns into patchwork cloth, which dissolves into the hero */
 .lp-dot {
   position: absolute; inset: 0; z-index: 5; pointer-events: none;
@@ -362,6 +365,7 @@
   background:
     radial-gradient(60% 52% at 84% 4%, rgba(59, 134, 255, .2), transparent 70%),
     radial-gradient(52% 50% at 6% 100%, rgba(239, 95, 34, .2), transparent 70%),
+    radial-gradient(380px 310px at 62% 42%, rgba(59, 134, 255, .14), transparent),
     radial-gradient(44% 22% at 50% 21%, rgba(59, 134, 255, .1), transparent 72%),
     radial-gradient(44% 18% at 50% 81%, rgba(239, 95, 34, .12), transparent 72%),
     linear-gradient(to bottom, rgba(6, 9, 18, .72), transparent 16%, transparent 82%, rgba(6, 9, 18, .8));
@@ -868,7 +872,7 @@
   .lp-word, .lp-word--b, .lp-sub, .lp-hint { transform: none; opacity: 1; }
   .lp-box { position: relative; clip-path: none; min-height: 100svh; }
   .lp-field { transform: none; opacity: 1; }
-  .lp-veil-cover, .lp-dot, .lp-outline, .lp-sparks, .lp-hint { display: none; }
+  .lp-veil-cover, .lp-dot, .lp-outline, .lp-sparks, .lp-hint, .lp-light { display: none; }
   .lp-hero { min-height: 100svh; height: auto; }
   .lp-hero__col { transform: none; will-change: auto; }
   .lp-glow, .lp-marq { opacity: 1; }

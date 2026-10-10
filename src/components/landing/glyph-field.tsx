@@ -7,8 +7,10 @@ import { useEffect, useRef } from "react";
    each cloud is the part of a slowly moving noise field that rises above a per-cell threshold,
    so the shapes come out of the animation itself, drift, breathe and never repeat.
 
-   Pointer: the characters under it scramble, then are sealed under a patch of patchwork cloth
-   (a pixelated circle) that lifts slowly once the pointer has moved on.
+   Pointer: while it really moves, the characters under it scramble and are sealed under a patch of
+   patchwork cloth (a pixelated circle) that lifts slowly behind it. The effect lives only as long as
+   the movement: when the pointer stops, the patch and the soft light behind it fade away on their own
+   and the field is exactly what it was before.
 
    Cost, because this page must stay light:
    - one canvas, painted whole once and afterwards only the cells that changed, from a
@@ -27,6 +29,14 @@ const RGB: readonly (readonly [number, number, number])[] = [
 const ALPHA = [0.34, 0.58, 0.82, 1] as const; /* four tone levels, darkest at the edge of a cloud */
 const TICK_MS = 110;
 const VEIL_W = 160; /* css px: the size of public/landing/veil.svg */
+
+/* Pointer behaviour. */
+const STILL_MS = 140; /* no real movement for this long: the pointer is "still" and the effect starts to lift */
+const MOVE_PX = 1.6; /* a shorter move (a resting hand, a synthetic event after a scroll) is not movement */
+const LIFT_MOVING = 2.4; /* per second: how fast cloth lifts behind a moving pointer (the trail) */
+const LIFT_STILL = 1.5; /* per second: how fast the whole patch lifts once the pointer is still */
+const CLOTH_LO = 0.3; /* coverage at which the cloth starts to show; it gets more opaque up to 1 in eight steps */
+const RING_LO = 0.08; /* below this a cell is back to its normal character */
 const VEIL_H = 104;
 
 /* [centre u, centre v, radius u, radius v, drift, speed a, speed b, phase], u and v as fractions of the field */
@@ -75,11 +85,14 @@ function smoothstep(a: number, b: number, x: number): number {
 export function GlyphField() {
   const wrapRef = useRef<HTMLDivElement>(null);
   const cvRef = useRef<HTMLCanvasElement>(null);
+  const lightRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const wrap = wrapRef.current;
     const cv = cvRef.current;
+    const light = lightRef.current;
     if (!wrap || !cv) return;
+    const lightDot = (light?.firstElementChild as HTMLElement | null) ?? null;
     const ctx = cv.getContext("2d");
     if (!ctx) return;
     const host = wrap.closest<HTMLElement>("[data-lp-box]") ?? wrap;
@@ -125,7 +138,9 @@ export function GlyphField() {
     const lx = new Float32Array(8);
     const ly = new Float32Array(8);
     const active = new Set<number>();
-    const ptr = { x: -9999, y: -9999, on: false, cx: 0, cy: 0 };
+    /* x, y: the pointer in field coordinates (computed once per frame); clientX/Y: as last reported;
+       ax, ay and last: where and when it last really moved */
+    const ptr = { x: -9999, y: -9999, clientX: 0, clientY: 0, ax: -9999, ay: -9999, last: -1e9, inside: false };
 
     let frameId = 0;
     let raf = 0;
@@ -134,12 +149,14 @@ export function GlyphField() {
     let ready = false;
     let scrolling = false;
     let scrollTimer = 0;
+    let lightOn = false;
     let lastTick = 0;
     let lastFrame = 0;
     const t0 = performance.now();
 
     const opened = () => host.dataset.live !== "0"; /* the opening is still too small to show the field */
-    const canRun = () => ready && inView && !document.hidden && !scrolling && opened() && !reduce;
+    const canRun = () => ready && inView && !document.hidden && opened() && !reduce;
+    const isMoving = (now: number) => ptr.inside && now - ptr.last < STILL_MS;
 
     function readFont() {
       const probe = document.createElement("span");
@@ -321,11 +338,13 @@ export function GlyphField() {
       }
     }
 
-    function updatePointer(dt: number) {
+    /* influence: the pointer is really moving, so it acts on the cells around it; without it every cell
+       just lifts, slowly, until the field is as it was */
+    function updatePointer(dt: number, influence: boolean) {
       frameId++;
       const kUp = 1 - Math.exp(-dt * 24);
-      const kDown = 1 - Math.exp(-dt * 2.4);
-      if (ptr.on) {
+      const kDown = 1 - Math.exp(-dt * (influence ? LIFT_MOVING : LIFT_STILL));
+      if (influence) {
         const px = ptr.x * dpr;
         const py = ptr.y * dpr;
         const rc = Math.ceil((radiusCss * dpr) / cw) + 1;
@@ -362,18 +381,54 @@ export function GlyphField() {
       }
     }
 
-    /* what a cell should look like right now, as one number: 0 is empty */
+    /* a patch that is not wanted any more (the opening closed, or the hero is zoomed away) goes at once */
+    function clearPatch() {
+      if (active.size) {
+        for (const i of active) {
+          cov[i] = 0;
+          mark(i);
+        }
+        active.clear();
+        flush(performance.now());
+      }
+      ptr.last = -1e9; /* whatever the pointer was doing, the field starts again from "still" */
+      if (lightOn) {
+        lightOn = false;
+        if (light) light.dataset.on = "0";
+      }
+    }
+
+    /* What a cell should look like right now, as one number (0 is empty). Layout, from the low bits:
+         0-3 character   4-5 tone   6-7 colour          (a character)
+         8-10 cloth opacity step   11 a character shows through   (cloth, kind 2)
+         14-15 kind: 0 character, 1 character being scrambled, 2 cloth */
     function keyOf(i: number, now: number): number {
       const c = cov[i];
-      if (c > 0.45) return 1 + ((2 << 14) | ((c > 0.74 ? 1 : 0) << 8)); /* sealed under cloth */
-      if (c > 0.14) {
-        /* the ring around the cloth: characters scrambling as they are sealed */
-        const g = (hash(i, (now / 85) | 0, 9) * NG) | 0;
-        const orange = hash(i, 0, 13) < 0.6 ? 1 : 0;
-        return 1 + ((1 << 14) | (orange << 10) | (3 << 8) | g);
+      if (c > CLOTH_LO) {
+        const a = Math.min(7, ((c - CLOTH_LO) * (8 / (1 - CLOTH_LO))) | 0);
+        let k = (2 << 14) | (a << 8);
+        /* until the cloth is nearly opaque the data underneath still shows through it, so it lifts like a veil */
+        if (a < 5 && vis[i]) k |= (1 << 11) | (col[i] << 6) | (lvl[i] << 4) | gly[i];
+        return 1 + k;
+      }
+      if (c > RING_LO) {
+        /* The edge of the patch: characters scrambling. As the cloth lifts, fewer and fewer cells still
+           scramble (each cell has its own turn, so it thins out like dust instead of vanishing as one
+           block) and the ones that do get dimmer; the others are already their normal selves again. */
+        const t = (c - RING_LO) / (CLOTH_LO - RING_LO);
+        if (hash(i, 0, 29) < t * t * (3 - 2 * t)) {
+          const g = (hash(i, (now / 85) | 0, 9) * NG) | 0;
+          const orange = hash(i, 0, 13) < 0.6 ? 1 : 0;
+          const tone = c > 0.2 ? 3 : c > 0.13 ? 2 : 1;
+          return 1 + ((1 << 14) | (orange << 6) | (tone << 4) | g);
+        }
       }
       if (!vis[i]) return 0;
-      return 1 + ((col[i] << 10) | (lvl[i] << 8) | gly[i]);
+      return 1 + ((col[i] << 6) | (lvl[i] << 4) | gly[i]);
+    }
+
+    function drawGlyph(k: number, x: number, y: number) {
+      ctx!.drawImage(atlas!, (k & 15) * cw, (((k >> 6) & 3) * 4 + ((k >> 4) & 3)) * ch, cw, ch, x, y, cw, ch);
     }
 
     function paintCell(i: number, key: number) {
@@ -383,19 +438,19 @@ export function GlyphField() {
       if (!key) return;
       const k = key - 1;
       if (k >> 14 === 2) {
+        if ((k >> 11) & 1) drawGlyph(k, x, y);
+        const alpha = 0.16 + ((k >> 8) & 7) * 0.115;
         if (veil) {
-          ctx!.globalAlpha = (k >> 8) & 1 ? 0.95 : 0.7;
+          ctx!.globalAlpha = alpha;
           ctx!.drawImage(veil, x % tileW, y % tileH, cw, ch, x, y, cw, ch);
           ctx!.globalAlpha = 1;
         } else {
-          ctx!.fillStyle = "rgba(12,18,36,.8)";
+          ctx!.fillStyle = `rgba(12,18,36,${alpha.toFixed(2)})`;
           ctx!.fillRect(x, y, cw, ch);
         }
         return;
       }
-      const c = (k >> 10) & 3;
-      const l = (k >> 8) & 3;
-      ctx!.drawImage(atlas!, (k & 15) * cw, (c * 4 + l) * ch, cw, ch, x, y, cw, ch);
+      drawGlyph(k, x, y);
     }
 
     function flush(now: number) {
@@ -417,49 +472,73 @@ export function GlyphField() {
       timer = 0;
       if (!canRun()) return;
       const now = performance.now();
-      const busy = ptr.on || active.size > 0 || drift;
+      /* while the page scrolls the field rests: the pointer acts on nothing and the clouds hold still,
+         but a patch that is already there keeps lifting, so it can never be left hanging */
+      const moving = !scrolling && isMoving(now);
+      const acting = moving || (drift && !scrolling);
+      const busy = acting || active.size > 0;
       const dt = busy ? Math.min(0.05, Math.max(0.001, (now - (lastFrame || now - 16)) / 1000)) : 0;
       lastFrame = busy ? now : 0;
 
       if (drift) {
-        const tt = (now - t0) / 1000;
-        ptr.on = true;
-        ptr.x = cssW * (0.5 + 0.34 * Math.sin(tt * 0.31));
-        ptr.y = cssH * (cssW < 860 ? 0.2 + 0.08 * Math.sin(tt * 0.19 + 1.3) : 0.5 + 0.24 * Math.sin(tt * 0.19 + 1.3));
+        if (acting) {
+          const tt = (now - t0) / 1000;
+          ptr.x = cssW * (0.5 + 0.34 * Math.sin(tt * 0.31));
+          ptr.y = cssH * (cssW < 860 ? 0.2 + 0.08 * Math.sin(tt * 0.19 + 1.3) : 0.5 + 0.24 * Math.sin(tt * 0.19 + 1.3));
+        }
+      } else if (moving) {
+        /* once per frame, not once per event: the field is scaled while the opening zooms, so ask where it is now */
+        const r = wrap!.getBoundingClientRect();
+        if (r.width > 1 && r.height > 1) {
+          ptr.x = ((ptr.clientX - r.left) / r.width) * cssW;
+          ptr.y = ((ptr.clientY - r.top) / r.height) * cssH;
+        }
+        if (lightDot) {
+          const hr = host.getBoundingClientRect();
+          lightDot.style.transform = `translate3d(${(ptr.clientX - hr.left).toFixed(0)}px, ${(ptr.clientY - hr.top).toFixed(0)}px, 0)`;
+        }
       }
-      if (now - lastTick >= TICK_MS) {
+
+      if (!scrolling && now - lastTick >= TICK_MS) {
         lastTick = now;
         tickField((now - t0) / 1000);
         flicker();
       }
-      if (ptr.on || active.size) {
-        updatePointer(dt);
-        /* the faint light behind the copy follows the same point */
-        if (ptr.on && !drift) {
-          host.style.setProperty("--mx", `${ptr.cx.toFixed(0)}px`);
-          host.style.setProperty("--my", `${ptr.cy.toFixed(0)}px`);
-        }
+      if (acting || active.size) updatePointer(dt, acting);
+
+      /* the soft light behind the copy: on while the pointer moves, fading out slowly (CSS) once it stops */
+      const lit = moving && !drift;
+      if (lit !== lightOn) {
+        lightOn = lit;
+        if (light) light.dataset.on = lit ? "1" : "0";
       }
+
       flush(now);
       schedule();
     }
 
     function schedule() {
       if (raf || timer || !canRun()) return;
-      if (ptr.on || active.size) raf = requestAnimationFrame(loop);
+      if (scrolling) {
+        if (active.size) raf = requestAnimationFrame(loop); /* only to let the patch lift */
+        return;
+      }
+      if (drift || active.size || isMoving(performance.now())) raf = requestAnimationFrame(loop);
       else timer = window.setTimeout(loop, TICK_MS);
     }
 
     function onMove(e: PointerEvent) {
       if (reduce || e.pointerType === "touch") return;
-      const r = wrap!.getBoundingClientRect(); /* includes the zoom transform */
-      if (r.width < 1 || r.height < 1) return;
-      ptr.x = ((e.clientX - r.left) / r.width) * cssW;
-      ptr.y = ((e.clientY - r.top) / r.height) * cssH;
-      const hr = host.getBoundingClientRect();
-      ptr.cx = e.clientX - hr.left;
-      ptr.cy = e.clientY - hr.top;
-      ptr.on = true;
+      ptr.clientX = e.clientX;
+      ptr.clientY = e.clientY;
+      ptr.inside = true;
+      /* only a real move counts: it must have travelled a little from where the last real move was */
+      const dx = e.clientX - ptr.ax;
+      const dy = e.clientY - ptr.ay;
+      if (dx * dx + dy * dy < MOVE_PX * MOVE_PX) return;
+      ptr.ax = e.clientX;
+      ptr.ay = e.clientY;
+      ptr.last = performance.now();
       if (host.dataset.ptr !== "1") host.dataset.ptr = "1";
       if (timer) {
         window.clearTimeout(timer);
@@ -468,7 +547,11 @@ export function GlyphField() {
       schedule();
     }
     function onLeave() {
-      ptr.on = false;
+      ptr.inside = false;
+      schedule();
+    }
+    function onLive() {
+      if (!opened()) clearPatch();
       schedule();
     }
 
@@ -476,6 +559,7 @@ export function GlyphField() {
        the scroll has been still for a moment. The twinkle pauses for it; nobody sees that. */
     function onScroll() {
       scrolling = true;
+      if (active.size) schedule();
       window.clearTimeout(scrollTimer);
       scrollTimer = window.setTimeout(() => {
         scrolling = false;
@@ -487,7 +571,7 @@ export function GlyphField() {
     }
 
     window.addEventListener("scroll", onScroll, { passive: true });
-    host.addEventListener("lp-live", schedule);
+    host.addEventListener("lp-live", onLive);
     host.addEventListener("pointermove", onMove);
     host.addEventListener("pointerleave", onLeave);
     document.addEventListener("visibilitychange", onVisibility);
@@ -539,15 +623,21 @@ export function GlyphField() {
       ro.disconnect();
       window.removeEventListener("scroll", onScroll);
       document.removeEventListener("visibilitychange", onVisibility);
-      host.removeEventListener("lp-live", schedule);
+      host.removeEventListener("lp-live", onLive);
       host.removeEventListener("pointermove", onMove);
       host.removeEventListener("pointerleave", onLeave);
     };
   }, []);
 
   return (
-    <div className="lp-field" ref={wrapRef} aria-hidden="true">
-      <canvas ref={cvRef} />
-    </div>
+    <>
+      <div className="lp-field" ref={wrapRef} aria-hidden="true">
+        <canvas ref={cvRef} />
+      </div>
+      {/* the soft light that follows a moving pointer; see .lp-light */}
+      <div className="lp-light" ref={lightRef} aria-hidden="true">
+        <i />
+      </div>
+    </>
   );
 }
