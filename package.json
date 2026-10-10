@@ -14,6 +14,7 @@
     "lending:anvil": "bun circuits/scripts/lending-anvil.mjs",
     "governance:anvil": "bun run contracts:build && bun scripts/governance-anvil.mjs",
     "deployment:gas-local": "bun scripts/estimate-giwa-sepolia-deployment-gas.mjs",
+    "deployment:simulate": "bash scripts/forge-simulate.sh",
     "dojang:check": "bun scripts/check-dojang-rpc.ts",
     "zk:compile": "bun circuits/scripts/compile.mjs",
     "zk:conformance": "bun circuits/scripts/conformance.mjs",

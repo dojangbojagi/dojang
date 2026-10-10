@@ -32,7 +32,7 @@ The standard deployment configuration uses GIWA's documented GIWA Sepolia addres
 - Upbit Korea attester ID: `0xd99b42e778498aa3c9c1f6a012359130252780511687a35982e8e52735453034`
 - Verified Address schema UID: `0x072d75e18b2be4f89a13a7147240477481c4b526d5795802acba59046b426e08`
 
-The attester address is resolved from `DojangAttesterBook.getAttester(attesterId)` at read time. This avoids trusting a copied issuer address and lets the EAS tuple be checked against the currently configured Dojang issuer. The frontend's historical config literal omitted a leading zero nibble; its EVM-padded display value is `0x04097bf3Cb731AEb3e501b910b33B2Af9Fa68E38`. The governance contract uses the live book mapping as its authority.
+The attester address is resolved from `DojangAttesterBook.getAttester(attesterId)` at read time. A read-only GIWA Sepolia check at block `38,306,947` (`2026-10-10T17:07:43Z`) returned `0x09B170CA2A006081042992bCE7379B85a02149C6`. GIWA's published table lists `0x4097bF3Cb731AEB3E501b910B33B2aF9Fa68E38` (padded to 20 bytes as `0x04097bf3Cb731AEb3e501b910b33B2Af9Fa68E38`), so the published value and observed live mapping differ. The on-chain book is authoritative; consumers must resolve it dynamically. The integration does not require the attester address to contain bytecode.
 
 Membership is accepted only when all checks pass:
 

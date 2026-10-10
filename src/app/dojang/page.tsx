@@ -75,7 +75,7 @@ export default function DojangPage() {
             <div className="protocol-panel__head"><h2 id="dojang-source-heading">Verified source</h2><StateChip state="connected">GIWA Sepolia</StateChip></div>
             <dl className="kv protocol-kv">
               <div className="kv__row"><dt>DojangScroll</dt><dd><a className="addr" href={`${GIWA_EXPLORER_URL}/address/${officialDojang.dojangScroll}`} target="_blank" rel="noopener noreferrer">{officialDojang.dojangScroll}<span className="visually-hidden"> (opens in a new tab)</span></a></dd></div>
-              <div className="kv__row"><dt>Attester</dt><dd className="addr">{officialDojang.upbitKoreaAttester}</dd></div>
+              <div className="kv__row"><dt>Attester</dt><dd className="addr">{dojang.trustedAttester ?? (dojang.isTrustedAttesterLoading ? "Resolving from DojangAttesterBook…" : "Unavailable (read failed)")}</dd></div>
               <div className="kv__row"><dt>Attester ID</dt><dd className="addr">{officialDojang.upbitKoreaAttesterId}</dd></div>
               <div className="kv__row"><dt>Schema</dt><dd className="addr">{officialDojang.verifiedAddressSchemaUid}</dd></div>
             </dl>

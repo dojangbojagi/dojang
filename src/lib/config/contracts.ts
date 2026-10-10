@@ -12,8 +12,6 @@ export const officialDojang = {
   eas: "0x4200000000000000000000000000000000000021" as Address,
   upbitKoreaAttesterId:
     "0xd99b42e778498aa3c9c1f6a012359130252780511687a35982e8e52735453034" as Hex,
-  // The docs omit the leading zero nibble from this 20-byte address; retain the EVM-padded form.
-  upbitKoreaAttester: "0x04097bf3Cb731AEb3e501b910b33B2Af9Fa68E38" as Address,
   verifiedAddressSchemaUid:
     "0x072d75e18b2be4f89a13a7147240477481c4b526d5795802acba59046b426e08" as Hex,
   testnetFaucetAttesterId:

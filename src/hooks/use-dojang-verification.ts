@@ -35,7 +35,7 @@ export function useDojangVerification(wallet?: `0x${string}`) {
     abi: dojangAttesterBookAbi,
     functionName: "getAttester",
     args: [officialDojang.upbitKoreaAttesterId],
-    query: { enabled: enabled && statusQuery.data === true, retry: 1 },
+    query: { retry: 1 },
   });
   const uid = uidQuery.data;
   const attestationQuery = useReadContract({
@@ -124,6 +124,9 @@ export function useDojangVerification(wallet?: `0x${string}`) {
   return {
     state,
     credential,
+    trustedAttester: trustedAttesterQuery.data,
+    isTrustedAttesterLoading: trustedAttesterQuery.isLoading,
+    trustedAttesterError: trustedAttesterQuery.error,
     isLoading: state === "checking",
     error: statusQuery.error ?? uidQuery.error ?? trustedAttesterQuery.error ?? attestationQuery.error ?? validityQuery.error ??
       (attestation && contentVerified === undefined ? new Error("The Verified Address attestation data is not one ABI-encoded bool.") : undefined),

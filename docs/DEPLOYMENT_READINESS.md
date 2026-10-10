@@ -7,7 +7,7 @@
 - `GovernedDojangAccess` is now implemented and locally tested; it is not included in the existing core or lending deployment transactions.
 - Deployment scripts: prepared in `contracts/script/`; Foundry scripts simulate by default and only send when passed `--broadcast`.
 - Local deployment gas observation: `12,059,491` EVM execution gas for nine contract deployments plus one issuer-role grant, measured with the local Anvil estimator. This is not a GIWA fee quote and does not include the rollup data fee.
-- Source verification: not submitted. The GIWA Explorer is documented as Blockscout; endpoint behavior and verification results remain unconfirmed.
+- Source verification: not submitted. GIWA's Foundry guide documents Blockscout verification at `https://sepolia-explorer.giwa.io/api`; project source verification still requires real deployed addresses.
 - Contract addresses in `.env.example` are intentionally blank until actual deployment and readback.
 - The public GIWA RPC is documented as rate-limited. Use an operator-managed RPC for sustained use.
 
@@ -23,7 +23,9 @@
 | LendingPool and ControlledTestToken | Project-owned fixed-price lending demo and capped test assets; not production lending. |
 | GIWA Explorer | External public evidence view. Its network-wide transaction, address, and fee totals must never be reported as application activity. |
 
-The Dojang integration uses GIWA’s documented `DojangScroll`, `DojangAttesterBook`, EAS, Upbit Korea attester ID, and Verified Address schema ([official Dojang contract table](https://docs.giwa.io/giwa-chain/en/giwa-ecosystem/dojang/contracts)). The frontend and governance contract resolve the trusted attester with `getAttester(attesterId)` instead of relying on a copied issuer value. The documentation's displayed Upbit Korea address omits a leading zero nibble; the padded EVM address in the app is `0x04097bf3Cb731AEb3e501b910b33B2Af9Fa68E38`. The RPC could not be queried from this environment to independently read the attester book, so confirm that mapping during live preflight.
+The Dojang integration uses GIWA’s documented `DojangScroll`, `DojangAttesterBook`, EAS, Upbit Korea attester ID, and Verified Address schema ([official Dojang contract table](https://docs.giwa.io/giwa-chain/en/giwa-ecosystem/dojang/contracts)). The app and governance contract resolve the trusted attester with `getAttester(attesterId)` at read time. A read-only GIWA Sepolia check at block `38,306,947` (`2026-10-10T17:07:43Z`) returned `0x09B170CA2A006081042992bCE7379B85a02149C6`. GIWA's published table lists `0x4097bF3Cb731AEB3E501b910B33B2aF9Fa68E38` (the 20-byte padded form is `0x04097bf3Cb731AEb3e501b910b33B2Af9Fa68E38`); the observed mapping differs. `DojangAttesterBook.getAttester` is the runtime source of truth. The checker does not require the trusted attester to have bytecode, since it may be an EOA.
+
+At the same observed block, EAS returned SchemaRegistry `0x4200000000000000000000000000000000000020`; its record for the configured Verified Address UID was `bool isVerified` and returned the same UID. DojangScroll, DojangAttesterBook, EAS, and this SchemaRegistry had code. The synthetic uncredentialed test address returned `false`; no positive credentialed-wallet result is claimed.
 
 ## Contract graph and deployment parameters
 
@@ -48,7 +50,7 @@ Use a distinct admin and trusted issuer address. The admin controls registry rol
 
 ## Reproducible deployment sequence
 
-These commands are templates for a later, separately authorized deployment. Do not add a private key to a command or file. Use a protected Foundry keystore (`--account`) or a supported hardware signer. `forge create` and `forge script` are simulations unless `--broadcast` is supplied.
+These commands are templates for a later, separately authorized deployment. Do not add a private key to a command or file. Use a protected Foundry keystore (`--account`) or a supported hardware signer. `forge create` and `forge script` are simulations unless `--broadcast` is supplied. The prior Governance simulation's post-run ABI decode failure came from stale artifacts in `contracts/out`, which referenced the removed `contracts/foundry-pp/DeployHelper30.sol`; the script execution itself had succeeded. For scripts, `bun run deployment:simulate -- <script:Contract> ...` forces a fresh build in temporary output/cache/broadcast directories and refuses broadcast, verification, and signer options. This avoids stale artifact decoding and keeps dry-run outputs out of the repository. Use direct Foundry commands only for a separately authorized broadcast.
 
 Set only public deployment inputs in the shell:
 
@@ -91,8 +93,8 @@ export GIWA_GOVERNANCE_INITIAL_MIN_VALIDITY="0"
 
    ```sh
    export GIWA_HONK_VERIFIER_ADDRESS="0x..."
-   forge script --root contracts --use contracts/solc-wrapper.sh script/DeployGIWASepolia.s.sol:DeployGIWASepolia \
-     --rpc-url "$GIWA_RPC_URL" --account "$GIWA_ACCOUNT" --sender "$GIWA_ADMIN_ADDRESS"
+   bun run deployment:simulate -- script/DeployGIWASepolia.s.sol:DeployGIWASepolia \
+     --rpc-url "$GIWA_RPC_URL" --sender "$GIWA_ADMIN_ADDRESS"
    ```
 
    Only an explicitly authorized broadcast should add `--broadcast`. Record the registry, adapter, and vault addresses and transaction receipts.
@@ -101,16 +103,16 @@ export GIWA_GOVERNANCE_INITIAL_MIN_VALIDITY="0"
    ```sh
    export GIWA_CREDENTIAL_REGISTRY_ADDRESS="0x..."
    export GIWA_VERIFIER_ADAPTER_ADDRESS="0x..."
-   forge script --root contracts --use contracts/solc-wrapper.sh script/DeployLendingGIWASepolia.s.sol:DeployLendingGIWASepolia \
-     --rpc-url "$GIWA_RPC_URL" --account "$GIWA_ACCOUNT" --sender "$GIWA_ADMIN_ADDRESS"
+   bun run deployment:simulate -- script/DeployLendingGIWASepolia.s.sol:DeployLendingGIWASepolia \
+     --rpc-url "$GIWA_RPC_URL" --sender "$GIWA_ADMIN_ADDRESS"
    ```
 
    Only an explicitly authorized broadcast should add `--broadcast`. Record the token and pool addresses and all receipts. Do not use addresses printed by a simulation as deployed addresses.
 7. Simulate the separate governance deployment with the standard official Dojang configuration:
 
    ```sh
-   forge script --root contracts --use contracts/solc-wrapper.sh script/DeployGovernanceGIWASepolia.s.sol:DeployGovernanceGIWASepolia \
-     --rpc-url "$GIWA_RPC_URL" --account "$GIWA_ACCOUNT" --sender "$GIWA_ADMIN_ADDRESS"
+   bun run deployment:simulate -- script/DeployGovernanceGIWASepolia.s.sol:DeployGovernanceGIWASepolia \
+     --rpc-url "$GIWA_RPC_URL" --sender "$GIWA_ADMIN_ADDRESS"
    ```
 
    The script rejects missing official contract code, fixes the external Dojang addresses/attester ID/schema UID, and requires a voting period of at least one hour. It simulates by default; add `--broadcast` only after separate explicit authorization. Record the DAO address and deployment receipt. Its constructor has no registry, demo issuer, ZK verifier, vault, or lending dependency.
@@ -120,9 +122,9 @@ export GIWA_GOVERNANCE_INITIAL_MIN_VALIDITY="0"
 
 ## Source verification and explorer evidence
 
-GIWA [documents its Sepolia explorer as Blockscout](https://docs.giwa.io/giwa-chain/en/tools/block-explorers). Foundry supports Blockscout verification with a custom verifier URL; its [documented URL convention](https://getfoundry.sh/reference/common/verifier-options) appends `/api?` to the explorer origin. The expected submission endpoint is therefore `https://sepolia-explorer.giwa.io/api?`, but it has not been tested or submitted from this environment.
+GIWA [documents its Sepolia explorer as Blockscout](https://docs.giwa.io/giwa-chain/en/tools/block-explorers). Its [official Foundry guide](https://docs.giwa.io/giwa-chain/en/get-started/smart-contract/develop/foundry) uses `--verifier blockscout --verifier-url https://sepolia-explorer.giwa.io/api`. No project verification has been submitted because no project contract is deployed.
 
-After deployment, verify each library and contract against the same compiler input used for deployment: Solidity `0.8.28`, optimizer enabled with `200` runs, current repository remappings, and EVM target `prague` (the current build artifact metadata). Use these common read-only compiler options for `forge verify-contract`:
+After deployment, verify each library and contract against the same compiler input used for deployment: Solidity `0.8.28`, optimizer enabled with `200` runs, current repository remappings, and explicitly pinned EVM target `prague`. Use these common read-only compiler options for `forge verify-contract`:
 
 ```sh
 VERIFY_ARGS=(--root contracts --use contracts/solc-wrapper.sh \
@@ -215,9 +217,9 @@ The standalone DAO deployment and lifecycle were also measured from mined receip
 
 The measured governance deployment excludes fixture deployment/setup writes. These are local execution-gas observations, not GIWA fee estimates.
 
-This is a local execution-gas baseline, not the ETH balance requirement. GIWA is an OP Stack L2; the actual total includes the live L2 execution price and rollup data fee. The GIWA RPC could not be resolved from this environment, so no current fee quote or remote `eth_estimateGas` result is claimed. Before deployment, quote each transaction against GIWA RPC, total the actual fees including L1 data fees, and fund the admin with an explicit safety buffer. GIWA documents a 60 million block gas limit in its [Ethereum differences guide](https://docs.giwa.io/giwa-chain/en/network-information/diffs-ethereum-giwa); this does not guarantee the transaction estimate or fee.
+This is a local execution-gas baseline, not the ETH balance requirement. GIWA is an OP Stack L2; the actual total includes the live L2 execution price and rollup data fee. The read-only preflight reached the GIWA Sepolia RPC, confirmed chain ID `91342`, read the current block, and completed an RPC gas-estimation probe; it did not estimate every project deployment transaction against live, not-yet-deployed dependencies or calculate a total fee quote. Before deployment, quote each transaction against GIWA RPC, total the actual fees including L1 data fees, and fund the admin with an explicit safety buffer. GIWA documents a 60 million block gas limit in its [Ethereum differences guide](https://docs.giwa.io/giwa-chain/en/network-information/diffs-ethereum-giwa); this does not guarantee the transaction estimate or fee.
 
-The current artifacts target `prague`, while the official GIWA network docs do not state the active EVM fork in the connection guide. Confirm the compiled deployment bytecode with GIWA `eth_estimateGas` before broadcast. If the target must change, rebuild all contracts and scripts and rerun proof conformance; the lending fixture binds the verifier target address and may need regeneration.
+Foundry explicitly targets `prague` through `contracts/foundry.toml`. The read-only GIWA Sepolia preflight confirmed compatibility for the configured compiler target. Re-run the RPC compatibility and constructor simulations against the current network immediately before any separately authorized broadcast.
 
 GIWA’s [published faucet documentation](https://docs.giwa.io/get-started/faucets) lists 0.005 test ETH per 24 hours for the GIWA Faucet and 0.01 test ETH per 24 hours for the Nodit Faucet. Availability and limits can change; check the current official faucet page. Do not assume a faucet claim covers the deployment budget.
 
@@ -236,8 +238,8 @@ Use separate admin, credential issuer, supplier, borrower, and (if needed) a sec
 
 ## Remaining blockers
 
-1. No live GIWA RPC connectivity from this execution environment: chain ID, current fee quote, remote gas estimates, on-chain role/config readback, and attester-book readback are unverified here.
-2. No real deployment addresses, deployment transactions, or source-verification submissions exist; the app remains unconfigured.
-3. The Blockscout verification API endpoint and exact-source result have not been tested.
-4. GIWA's currently active EVM fork has not been confirmed against the current `prague` compiler target.
-5. Wallet testing on GIWA Sepolia remains pending deployment and funding. Local Anvil evidence is not a substitute.
+1. No project-owned GIWA Sepolia deployment addresses or receipts exist; app contract-address configuration remains blank.
+2. The published Upbit Korea attester address differs from the live AttesterBook mapping observed above. The live mapping is used dynamically, but documentation and any external integrations should be reconciled against the registry.
+3. No real eligible DAO voter wallet was supplied or positively verified. DAO end-to-end testing needs at least two current official Dojang-verified wallets for the example quorum.
+4. No deployment admin/signer was configured or funded for this preflight. Do not infer a balance from the RPC gas-price probe.
+5. Blockscout verification is documented, but project source verification cannot be performed until real deployments exist. The public RPC remains rate-limited for sustained usage.
