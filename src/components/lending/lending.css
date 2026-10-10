@@ -1,0 +1,113 @@
+/* ==========================================================================
+   Lending page (/lending)
+   Same language as the rest of the app (theme.css): ink panels, thin lines, mono labels,
+   blue = public / on-chain, orange = actions. Everything is scoped under .lend.
+   ========================================================================== */
+
+.lend { display: grid; gap: var(--space-5); }
+.lend > * { min-width: 0; }
+.lend .protocol-empty, .lend .callout, .lend .kv dd { overflow-wrap: anywhere; }
+
+/* ---- What this market is not ------------------------------------------- */
+.lend-limits { padding: var(--space-4) var(--space-5); }
+.lend-limits__title { font-family: var(--font-display); font-size: 1rem; font-weight: 700; letter-spacing: -0.01em; color: var(--text); margin: 0 0 var(--space-2); text-transform: none; }
+.lend-limits__list { margin: 0; padding: 0; list-style: none; display: grid; gap: 0.3rem 2rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.lend-limits__list li { position: relative; padding-left: 1.05rem; font-size: var(--fs-sm); line-height: 1.5; }
+.lend-limits__list li::before { content: ""; position: absolute; left: 0; top: 0.62em; width: 0.42rem; height: 0.42rem; border-radius: 1px; background: var(--state-warn); transform: rotate(45deg); }
+.lend-limits__list strong { color: var(--text); font-weight: 600; }
+@media (max-width: 760px) { .lend-limits__list { grid-template-columns: 1fr; } }
+
+/* ---- Layout ------------------------------------------------------------- */
+.lend-layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(19rem, 0.6fr); gap: var(--space-5); align-items: start; }
+.lend-main, .lend-side { display: grid; gap: var(--space-5); min-width: 0; }
+.lend-side { position: sticky; top: calc(var(--header-h) + var(--space-4)); max-height: calc(100svh - var(--header-h) - var(--space-6)); overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; padding-right: 2px; }
+@media (max-width: 1060px) {
+  .lend-layout { grid-template-columns: 1fr; }
+  .lend-side { position: static; max-height: none; overflow: visible; }
+}
+
+.lend-subhead { margin: var(--space-4) 0 0; font-family: var(--font-mono); font-size: 0.68rem; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-dim); }
+.lend-action-name { margin: 0 0 var(--space-3); font-weight: 600; color: var(--text); }
+.kv dd[data-strong="true"] { color: var(--state-warn); font-weight: 600; }
+
+/* ---- Tabs: the two experiences ----------------------------------------- */
+.lend-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.4rem; padding: 0.4rem; border-radius: 999px; background: rgba(13, 19, 34, 0.7); box-shadow: inset 0 0 0 1px var(--line); }
+.lend-tab {
+  display: grid; justify-items: center; gap: 0.15rem; padding: 0.7rem 1rem; border: 0; border-radius: 999px; background: transparent; cursor: pointer; color: var(--text-muted);
+  font-family: var(--font-display); font-size: 0.82rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase;
+  transition: background-color 0.25s var(--ease-out), color 0.25s var(--ease-out), box-shadow 0.25s var(--ease-out);
+}
+.lend-tab small { font-family: var(--font-mono); font-size: 0.62rem; font-weight: 500; letter-spacing: 0.1em; opacity: 0.8; }
+.lend-tab:hover { color: var(--text); background: rgba(255, 255, 255, 0.05); }
+.lend-tab[aria-selected="true"] { color: #fff; background: linear-gradient(180deg, #ff7a3d, var(--gold) 60%, #e2501a); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 10px 26px -12px rgba(239, 95, 34, 0.7); text-shadow: 0 1px 2px rgba(120, 35, 5, 0.4); }
+.lend-tab:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+@media (max-width: 480px) { .lend-tab { padding: 0.65rem 0.5rem; } .lend-tab small { display: none; } }
+
+.lend-banner-slot:empty { display: none; }
+.lend-banner { margin: 0; }
+
+/* ---- Amount field -------------------------------------------------------- */
+.lend-field { display: grid; gap: 0.4rem; }
+.lend-field__label { font-family: var(--font-mono); font-size: 0.68rem; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); }
+.lend-field__box { display: flex; align-items: center; gap: 0.6rem; min-height: 3.2rem; padding: 0.3rem 0.4rem 0.3rem 1rem; border-radius: 16px; border: 1px solid var(--line-strong); background: rgba(4, 6, 13, 0.6); transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+.lend-field__box:focus-within { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(239, 95, 34, 0.18); }
+.lend-field__box[data-invalid="true"] { border-color: var(--state-invalid); }
+.lend-field__box[data-disabled="true"] { opacity: 0.6; }
+.lend-field__box input { flex: 1; min-width: 0; padding: 0.5rem 0; border: 0; outline: 0; background: transparent; color: var(--text); font-family: var(--font-mono); font-size: 1.15rem; font-weight: 500; letter-spacing: -0.01em; }
+.lend-field__box input::placeholder { color: var(--text-dim); }
+.lend-field__symbol { flex: none; font-family: var(--font-mono); font-size: 0.78rem; font-weight: 500; letter-spacing: 0.08em; color: var(--text-muted); }
+.lend-field__max { flex: none; padding: 0.5rem 0.85rem; border: 1px solid var(--line-strong); border-radius: 999px; background: rgba(255, 255, 255, 0.05); cursor: pointer; color: var(--text); font-family: var(--font-display); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; transition: background-color 0.2s ease, border-color 0.2s ease; }
+.lend-field__max:hover:not(:disabled) { background: rgba(255, 255, 255, 0.1); border-color: var(--text-muted); }
+.lend-field__max:disabled { cursor: not-allowed; }
+.lend-field__error { margin: 0; font-size: var(--fs-xs); color: var(--state-invalid); }
+.lend-field__hint { margin: 0; font-size: var(--fs-xs); color: var(--text-dim); }
+
+/* ---- One action: field, approve-then-act flow, button, reason ----------- */
+.lend-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-5); margin-top: var(--space-5); }
+@media (max-width: 760px) { .lend-actions { grid-template-columns: 1fr; } }
+.lend-action { display: grid; gap: var(--space-3); align-content: start; padding: var(--space-4); border-radius: 18px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.02); }
+.lend-action__title { margin: 0; font-family: var(--font-display); font-size: 1rem; font-weight: 700; letter-spacing: -0.01em; text-transform: none; }
+.lend-action__buttons { margin-top: 0; }
+.lend-action__buttons .btn { width: 100%; }
+.lend-reason { margin: 0; font-size: var(--fs-xs); color: var(--text-muted); }
+.lend-flow { display: flex; gap: 0.5rem; margin: 0; padding: 0; list-style: none; font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.lend-flow li { flex: 1; padding: 0.45rem 0.6rem; border-radius: 999px; text-align: center; color: var(--text-dim); box-shadow: inset 0 0 0 1px var(--line); }
+.lend-flow li[data-state="current"] { color: #fff; box-shadow: inset 0 0 0 1px var(--gold); background: rgba(239, 95, 34, 0.14); }
+.lend-flow li[data-state="done"] { color: var(--state-valid); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--state-valid) 50%, transparent); }
+.lend-flow li[data-state="done"]::before { content: "✓ "; }
+
+/* ---- Borrow: the five steps --------------------------------------------- */
+.lend-borrow { display: grid; gap: var(--space-4); margin-top: var(--space-3); }
+.lend-steps { display: grid; gap: var(--space-4); margin: 0; padding: 0; list-style: none; }
+.lend-step { position: relative; display: grid; gap: var(--space-3); padding: var(--space-4) var(--space-4) var(--space-4) 3.6rem; border-radius: 20px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.02); }
+.lend-step::before { content: ""; position: absolute; left: 1.55rem; top: 3.4rem; bottom: -1.2rem; width: 1px; background: var(--line); }
+.lend-step:last-child::before { display: none; }
+.lend-step[data-done="true"] { border-color: color-mix(in srgb, var(--state-valid) 38%, transparent); }
+.lend-step__head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 0.9rem; }
+.lend-step__head h3 { margin: 0; flex: 1 1 10rem; font-family: var(--font-display); font-size: 1.05rem; font-weight: 700; letter-spacing: -0.01em; text-transform: none; }
+.lend-step__n { position: absolute; left: 0.9rem; top: 0.95rem; display: grid; place-items: center; width: 1.9rem; height: 1.9rem; border-radius: 50%; background: var(--ink-900); box-shadow: inset 0 0 0 1px var(--line-strong); font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted); }
+.lend-step[data-done="true"] .lend-step__n { background: var(--state-valid); box-shadow: none; color: #04060d; font-weight: 700; }
+.lend-step__body { display: grid; gap: var(--space-3); min-width: 0; }
+.lend-step__body .kv { margin-top: 0; }
+@media (max-width: 560px) {
+  .lend-step { padding: var(--space-4); padding-top: 3.4rem; }
+  .lend-step::before { display: none; }
+  .lend-step__n { left: var(--space-4); }
+}
+
+/* ---- Issuer tools -------------------------------------------------------- */
+.lend-issuer { border-radius: 16px; border: 1px dashed var(--line-strong); padding: var(--space-3) var(--space-4); }
+.lend-issuer > summary { cursor: pointer; }
+.lend-issuer[open] > summary { margin-bottom: var(--space-3); }
+.lend-issuer__body { display: grid; gap: var(--space-3); }
+
+/* ---- Confirmed transactions ---------------------------------------------- */
+.lend-evidence { display: grid; gap: var(--space-2); }
+.lend-evidence ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 0.15rem; }
+.lend-evidence li { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); padding: 0.5rem 0; border-bottom: 1px dashed var(--line); font-size: var(--fs-sm); }
+.lend-evidence li:last-child { border-bottom: 0; }
+.lend-evidence a { color: var(--celadon); text-decoration: underline; text-underline-offset: 0.2em; white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lend-tab, .lend-field__box, .lend-field__max { transition: none; }
+}

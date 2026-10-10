@@ -10,6 +10,7 @@ const LINKS = [
   ["Dojang", "/dojang"],
   ["Bojagi", "/bojagi"],
   ["Vault", "/vault"],
+  ["Lending", "/lending"],
   ["Contracts", "/contracts"],
   ["Docs", "/docs"],
 ] as const;

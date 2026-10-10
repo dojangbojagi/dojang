@@ -115,13 +115,16 @@ h4 { font-weight: 600; }
 }
 .proto-bar strong { color: var(--gold); }
 
+/* A solid bar: page content scrolls under the sticky header, and a see-through header let it run through the
+   logo and the links. Blur is cheap here (one 76px strip on simple pages). */
 .site-header {
-  background: linear-gradient(to bottom, rgba(6, 9, 18, 0.88), rgba(6, 9, 18, 0.5) 62%, transparent);
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-  border-bottom: 0;
+  background: rgba(6, 9, 18, 0.9);
+  -webkit-backdrop-filter: blur(14px) saturate(1.3);
+  backdrop-filter: blur(14px) saturate(1.3);
+  border-bottom: 1px solid var(--line-faint);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
-.site-header[data-scrolled="true"] { background: linear-gradient(to bottom, rgba(6, 9, 18, 0.9), rgba(6, 9, 18, 0.55) 62%, transparent); }
+.site-header[data-scrolled="true"] { background: rgba(6, 9, 18, 0.95); border-bottom-color: var(--line); }
 .site-header__inner { position: relative; }
 
 .brand { gap: 0.7rem; }
@@ -319,7 +322,7 @@ h4 { font-weight: 600; }
 /* ---- Pages built from the old scaffold classes -------------------------
    Some routes still use .page / .eyebrow / .page-lead / .data-list / .notice. Same look
    until they move onto the shared components above. */
-.page { width: min(100% - 2 * var(--gutter), var(--container)); margin: 0 auto; padding-block: clamp(3rem, 2rem + 5vw, 6rem) var(--section-pad); }
+.page { width: min(100% - 2 * var(--gutter), var(--container)); margin: 0 auto; padding-block: clamp(2rem, 1.2rem + 3vw, 4rem) clamp(3rem, 2rem + 4vw, 5.5rem); }
 .page > * + * { margin-top: var(--space-5); }
 .page h1 { max-width: 17ch; font-size: clamp(2.2rem, 1.2rem + 3.7vw, 4.7rem); line-height: 1.04; letter-spacing: -0.028em; text-transform: uppercase; }
 .eyebrow { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-muted); }
@@ -356,3 +359,11 @@ h4 { font-weight: 600; }
   .stub .container > *, .page > * { animation: none !important; }
   .btn::before { display: none; }
 }
+
+/* ---- Spacing and footer position (all inner pages) -------------------------
+   The sticky header takes its own space, so the pages need less air above the first line, and a short
+   page must not pull the footer up into the middle of a tall screen. */
+.stub { padding-block: clamp(2.25rem, 1.4rem + 3.4vw, 4.5rem) clamp(3rem, 2rem + 4vw, 5.5rem); }
+.page, .stub { min-height: calc(100svh - var(--header-h) - 12rem); }
+.site-footer__grid { padding-block: var(--space-7) var(--space-6); }
+.site-footer__legal { padding-block: var(--space-5) var(--space-6); }

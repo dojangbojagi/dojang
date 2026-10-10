@@ -1,18 +1,21 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
 export function ReferenceEffects() {
+  /* The layout stays mounted while pages change, so the nodes to watch are looked up again on every navigation */
+  const pathname = usePathname();
   useEffect(() => {
     const toneNodes = Array.from(document.querySelectorAll<HTMLElement>(".stub[data-tone]"));
     const revealNodes = Array.from(document.querySelectorAll<HTMLElement>("[data-inview]"));
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const revealObserver = !reduced && "IntersectionObserver" in window
-      ? new IntersectionObserver((entries) => {
+      ? new IntersectionObserver((entries, observer) => {
         for (const entry of entries) {
           if (!entry.isIntersecting) continue;
           entry.target.classList.add("is-inview");
-          revealObserver.unobserve(entry.target);
+          observer.unobserve(entry.target);
         }
       }, { threshold: 0.12 })
       : undefined;
@@ -34,7 +37,7 @@ export function ReferenceEffects() {
       toneObserver?.disconnect();
       delete document.body.dataset.tone;
     };
-  }, []);
+  }, [pathname]);
 
   return null;
 }

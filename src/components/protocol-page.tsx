@@ -6,6 +6,7 @@ const PAGES = [
   { label: "Dojang", href: "/dojang" },
   { label: "Bojagi", href: "/bojagi" },
   { label: "Vault", href: "/vault" },
+  { label: "Lending", href: "/lending" },
   { label: "Contracts", href: "/contracts" },
   { label: "Docs", href: "/docs" },
 ] as const;
@@ -19,7 +20,7 @@ export function ProtocolPage({
   lead,
   children,
 }: {
-  index: 2 | 3 | 4 | 5 | 6;
+  index: 2 | 3 | 4 | 5 | 6 | 7;
   tone: "dojang" | "bojagi" | "vault" | "neutral";
   accent: "celadon" | "periwinkle" | "gold";
   status: string;
@@ -40,7 +41,7 @@ export function ProtocolPage({
         <section className="stub" data-tone={tone} style={style} aria-labelledby="page-title">
           <span className="stub__numeral" aria-hidden="true">{String(index).padStart(2, "0")}</span>
           <div className="container">
-            <p className="stub__eyebrow"><span className="stub__num">{String(index).padStart(2, "0")} / 06</span><span className="stub__tag">{status}</span></p>
+            <p className="stub__eyebrow"><span className="stub__num">{String(index).padStart(2, "0")} / {String(PAGES.length).padStart(2, "0")}</span><span className="stub__tag">{status}</span></p>
             <h1 className="stub__title" id="page-title">{title}</h1>
             <p className="lead stub__lead">{lead}</p>
             {children}

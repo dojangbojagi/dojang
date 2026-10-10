@@ -1,38 +1,106 @@
-import { invalidContractConfig, officialDojang, projectContracts } from "@/lib/config/contracts";
+import "./contracts.css";
+import { LendingAssetRows } from "@/components/lending/lending-asset-rows";
 import { GIWA_CHAIN_ID, GIWA_EXPLORER_URL } from "@/lib/config/chain";
+import { invalidContractConfig, officialDojang, projectContracts } from "@/lib/config/contracts";
 
-const envNameByProjectContract = {
-  credentialRegistry: "NEXT_PUBLIC_DEMO_CREDENTIAL_REGISTRY_CONTRACT",
-  proofVerifier: "NEXT_PUBLIC_PROOF_VERIFIER_CONTRACT",
-  restrictedVault: "NEXT_PUBLIC_RESTRICTED_VAULT_CONTRACT",
-} as const;
+/* The contracts this project owns. Status comes from configuration only: a configured address is not proof of
+   a verified deployment, and an unset one is shown as unset, never filled in. */
+const PROJECT_CONTRACTS = [
+  {
+    key: "credentialRegistry",
+    name: "DemoCredentialRegistry",
+    role: "Issuer-managed commitments for demo credentials: policy 1 for the vault, policy 2 for lending",
+    env: "NEXT_PUBLIC_DEMO_CREDENTIAL_REGISTRY_CONTRACT",
+  },
+  {
+    key: "proofVerifier",
+    name: "EligibilityVerifier",
+    role: "Adapter in front of the generated UltraHonk verifier; the vault and the pool are wired to it when they are deployed",
+    env: "NEXT_PUBLIC_PROOF_VERIFIER_CONTRACT",
+  },
+  {
+    key: "restrictedVault",
+    name: "RestrictedVault",
+    role: "Proof-gated access flag. It holds no funds",
+    env: "NEXT_PUBLIC_RESTRICTED_VAULT_CONTRACT",
+  },
+  {
+    key: "lendingPool",
+    name: "LendingPool",
+    role: "The demo lending market: supplier principal, collateral and debt, with proof-gated borrowing",
+    env: "NEXT_PUBLIC_LENDING_POOL_CONTRACT",
+  },
+] as const;
 
-function AddressRow({ label, address, official = false, invalid = false }: { label: string; address?: string; official?: boolean; invalid?: boolean }) {
-  return <div><dt>{label}{official ? " · Official GIWA" : " · Project"}</dt><dd>{invalid ? "Invalid address configuration" : address ? <a href={`${GIWA_EXPLORER_URL}/address/${address}`} target="_blank" rel="noreferrer"><code>{address}</code></a> : "Not configured / not deployed"}</dd></div>;
+function Status({ state }: { state: "configured" | "unset" | "invalid" }) {
+  const tone = state === "configured" ? "valid" : state === "invalid" ? "invalid" : "warn";
+  const label = state === "configured" ? "Address configured" : state === "invalid" ? "Invalid address" : "Not configured";
+  return <span className="status" data-state={tone}><i className="status__dot" aria-hidden="true" />{label}</span>;
 }
 
 export default function ContractsPage() {
+  const rows = PROJECT_CONTRACTS.map((contract) => {
+    const address = projectContracts[contract.key];
+    const state = invalidContractConfig.includes(contract.key) ? "invalid" : address ? "configured" : "unset";
+    return { ...contract, address, state } as const;
+  });
+  const configured = rows.filter((row) => row.state === "configured").length;
+
   return (
     <main className="page">
-      <p className="eyebrow">Evidence · Addresses and deployment status</p>
+      <p className="eyebrow">Evidence · Project contracts and deployment status</p>
       <h1>Contract evidence</h1>
-      <p className="page-lead">Network: GIWA Sepolia · Chain ID {GIWA_CHAIN_ID}. Project addresses remain unset until deployment is completed and independently checked.</p>
-      <section className="panel">
-        <h2>Official GIWA infrastructure</h2>
-        <dl className="data-list">
-          <AddressRow label="DojangScroll" address={officialDojang.dojangScroll} official />
-          <AddressRow label="EAS" address={officialDojang.eas} official />
+      <p className="page-lead">
+        Network: GIWA Sepolia · Chain ID {GIWA_CHAIN_ID}. These are the contracts this project owns, and whether an address is configured for each.
+        A configured address is not proof of a verified deployment: check it on the explorer.
+      </p>
+
+      <section className="panel" aria-labelledby="project-contracts-heading">
+        <h2 id="project-contracts-heading">Project contracts</h2>
+        <p className="contract-summary">{configured} of {rows.length} addresses configured</p>
+        <dl className="contract-list">
+          {rows.map((row) => (
+            <div className="contract-row" key={row.key}>
+              <dt>
+                <strong>{row.name}</strong>
+                <span className="xsmall muted">{row.role}</span>
+              </dt>
+              <dd>
+                <Status state={row.state} />
+                {row.state === "configured" && row.address && (
+                  <a href={`${GIWA_EXPLORER_URL}/address/${row.address}`} target="_blank" rel="noopener noreferrer"><code>{row.address}</code><span className="visually-hidden"> (opens in a new tab)</span></a>
+                )}
+                {row.state === "invalid" && <span className="xsmall muted">The value in the environment is not a valid address, so it is ignored.</span>}
+                {row.state === "unset" && <span className="xsmall muted">No address and no deployment is claimed.</span>}
+                <span className="contract-env">{row.env}</span>
+              </dd>
+            </div>
+          ))}
+          <LendingAssetRows />
         </dl>
+        <p className="notice">
+          No GIWA Sepolia deployment or transaction evidence is configured for this project. Local Foundry tests and a local Anvil lending run exist; they
+          are not deployments, and no local address or transaction hash is shown here as if it were one.
+        </p>
+        <p className="notice">
+          The vault tests use a local test-only verifier fixture, which is not a cryptographic ZK verifier. The lending pool is a demonstration market:
+          controlled test tokens, a fixed 1:1 price, zero interest, no liquidation and no oracle.
+        </p>
       </section>
-      <section className="panel">
-        <h2>Project contracts</h2>
-        <dl className="data-list">
-          <AddressRow label="DemoCredentialRegistry" address={projectContracts.credentialRegistry} invalid={invalidContractConfig.includes("credentialRegistry")} />
-          <AddressRow label="EligibilityVerifier" address={projectContracts.proofVerifier} invalid={invalidContractConfig.includes("proofVerifier")} />
-          <AddressRow label="RestrictedVault" address={projectContracts.restrictedVault} invalid={invalidContractConfig.includes("restrictedVault")} />
+
+      <section className="panel" aria-labelledby="official-heading">
+        <h2 id="official-heading">Official GIWA references (not project-owned)</h2>
+        <p className="muted">These belong to GIWA. The app only reads them, to show an official Dojang Verified Address record. Nothing here is deployed or controlled by this project.</p>
+        <dl className="contract-list">
+          <div className="contract-row">
+            <dt><strong>DojangScroll</strong><span className="xsmall muted">Official GIWA Dojang registry</span></dt>
+            <dd><a href={`${GIWA_EXPLORER_URL}/address/${officialDojang.dojangScroll}`} target="_blank" rel="noopener noreferrer"><code>{officialDojang.dojangScroll}</code><span className="visually-hidden"> (opens in a new tab)</span></a></dd>
+          </div>
+          <div className="contract-row">
+            <dt><strong>EAS</strong><span className="xsmall muted">Official GIWA attestation service</span></dt>
+            <dd><a href={`${GIWA_EXPLORER_URL}/address/${officialDojang.eas}`} target="_blank" rel="noopener noreferrer"><code>{officialDojang.eas}</code><span className="visually-hidden"> (opens in a new tab)</span></a></dd>
+          </div>
         </dl>
-        {invalidContractConfig.length > 0 && <p className="notice">Invalid address format in: {invalidContractConfig.map((key) => envNameByProjectContract[key as keyof typeof envNameByProjectContract]).join(", ")}. Project addresses remain unset until valid deployment addresses are supplied.</p>}
-        <p className="notice">No project deployment or transaction evidence is configured. The Foundry vault tests use a local test-only verifier fixture, not a cryptographic ZK verifier.</p>
       </section>
     </main>
   );

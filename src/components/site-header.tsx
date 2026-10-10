@@ -11,7 +11,7 @@ import { GIWA_CHAIN_ID } from "@/lib/config/chain";
 
 const LINKS = [
   ["home", "Home", "/"], ["dojang", "Dojang", "/dojang"], ["bojagi", "Bojagi", "/bojagi"],
-  ["vault", "Vault", "/vault"], ["contracts", "Contracts", "/contracts"], ["docs", "Docs", "/docs"],
+  ["vault", "Vault", "/vault"], ["lending", "Lending", "/lending"], ["contracts", "Contracts", "/contracts"], ["docs", "Docs", "/docs"],
 ] as const;
 
 export function SiteHeader() {

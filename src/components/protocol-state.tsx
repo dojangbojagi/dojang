@@ -6,7 +6,8 @@ type ProtocolUiState =
   | "unconfigured" | "missing" | "active"
   | "credential-required" | "ready-to-prove" | "generating" | "ready-to-submit" | "contract-unconfigured"
   | "locked" | "eligible" | "access-granted" | "previously-granted"
-  | "simulating" | "awaiting-signature" | "submitted" | "confirming" | "confirmed" | "reverted" | "rejected" | "rpc-error";
+  | "simulating" | "awaiting-signature" | "submitted" | "confirming" | "confirmed" | "reverted" | "rejected" | "rpc-error"
+  | "ready" | "issuer-untrusted" | "witness-required" | "proof-ready" | "checking-credential" | "credential-expired" | "credential-revoked";
 
 const LABELS: Record<ProtocolUiState, string> = {
   disconnected: "Disconnected", connecting: "Connecting", connected: "Connected", "wrong-network": "Wrong Network",
@@ -18,6 +19,8 @@ const LABELS: Record<ProtocolUiState, string> = {
   locked: "Locked", eligible: "Eligible", "access-granted": "Access Granted", "previously-granted": "Previously Granted",
   simulating: "Simulating", "awaiting-signature": "Awaiting Signature", submitted: "Submitted", confirming: "Confirming",
   confirmed: "Confirmed", reverted: "Reverted", rejected: "Rejected", "rpc-error": "RPC Error",
+  ready: "Ready", "issuer-untrusted": "Issuer Not Authorized", "witness-required": "Witness Required", "proof-ready": "Proof Ready",
+  "checking-credential": "Checking Credential", "credential-expired": "Credential Expired", "credential-revoked": "Credential Revoked",
 };
 
 const TONES: Record<ProtocolUiState, "valid" | "pending" | "invalid" | "warn" | "demo" | "neutral"> = {
@@ -30,6 +33,8 @@ const TONES: Record<ProtocolUiState, "valid" | "pending" | "invalid" | "warn" | 
   locked: "neutral", eligible: "valid", "access-granted": "valid", "previously-granted": "valid",
   simulating: "pending", "awaiting-signature": "pending", submitted: "pending", confirming: "pending",
   confirmed: "valid", reverted: "invalid", rejected: "warn", "rpc-error": "invalid",
+  ready: "valid", "issuer-untrusted": "warn", "witness-required": "neutral", "proof-ready": "valid",
+  "checking-credential": "pending", "credential-expired": "warn", "credential-revoked": "invalid",
 };
 
 export function stateLabel(state: ProtocolUiState) {

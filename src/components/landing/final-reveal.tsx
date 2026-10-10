@@ -95,6 +95,7 @@ export function FinalReveal({ appName }: { appName: string }) {
                 <li><Link href="/dojang">Dojang</Link></li>
                 <li><Link href="/bojagi">Bojagi</Link></li>
                 <li><Link href="/vault">Vault</Link></li>
+                <li><Link href="/lending">Lending</Link></li>
               </ul>
             </nav>
             <nav aria-label="Transparency">

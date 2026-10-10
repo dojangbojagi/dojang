@@ -20,7 +20,7 @@ export function SiteFooter() {
             <Link className="brand" href="/" aria-label={`${appEnv.appName}, home`}><BrandMark size={28} /><span className="brand__name">{appEnv.appName}</span></Link>
             <p>Prove more. Reveal less. Verify trusted state, prove eligibility privately and unlock an on-chain action.</p>
           </div>
-          <nav aria-label="Protocol"><h2>Protocol</h2><ul><li><Link href="/dojang">Dojang</Link></li><li><Link href="/bojagi">Bojagi</Link></li><li><Link href="/vault">Vault</Link></li></ul></nav>
+          <nav aria-label="Protocol"><h2>Protocol</h2><ul><li><Link href="/dojang">Dojang</Link></li><li><Link href="/bojagi">Bojagi</Link></li><li><Link href="/vault">Vault</Link></li><li><Link href="/lending">Lending</Link></li></ul></nav>
           <nav aria-label="Resources"><h2>Resources</h2><ul><li><Link href="/contracts">Contracts</Link></li><li><Link href="/docs">Docs</Link></li></ul></nav>
           <nav aria-label="GIWA references"><h2>Reference</h2><ul>
             <li><a href={GIWA_DOCS} target="_blank" rel="noopener noreferrer">GIWA network setup<span className="visually-hidden"> (opens in a new tab)</span></a></li>
