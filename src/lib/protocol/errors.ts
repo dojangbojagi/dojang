@@ -36,6 +36,18 @@ export function explainProtocolError(error: unknown): string {
   if (message.includes("repayexceedsdebt")) return "The repayment amount exceeds the outstanding loan balance.";
   if (message.includes("unsafecollateralwithdrawal")) return "That withdrawal would leave the loan below the required collateral ratio.";
   if (message.includes("unsupportedtokenbehavior")) return "The market rejected a token transfer whose received or sent amount did not match.";
+  if (message.includes("notverifiedmember")) return "A current official Dojang Verified Address is required for this governance action.";
+  if (message.includes("dojangreadfailed")) return "The official Dojang or EAS verification read failed. Membership was not granted.";
+  if (message.includes("invaliddojangattestation")) return "The Dojang attestation metadata does not match the configured official schema or attester.";
+  if (message.includes("votingnotstarted")) return "Voting has not opened for this proposal yet.";
+  if (message.includes("votingclosed")) return "The voting deadline for this proposal has passed.";
+  if (message.includes("alreadyvoted")) return "This wallet has already voted on this proposal.";
+  if (message.includes("proposalstillactive")) return "This proposal can be finalized after its voting deadline.";
+  if (message.includes("proposalnotfinalized")) return "Finalize the voting outcome before executing this proposal.";
+  if (message.includes("proposalnotsucceeded")) return "Only a successful, unexpired proposal can be executed.";
+  if (message.includes("accesspolicyrequireslongercredentialvalidity")) return "This verified credential does not remain valid long enough for the current access policy.";
+  if (message.includes("invalidproposal")) return "The requested governance proposal does not exist.";
+  if (message.includes("unauthorizedaction")) return "Governance only allows its approved access-policy action.";
   if (message.includes("accesscontrolunauthorizedaccount") || message.includes("notcredentialissuer") || message.includes("missingrole")) return "This account is not authorized to issue or revoke demo credentials.";
   if (message.includes("unexpectedcredentialversion")) return "The credential changed while it was being prepared. Refresh the record and issue it again.";
   if (message.includes("zeroaddress") || message.includes("zerowallet") || message.includes("zerocommitment")) return "The contract rejected an empty address or commitment.";

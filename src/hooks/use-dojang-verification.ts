@@ -5,7 +5,7 @@ import { useReadContract } from "wagmi";
 import { isAddressEqual, zeroHash } from "viem";
 import { officialDojang } from "@/lib/config/contracts";
 import { GIWA_CHAIN_ID } from "@/lib/config/chain";
-import { easAbi, dojangScrollAbi } from "@/lib/contracts/abis";
+import { dojangAttesterBookAbi, easAbi, dojangScrollAbi } from "@/lib/contracts/abis";
 import { decodeVerifiedAddressContent } from "@/lib/protocol/dojang-content";
 import type { DojangState, OfficialDojangCredential } from "@/lib/protocol/types";
 
@@ -27,6 +27,14 @@ export function useDojangVerification(wallet?: `0x${string}`) {
     args: wallet ? [wallet, officialDojang.upbitKoreaAttesterId] : undefined,
     // The official Dojang query flow requests a UID only after isVerified is true.
     // On GIWA Sepolia, asking for a missing UID can revert instead of returning zeroHash.
+    query: { enabled: enabled && statusQuery.data === true, retry: 1 },
+  });
+  const trustedAttesterQuery = useReadContract({
+    address: officialDojang.dojangAttesterBook,
+    chainId: GIWA_CHAIN_ID,
+    abi: dojangAttesterBookAbi,
+    functionName: "getAttester",
+    args: [officialDojang.upbitKoreaAttesterId],
     query: { enabled: enabled && statusQuery.data === true, retry: 1 },
   });
   const uid = uidQuery.data;
@@ -60,7 +68,8 @@ export function useDojangVerification(wallet?: `0x${string}`) {
     if (
       attestation.uid.toLowerCase() !== uid.toLowerCase() ||
       !isAddressEqual(attestation.recipient, wallet) ||
-      !isAddressEqual(attestation.attester, officialDojang.upbitKoreaAttester) ||
+      !trustedAttesterQuery.data ||
+      !isAddressEqual(attestation.attester, trustedAttesterQuery.data) ||
       attestation.schema.toLowerCase() !== officialDojang.verifiedAddressSchemaUid.toLowerCase()
     ) return undefined;
     const nowSeconds = BigInt(Math.floor(Date.now() / 1000));
@@ -82,13 +91,13 @@ export function useDojangVerification(wallet?: `0x${string}`) {
       isValid: validityQuery.data,
       isVerified: contentVerified,
     };
-  }, [attestationQuery.data, contentVerified, statusQuery.data, uid, validityQuery.data, wallet]);
+  }, [attestationQuery.data, contentVerified, statusQuery.data, trustedAttesterQuery.data, uid, validityQuery.data, wallet]);
 
   const metadataMismatch = Boolean(
     wallet && uid && uid !== zeroHash && attestation && (
       attestation.uid.toLowerCase() !== uid.toLowerCase() ||
       !isAddressEqual(attestation.recipient, wallet) ||
-      !isAddressEqual(attestation.attester, officialDojang.upbitKoreaAttester) ||
+      Boolean(trustedAttesterQuery.data && !isAddressEqual(attestation.attester, trustedAttesterQuery.data)) ||
       attestation.schema.toLowerCase() !== officialDojang.verifiedAddressSchemaUid.toLowerCase()
     ),
   );
@@ -99,10 +108,14 @@ export function useDojangVerification(wallet?: `0x${string}`) {
     else if (statusQuery.isPending) state = "checking";
     else if (statusQuery.data === false) state = "no-official-credential";
     else if (statusQuery.data === true) {
-      if (uidQuery.isError || attestationQuery.isError || validityQuery.isError) state = "read-error";
-      else if (uidQuery.isPending || (uid && uid !== zeroHash && (attestationQuery.isPending || validityQuery.isPending))) {
+      if (uidQuery.isError || trustedAttesterQuery.isError || attestationQuery.isError || validityQuery.isError) state = "read-error";
+      else if (
+        uidQuery.isPending || trustedAttesterQuery.isPending ||
+        (uid && uid !== zeroHash && (attestationQuery.isPending || validityQuery.isPending))
+      ) {
         state = "checking";
       } else if (!uid || uid === zeroHash) state = "read-error";
+      else if (!trustedAttesterQuery.data || trustedAttesterQuery.data === "0x0000000000000000000000000000000000000000") state = "read-error";
       else if (attestation && contentVerified === undefined) state = "read-error";
       else state = credential?.state ?? "no-official-credential";
     } else state = "checking";
@@ -112,12 +125,13 @@ export function useDojangVerification(wallet?: `0x${string}`) {
     state,
     credential,
     isLoading: state === "checking",
-    error: statusQuery.error ?? uidQuery.error ?? attestationQuery.error ?? validityQuery.error ??
+    error: statusQuery.error ?? uidQuery.error ?? trustedAttesterQuery.error ?? attestationQuery.error ?? validityQuery.error ??
       (attestation && contentVerified === undefined ? new Error("The Verified Address attestation data is not one ABI-encoded bool.") : undefined),
     refetch: async () => {
       const status = await statusQuery.refetch();
       if (status.data !== true) return status;
-      return uidQuery.refetch();
+      const [uidResult] = await Promise.all([uidQuery.refetch(), trustedAttesterQuery.refetch()]);
+      return uidResult;
     },
   };
 }

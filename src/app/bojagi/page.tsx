@@ -10,12 +10,13 @@ export default function BojagiPage() {
       tone="bojagi"
       accent="periwinkle"
       status="Private eligibility · browser proof"
+      glyph={{ shape: "seal", label: "An orange core sealed inside a blue ring: the value stays private and the proof is public.", caption: "Value sealed · proof public", legend: ["private", "public"] }}
       title="Prove it without showing it."
       lead="Your device checks the issuer-backed witness against the current on-chain commitment, then proves that it meets the policy. The exact value stays hidden; the wallet and proof remain public."
     >
       <div className="protocol-stack protocol-section">
         <WalletNetworkCard />
-        <div className="protocol-grid">
+        <div className="protocol-grid protocol-grid--stretch">
           <ProofGenerationPanel />
           <section className="panel panel--ticks protocol-panel" aria-labelledby="cloth-heading">
             <div className="protocol-panel__head"><h2 id="cloth-heading">A sealed fact, opened only to a rule</h2></div>
@@ -39,7 +40,7 @@ export default function BojagiPage() {
             <h2 id="public-private-heading">What leaves the device?</h2>
             <p>The circuit runs in this browser. No server prover fallback uploads the witness.</p>
           </header>
-          <div className="protocol-grid">
+          <div className="protocol-grid protocol-grid--even">
             <article className="panel panel--ticks protocol-panel">
               <div className="protocol-panel__head"><h2>Remains private</h2></div>
               <ul className="protocol-list"><li>Exact demo value</li><li>Random commitment salt</li><li>Imported witness JSON</li></ul>

@@ -1,4 +1,4 @@
-import type { Address, Hex } from "viem";
+import type { Address, Hex, TransactionReceipt } from "viem";
 
 export type WalletState = "disconnected" | "connecting" | "connected" | "wrong-network";
 
@@ -174,6 +174,77 @@ export interface LendingUserPosition {
   remainingBorrowCapacity: bigint;
 }
 
+export type GovernanceState = "unconfigured" | "checking" | "ready" | "read-error";
+
+export type GovernanceProposalState =
+  | "pending"
+  | "active"
+  | "succeeded"
+  | "rejected"
+  | "expired"
+  | "executed";
+
+export type GovernanceVoteType = "against" | "for" | "abstain";
+
+export interface GovernanceProposal {
+  id: bigint;
+  proposer: Address;
+  contentReference: string;
+  createdAt: bigint;
+  startAt: bigint;
+  deadline: bigint;
+  executionDeadline: bigint;
+  proposedMinimumRemainingValidity: bigint;
+  forVotes: bigint;
+  againstVotes: bigint;
+  abstainVotes: bigint;
+  finalized: boolean;
+  approved: boolean;
+  executed: boolean;
+  state: GovernanceProposalState;
+  walletHasVoted?: boolean;
+}
+
+export interface GovernanceSnapshot {
+  votingPeriod: bigint;
+  quorum: bigint;
+  executionWindow: bigint;
+  minimumRemainingValidity: bigint;
+  nextProposalId: bigint;
+  isVerifiedMember?: boolean;
+  protectedActionCount?: bigint;
+  proposal?: GovernanceProposal;
+}
+
+export interface GovernanceWriteResult<TResult = undefined> {
+  result: TResult;
+  receipt: TransactionReceipt;
+}
+
+export type GovernanceContractErrorName =
+  | "UnsupportedChain"
+  | "ZeroAddress"
+  | "UnconfiguredDojang"
+  | "InvalidVotingPeriod"
+  | "InvalidQuorum"
+  | "InvalidExecutionWindow"
+  | "InvalidMinimumRemainingValidity"
+  | "InvalidContentReference"
+  | "InvalidProposal"
+  | "InvalidVoteType"
+  | "VotingNotStarted"
+  | "VotingClosed"
+  | "AlreadyVoted"
+  | "NotVerifiedMember"
+  | "DojangReadFailed"
+  | "InvalidDojangAttestation"
+  | "AlreadyFinalized"
+  | "ProposalStillActive"
+  | "ProposalNotFinalized"
+  | "ProposalNotSucceeded"
+  | "UnauthorizedAction"
+  | "AccessPolicyRequiresLongerCredentialValidity";
+
 export type LendingContractErrorName =
   | "UnsupportedChain"
   | "InvalidMarketAsset"
@@ -223,6 +294,10 @@ export type ProtocolErrorCode =
   | "ALREADY_GRANTED"
   | "TRANSACTION_REJECTED"
   | "INSUFFICIENT_FUNDS"
+  | "GOVERNANCE_NOT_CONFIGURED"
+  | "GOVERNANCE_NOT_MEMBER"
+  | "GOVERNANCE_INVALID_PROPOSAL"
+  | "GOVERNANCE_ACTION_NOT_CONFIRMED"
   | "RPC_ERROR";
 
 export class ProtocolError extends Error {

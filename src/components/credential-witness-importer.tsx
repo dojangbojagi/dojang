@@ -53,6 +53,11 @@ export function CredentialWitnessImporter() {
       <label className="protocol-field" htmlFor="witness-file"><span>Credential witness JSON</span>
         <input id="witness-file" type="file" accept="application/json,.json" onChange={(event) => void importFile(event.currentTarget.files?.[0])} />
       </label>
+      <ul className="protocol-list" aria-label="What happens to the witness">
+        <li>Read in this browser only: no server receives it.</li>
+        <li>Held in memory for this session; it is not saved anywhere.</li>
+        <li>Gone when you clear it or refresh the page.</li>
+      </ul>
       {witness && <p className="small muted" role="status">Witness loaded for wallet <span className="addr">{witness.wallet}</span>.</p>}
       {message && <p className="callout callout--demo" role="status" aria-live="polite">{message}</p>}
       <div className="protocol-actions">

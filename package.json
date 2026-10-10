@@ -12,6 +12,7 @@
     "contracts:build": "bash contracts/run-forge.sh build",
     "lending:proof-fixture": "bun circuits/scripts/lending-conformance.mjs",
     "lending:anvil": "bun circuits/scripts/lending-anvil.mjs",
+    "governance:anvil": "bun run contracts:build && bun scripts/governance-anvil.mjs",
     "deployment:gas-local": "bun scripts/estimate-giwa-sepolia-deployment-gas.mjs",
     "dojang:check": "bun scripts/check-dojang-rpc.ts",
     "zk:compile": "bun circuits/scripts/compile.mjs",

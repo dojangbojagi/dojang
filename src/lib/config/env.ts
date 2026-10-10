@@ -25,6 +25,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_PROOF_VERIFIER_CONTRACT: optionalAddress,
   NEXT_PUBLIC_RESTRICTED_VAULT_CONTRACT: optionalAddress,
   NEXT_PUBLIC_LENDING_POOL_CONTRACT: optionalAddress,
+  NEXT_PUBLIC_DAO_GOVERNANCE_CONTRACT: optionalAddress,
 });
 
 const result = envSchema.safeParse({
@@ -38,6 +39,7 @@ const result = envSchema.safeParse({
   NEXT_PUBLIC_PROOF_VERIFIER_CONTRACT: process.env.NEXT_PUBLIC_PROOF_VERIFIER_CONTRACT,
   NEXT_PUBLIC_RESTRICTED_VAULT_CONTRACT: process.env.NEXT_PUBLIC_RESTRICTED_VAULT_CONTRACT,
   NEXT_PUBLIC_LENDING_POOL_CONTRACT: process.env.NEXT_PUBLIC_LENDING_POOL_CONTRACT,
+  NEXT_PUBLIC_DAO_GOVERNANCE_CONTRACT: process.env.NEXT_PUBLIC_DAO_GOVERNANCE_CONTRACT,
 });
 
 if (!result.success) {
@@ -55,5 +57,6 @@ export const appEnv = {
     proofVerifier: result.data.NEXT_PUBLIC_PROOF_VERIFIER_CONTRACT,
     restrictedVault: result.data.NEXT_PUBLIC_RESTRICTED_VAULT_CONTRACT,
     lendingPool: result.data.NEXT_PUBLIC_LENDING_POOL_CONTRACT,
+    daoGovernance: result.data.NEXT_PUBLIC_DAO_GOVERNANCE_CONTRACT,
   },
 } as const;

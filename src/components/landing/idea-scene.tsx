@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { GlyphSolid, type SolidState } from "./glyph-solid";
+import { GlyphSolid, type ShapeId } from "./glyph-solid";
 import { scrollToY } from "./smooth-scroll";
 
 /* 01 · The idea. The same fact, seen three ways by a verifier.
@@ -26,6 +26,7 @@ const STATES = [
 ] as const;
 
 const CAPTION = "What a verifier sees about the same fact. An illustration, not real data.";
+const IDEA_SHAPES: readonly ShapeId[] = ["sphere", "cube", "seal"];
 const SOLID_LABEL = [
   "A sphere of readable characters with a few orange ones among them: the private value, exposed.",
   "A closed cube of sealed grey cells: the value is hidden, but nothing can check it.",
@@ -179,7 +180,7 @@ export function IdeaScene() {
                     <h3 key={s.name} data-on={state === i} data-past={state > i}>{s.name}</h3>
                   ))}
                 </div>
-                <GlyphSolid className="lp-solid" state={state as SolidState} label={SOLID_LABEL[state]} />
+                <GlyphSolid className="lp-solid" shape={IDEA_SHAPES[state]} label={SOLID_LABEL[state]} />
                 <div className="lp-vrule" aria-hidden={state !== 2}>
                   <span>the rule is met, and the value stays hidden</span>
                   <span className="lp-yes">yes</span>
@@ -198,17 +199,17 @@ export function IdeaScene() {
               <p className="lp-ledger__cap">{CAPTION}</p>
               <div className="lp-lrow">
                 <h3>A public attestation</h3>
-                <GlyphSolid className="lp-solid lp-solid--row" state={0} animated={false} label={SOLID_LABEL[0]} />
+                <GlyphSolid className="lp-solid lp-solid--row" shape="sphere" animated={false} label={SOLID_LABEL[0]} />
                 <span className="lp-chip" data-tone="warn"><i aria-hidden="true" />Trusted, but exposed</span>
               </div>
               <div className="lp-lrow">
                 <h3>A private note</h3>
-                <GlyphSolid className="lp-solid lp-solid--row" state={1} animated={false} label={SOLID_LABEL[1]} />
+                <GlyphSolid className="lp-solid lp-solid--row" shape="cube" animated={false} label={SOLID_LABEL[1]} />
                 <span className="lp-chip" data-tone="neutral"><i aria-hidden="true" />Private, but unverifiable</span>
               </div>
               <div className="lp-lrow lp-lrow--proof">
                 <h3>A sealed credential with a proof</h3>
-                <GlyphSolid className="lp-solid lp-solid--row" state={2} animated={false} label={SOLID_LABEL[2]} />
+                <GlyphSolid className="lp-solid lp-solid--row" shape="seal" animated={false} label={SOLID_LABEL[2]} />
                 <div className="lp-lrow__view"><u>the rule is met, and the value stays hidden</u><span className="lp-yes">yes</span></div>
                 <span className="lp-chip" data-tone="valid"><i aria-hidden="true" />Trusted and private</span>
               </div>

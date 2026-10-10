@@ -26,12 +26,13 @@ export default function DojangPage() {
       tone="dojang"
       accent="celadon"
       status="Official read + project demo credential"
+      glyph={{ shape: "orb", label: "A sphere of readable characters: the official Dojang record is public, so anyone can read it.", caption: "The official record is public", legend: ["public"] }}
       title="Check what is officially trusted."
       lead="Read the connected wallet’s official Dojang Verified Address record on GIWA Sepolia. Issuer-managed demo credentials are a separate path and are never shown as official identity verification."
     >
       <div className="protocol-stack protocol-section">
         <WalletNetworkCard />
-        <div className="protocol-grid">
+        <div className="protocol-grid protocol-grid--even">
           <section className="panel panel--ticks protocol-panel" aria-labelledby="official-dojang-heading">
             <div className="protocol-panel__head">
               <h2 id="official-dojang-heading">Official GIWA Dojang</h2>
@@ -68,24 +69,27 @@ export default function DojangPage() {
             </div>
           </section>
 
-          <div className="protocol-stack">
-            <section className="panel panel--ticks protocol-panel" aria-labelledby="dojang-source-heading">
-              <div className="protocol-panel__head"><h2 id="dojang-source-heading">Verified source</h2><StateChip state="connected">GIWA Sepolia</StateChip></div>
-              <dl className="kv protocol-kv">
-                <div className="kv__row"><dt>DojangScroll</dt><dd><a className="addr" href={`${GIWA_EXPLORER_URL}/address/${officialDojang.dojangScroll}`} target="_blank" rel="noopener noreferrer">{officialDojang.dojangScroll}<span className="visually-hidden"> (opens in a new tab)</span></a></dd></div>
-                <div className="kv__row"><dt>Attester</dt><dd className="addr">{officialDojang.upbitKoreaAttester}</dd></div>
-                <div className="kv__row"><dt>Attester ID</dt><dd className="addr">{officialDojang.upbitKoreaAttesterId}</dd></div>
-                <div className="kv__row"><dt>Schema</dt><dd className="addr">{officialDojang.verifiedAddressSchemaUid}</dd></div>
-              </dl>
-            </section>
-            <CredentialWitnessImporter />
-          </div>
+          <section className="panel panel--ticks protocol-panel" aria-labelledby="dojang-source-heading">
+            <div className="protocol-panel__head"><h2 id="dojang-source-heading">Verified source</h2><StateChip state="connected">GIWA Sepolia</StateChip></div>
+            <dl className="kv protocol-kv">
+              <div className="kv__row"><dt>DojangScroll</dt><dd><a className="addr" href={`${GIWA_EXPLORER_URL}/address/${officialDojang.dojangScroll}`} target="_blank" rel="noopener noreferrer">{officialDojang.dojangScroll}<span className="visually-hidden"> (opens in a new tab)</span></a></dd></div>
+              <div className="kv__row"><dt>Attester</dt><dd className="addr">{officialDojang.upbitKoreaAttester}</dd></div>
+              <div className="kv__row"><dt>Attester ID</dt><dd className="addr">{officialDojang.upbitKoreaAttesterId}</dd></div>
+              <div className="kv__row"><dt>Schema</dt><dd className="addr">{officialDojang.verifiedAddressSchemaUid}</dd></div>
+            </dl>
+          </section>
         </div>
 
-        <section className="protocol-panel panel panel--ticks" aria-labelledby="demo-issuer-heading">
-          <div className="protocol-panel__head"><h2 id="demo-issuer-heading">Optional issuer onboarding</h2><StateChip state="active">Project demo · not official</StateChip></div>
-          <p className="protocol-copy">The issuer-controlled commitment flow exists for the local demo path. It requires configured project contracts and an authorized issuer wallet. No issuer keys or credentials are provided by this app.</p>
-          <DemoCredentialTools />
+        <section className="protocol-section" aria-labelledby="demo-path-heading">
+          <header className="protocol-section__head">
+            <p className="stub__num">PROJECT DEMO PATH · NOT OFFICIAL</p>
+            <h2 id="demo-path-heading">Separate from official Dojang</h2>
+            <p>The issuer-controlled commitment flow exists for the demo path. It needs the configured project contracts and an authorized issuer wallet, and no issuer keys or credentials are provided by this app.</p>
+          </header>
+          <div className="protocol-grid protocol-grid--even">
+            <CredentialWitnessImporter />
+            <DemoCredentialTools />
+          </div>
         </section>
       </div>
     </ProtocolPage>

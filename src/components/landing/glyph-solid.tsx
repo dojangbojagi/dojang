@@ -18,7 +18,9 @@ import { useEffect, useRef } from "react";
    It turns with the scroll position (the scene's --ip) and drifts slowly in between. The static variant used
    in the stacked layout draws once. Decorative: the label describes the state in words. */
 
-export type SolidState = 0 | 1 | 2;
+/* The shapes. sphere / cube / seal are the three states of the idea scene; orb is a sphere with no private
+   characters (an official, public record); rings is two linked rings (supply and borrow, joined by a proof). */
+export type ShapeId = "sphere" | "cube" | "seal" | "orb" | "rings";
 
 const GLYPHS = "0123456789ABCDEF";
 const NG = GLYPHS.length;
@@ -102,26 +104,67 @@ function ringPoint(k: number, spin: number, out: Float32Array, o: number) {
   out[o + 2] = Math.sin(th) * r;
 }
 
-/* which colour each point has in each state */
-function paletteFor(state: SolidState, i: number): number {
-  if (state === 0) return i % 9 === 0 ? 2 : rnd(i * 3) > 0.55 ? 0 : 1;
-  if (state === 1) return SEALED;
-  return i < CORE ? 2 : rnd(i * 5) > 0.78 ? 0 : 1;
+/* two linked rings: one upright, one flat, each passing through the other's middle */
+const HALF = COUNT / 2;
+function linkedPoint(i: number, spin: number, out: Float32Array, o: number) {
+  const k = i % HALF;
+  const s = k % 3;
+  const idx = (k / 3) | 0; /* 81 per strand */
+  const r = 0.78 + (s - 1) * 0.05;
+  const z = (s - 1) * 0.04;
+  if (i < HALF) {
+    const th = (idx / 81) * Math.PI * 2 + s * 0.5 + spin;
+    out[o] = -0.39 + Math.cos(th) * r;
+    out[o + 1] = Math.sin(th) * r;
+    out[o + 2] = z;
+  } else {
+    const th = (idx / 81) * Math.PI * 2 + s * 0.5 - spin * 0.8;
+    out[o] = 0.39 + Math.cos(th) * r;
+    out[o + 1] = z;
+    out[o + 2] = Math.sin(th) * r;
+  }
 }
 
+/* which colour each point has */
+const palette = (fn: (i: number) => number) => Uint8Array.from({ length: COUNT }, (_, i) => fn(i));
+const PAL_SPHERE = palette((i) => (i % 9 === 0 ? 2 : rnd(i * 3) > 0.55 ? 0 : 1));
+const PAL_ORB = palette((i) => (rnd(i * 3) > 0.55 ? 0 : 1));
+const PAL_CUBE = palette(() => SEALED);
+const PAL_SEAL = palette((i) => (i < CORE ? 2 : rnd(i * 5) > 0.78 ? 0 : 1));
+const PAL_RINGS = palette((i) => (i < HALF ? (rnd(i * 5) > 0.7 ? 0 : 1) : rnd(i * 7) > 0.88 ? 0 : 2));
+
+const P_SPHERE = sphereShape();
+const P_CUBE = cubeShape();
+const P_CORE = coreShape();
+
+interface Shape {
+  pos(i: number, spin: number, out: Float32Array): void;
+  pal: Uint8Array;
+  /** the angle it rests at when it is drawn once, not animated */
+  yaw: number;
+}
+const copy3 = (p: Float32Array, i: number, out: Float32Array) => { out[0] = p[i * 3]; out[1] = p[i * 3 + 1]; out[2] = p[i * 3 + 2]; };
+const SHAPES: Record<ShapeId, Shape> = {
+  sphere: { pos: (i, _s, out) => copy3(P_SPHERE, i, out), pal: PAL_SPHERE, yaw: 0.7 },
+  orb: { pos: (i, _s, out) => copy3(P_SPHERE, i, out), pal: PAL_ORB, yaw: 0.7 },
+  cube: { pos: (i, _s, out) => copy3(P_CUBE, i, out), pal: PAL_CUBE, yaw: 1.25 },
+  seal: { pos: (i, spin, out) => (i < CORE ? copy3(P_CORE, i, out) : ringPoint(i - CORE, spin, out, 0)), pal: PAL_SEAL, yaw: 1.8 },
+  rings: { pos: (i, spin, out) => linkedPoint(i, spin, out, 0), pal: PAL_RINGS, yaw: 0.9 },
+};
+
 interface Props {
-  state: SolidState;
+  shape: ShapeId;
   /** Turn with the scroll and drift. Off for the stacked layout: one still frame. */
   animated?: boolean;
   label: string;
   className?: string;
 }
 
-export function GlyphSolid({ state, animated = true, label, className }: Props) {
+export function GlyphSolid({ shape, animated = true, label, className }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const stateRef = useRef<SolidState>(state);
-  const setStateRef = useRef<((s: SolidState) => void) | null>(null);
-  stateRef.current = state;
+  const shapeRef = useRef<ShapeId>(shape);
+  const setShapeRef = useRef<((s: ShapeId) => void) | null>(null);
+  shapeRef.current = shape;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -131,10 +174,6 @@ export function GlyphSolid({ state, animated = true, label, className }: Props) 
     const live = animated && !reduce;
     const run = canvas.closest<HTMLElement>(".lp-idea-run");
 
-    const P0 = sphereShape();
-    const P1 = cubeShape();
-    const P2 = coreShape();
-    const PAL = [0, 1, 2].map((s) => Uint8Array.from({ length: COUNT }, (_, i) => paletteFor(s as SolidState, i)));
     const GLYPH = Uint8Array.from({ length: COUNT }, (_, i) => (i * 7 + 3) % NG);
     const DELAY = Float32Array.from({ length: COUNT }, (_, i) => rnd(i + 0.5) * 0.38);
     const JIT = Float32Array.from({ length: COUNT * 3 }, (_, n) => (rnd(n * 1.7 + 9) - 0.5) * 1.1);
@@ -149,8 +188,8 @@ export function GlyphSolid({ state, animated = true, label, className }: Props) 
     const sc = new Float32Array(COUNT);
     const order = new Uint16Array(COUNT).map((_, i) => i);
 
-    let to: SolidState = stateRef.current;
-    let curPal = PAL[to];
+    let to: ShapeId = shapeRef.current;
+    let curPal = SHAPES[to].pal;
     let mStart = -1;
     let morphing = false;
     let dpr = 1;
@@ -162,12 +201,7 @@ export function GlyphSolid({ state, animated = true, label, className }: Props) 
     let lastFrame = 0;
     const t0 = performance.now();
 
-    const targetOf = (s: SolidState, i: number, t: number, out: Float32Array) => {
-      if (s === 0) { out[0] = P0[i * 3]; out[1] = P0[i * 3 + 1]; out[2] = P0[i * 3 + 2]; return; }
-      if (s === 1) { out[0] = P1[i * 3]; out[1] = P1[i * 3 + 1]; out[2] = P1[i * 3 + 2]; return; }
-      if (i < CORE) { out[0] = P2[i * 3]; out[1] = P2[i * 3 + 1]; out[2] = P2[i * 3 + 2]; return; }
-      ringPoint(i - CORE, live ? t * 0.7 : 0.6, out, 0);
-    };
+    const targetOf = (id: ShapeId, i: number, t: number, out: Float32Array) => SHAPES[id].pos(i, live ? t * 0.7 : 0.6, out);
 
     function readFont() {
       const probe = document.createElement("span");
@@ -229,7 +263,7 @@ export function GlyphSolid({ state, animated = true, label, className }: Props) 
       const m = morphing ? clamp01((now - mStart) / MORPH_MS) : 1;
       if (morphing && m >= 1) morphing = false;
 
-      const yaw = live ? t * 0.28 + prog * 3.2 : 0.7 + to * 0.55;
+      const yaw = live ? t * 0.28 + prog * 3.2 : SHAPES[to].yaw;
       const pitch = live ? 0.5 + Math.sin(t * 0.35) * 0.06 : 0.5;
       const cy = Math.cos(yaw), sy_ = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
       const minDim = Math.min(w, h);
@@ -295,12 +329,12 @@ export function GlyphSolid({ state, animated = true, label, className }: Props) 
     };
 
     /* a new state: the points leave where they are now and settle into the new shape */
-    const setState = (next: SolidState) => {
+    const setShape = (next: ShapeId) => {
       if (next === to) return;
       from.set(cur);
       fromPal.set(curPal);
       to = next;
-      curPal = PAL[next];
+      curPal = SHAPES[next].pal;
       if (live) {
         mStart = performance.now();
         morphing = true;
@@ -309,7 +343,7 @@ export function GlyphSolid({ state, animated = true, label, className }: Props) 
       }
       kick();
     };
-    setStateRef.current = setState;
+    setShapeRef.current = setShape;
 
     /* start in the current state, fully formed */
     for (let i = 0; i < COUNT; i++) {
@@ -349,7 +383,7 @@ export function GlyphSolid({ state, animated = true, label, className }: Props) 
 
     return () => {
       cancelled = true;
-      setStateRef.current = null;
+      setShapeRef.current = null;
       if (raf) cancelAnimationFrame(raf);
       io.disconnect();
       ro.disconnect();
@@ -358,8 +392,8 @@ export function GlyphSolid({ state, animated = true, label, className }: Props) 
   }, [animated]);
 
   useEffect(() => {
-    setStateRef.current?.(state);
-  }, [state]);
+    setShapeRef.current?.(shape);
+  }, [shape]);
 
   return <canvas ref={canvasRef} className={className} role="img" aria-label={label} />;
 }
