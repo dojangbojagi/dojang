@@ -1,0 +1,6 @@
+# Do not upload local environment secrets with CLI deployments.
+.env*
+!.env.example
+
+# Local Vercel project metadata is generated per workspace.
+.vercel/
