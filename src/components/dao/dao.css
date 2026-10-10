@@ -44,7 +44,7 @@
 .dao-votes { display: grid; gap: .5rem; }
 .dao-bar { display: flex; height: .55rem; overflow: hidden; border-radius: 999px; background: rgba(255, 255, 255, .08); }
 .dao-bar span { display: block; height: 100%; }
-.dao-bar [data-k="for"], .dao-votes__counts [data-k="for"] i { background: var(--state-valid, #3b86ff); }
+.dao-bar [data-k="for"], .dao-votes__counts [data-k="for"] i { background: var(--state-valid, #7DD3FC); }
 .dao-bar [data-k="against"], .dao-votes__counts [data-k="against"] i { background: var(--gold); }
 .dao-bar [data-k="abstain"], .dao-votes__counts [data-k="abstain"] i { background: var(--text-dim); }
 .dao-bar [data-k="none"] { background: transparent; }
@@ -66,4 +66,4 @@ a.dao-ref { color: var(--celadon); text-decoration: underline; text-underline-of
 /* the outcome of the last action stays in view while you scroll, on every screen size */
 .dao-banner-slot { position: sticky; top: calc(var(--header-h) + .75rem); z-index: 6; }
 .dao-banner-slot:empty { display: none; }
-.dao-banner-slot .lend-banner { box-shadow: 0 18px 40px -18px rgba(0, 0, 0, .8); background-color: color-mix(in srgb, var(--ink-950, #060912) 92%, transparent); }
+.dao-banner-slot .lend-banner { box-shadow: 0 18px 40px -18px rgba(0, 0, 0, .8); background-color: color-mix(in srgb, var(--ink-950, #07090D) 92%, transparent); }

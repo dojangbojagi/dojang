@@ -30,22 +30,24 @@ This document is the **single source of truth for product behavior, system bound
 | --- | --- |
 | Category | Web3 verification and privacy infrastructure / application |
 | Product concept | Private Verifiable State Protocol |
-| Primary features | Dojang Verification; Bojagi-inspired Protection |
+| Primary journeys | Official Dojang verification → DAO governance; project-issued policy-2 demo credential → Bojagi-inspired ZK eligibility → Lending demonstration |
 | Reference, not clone | GIWA Dojang for attestation; GIWA Bojagi for privacy principles |
-| Flagship proof | Private Eligibility Proof |
-| Application | Restricted Vault: a gated on-chain action, **not a deposit/yield product** |
+| Privacy capability | Private eligibility proofs over issuer-backed demo credentials; this is not a native Bojagi private-transfer protocol |
+| Application | DAO governance and a controlled Lending demonstration are the primary product journeys; Restricted Vault remains a legacy/secondary proof-gated technical utility, **not a deposit/yield product** |
 | Blockchain | GIWA Sepolia only for MVP; **chain ID 91342** |
 | Execution | Real smart contracts, real wallet-signed transactions, real on-chain verification |
 | Privacy target | Hide exact private eligibility value from public calldata and logs |
 | Visible on-chain | Wallet address, policy, commitment, proof-validation-related public inputs, transaction metadata, access result |
-| Main pages | `/`, `/dojang`, `/bojagi`, `/vault`, `/contracts`, `/docs` |
-| Markets page | Not part of MVP: no real markets, pools, trading, or yield positions |
+| Main routes | `/`, `/dojang`, `/dao`, `/bojagi`, `/lending`, `/contracts`, `/docs`; `/vault` remains a secondary technical route |
+| Lending scope | A controlled Lending demonstration exists; no production market, real-world collateral valuation, or yield positions are claimed |
 | Security status | Testnet demonstration only; no production/audit claims |
 | Implementation technology | Not locked by this brief; EVM-compatible libraries required |
 
 **Terminology rule:** The product integrates or draws inspiration from GIWA components. Unless authorized and technically integrated, do not present our private-eligibility proof as GIWA's native Bojagi private-transfer system. Use **“Bojagi-inspired Protection”** where the distinction matters.
 
-## 3. What the Two Features Actually Do
+**Credential boundary:** Official Dojang Verified Address credentials are external attestations used for DAO membership. Lending eligibility uses a separate project-issued demo credential and policy-2 proof. Never merge these statuses or suggest that a project-issued credential is an official Dojang credential. `/vault` remains implemented as a separate policy-1 proof-gated access utility; it is legacy/secondary in public information architecture, not removed or deprecated protocol support.
+
+## 3. What the Verification and Privacy Paths Actually Do
 
 ### 3A. DOJANG — VERIFY
 
@@ -69,33 +71,28 @@ Dojang is GIWA's EAS-based attestation layer. For a supported wallet, the app re
 - Execute `enterVault(...)` only if all checks pass. Emit an on-chain access event and save contract state.
 - This is **eligibility privacy, not transaction privacy**: wallet address, transaction existence and potentially the access decision remain observable.
 
-### 3C. RESTRICTED VAULT — REAL UTILITY
+### 3C. RESTRICTED VAULT — SECONDARY TECHNICAL UTILITY
 
-The vault is the demonstration of what private proof **enables**. It is an on-chain access gate, **not** a financial vault holding user deposits in MVP. It has a meaningful state-changing transaction, for example `hasAccess[wallet] = true` and `VaultAccessGranted(wallet, policyId)`.
+The vault remains an on-chain access-gate demonstration of what a policy-1 private proof enables. It is **not** the primary public utility or a financial vault holding user deposits. It has a state-changing transaction, for example `hasAccess[wallet] = true` and `VaultAccessGranted(wallet, policyId)`. Keep this legacy/secondary route available for technical exploration without presenting it as a flagship journey.
 
 A React-only “Access Granted” message does **not** count. An invalid or expired proof MUST revert on-chain. Do not introduce custody, deposits, swaps, interest or yield before the core verification flow works.
 
 ## 4. System Architecture and Trust Boundaries
 
 ```text
-                    USER / EVM WALLET
-                           |
-                 Connect + network check
-                           |
-                     FRONTEND DAPP
-                 /         |          \
-                /          |           \
-       DOJANG READ       PROVER       CONTRACTS + EXPLORER
-            |               |                  |
-    Official Dojang     Private witness      GIWA Sepolia
-    DojangScroll/EAS    + public inputs           |
-            |               |          +------------------------+
-    Status/UID/issuer    ZK proof        | DemoCredentialRegistry |
-            |               |          | On-chain Verifier      |
-            +----------- user flow ---->| RestrictedVault        |
-                                       +------------------------+
-                                                  |
-                                      Real event + state change
+USER / EVM WALLET
+       |
+NEXT.JS APPLICATION
+       |-- Official Dojang read (DojangScroll + EAS)
+       |       `-- Verified Address status --> DAO Governance
+       |
+       `-- Project-issued demo credential (registry + private witness)
+               `-- Policy-bound browser ZK proof (separate context per utility)
+                       |-- Policy 2 --> LendingPool (primary private utility)
+                       `-- Policy 1 --> RestrictedVault (secondary technical utility)
+
+Project-owned contracts target GIWA Sepolia; after deployment, GIWA Explorer is
+the external source for inspecting public deployment and transaction evidence.
 ```
 
 **Two distinct trust anchors:**
@@ -103,7 +100,7 @@ A React-only “Access Granted” message does **not** count. An invalid or expi
 1. **Official Dojang source:** trust a specifically selected GIWA attester when reading official `Verified Address`. This can be independently inspected via GIWA contracts. Official issuance might be unavailable to arbitrary test wallets.
 2. **Demo private-state issuer:** a clearly labeled project-controlled issuer issues a cryptographic commitment for the demo witness. The smart contract trusts only explicitly authorized issuer(s). This proves **issuer-backed demo eligibility**, NOT verified exchange holdings.
 
-Do not quietly merge these statuses. If the user lacks official Dojang verification, the user may still exercise the **separately labeled Demo Vault path** using a demo credential. If a future policy explicitly requires official Dojang verification, the contract must enforce the official status on-chain, not merely the UI.
+Do not quietly merge these statuses. A wallet without official Dojang verification may still use a separately labeled project-demo credential for the independent ZK utility path, subject to that path's own issuer, proof and contract requirements. Do not use that credential for DAO membership. If a future policy requires official Dojang verification, the contract must enforce the official status on-chain, not merely the UI.
 
 **Preferred end-to-end testable architecture for MVP:**
 
@@ -116,12 +113,12 @@ Do not quietly merge these statuses. If the user lacks official Dojang verificat
 
 **Implementation notes:** Choose a hash/commitment construction supported in both the circuit and the on-chain registry; domain-separate the committed data; use high-entropy salts; decide exact integer units explicitly; do not hash ambiguous concatenations; test circuit-to-contract public-input order byte-for-byte.
 
-## 5. Six Pages: Purpose, Data, Actions, States
+## 5. Eight Routes: Purpose, Data, Actions, States
 
 ### `/` — Home
 
-- In 10 seconds, explain: **Verify trusted state → prove eligibility privately → unlock an on-chain action**.
-- Entry points: `Explore Dojang`, `Generate Proof`, `View Contracts`, `Read Docs`.
+- Lead with two journeys: **Official Dojang verification → DAO governance** and **project-issued demo credential → Bojagi-inspired ZK → Lending demonstration**.
+- Entry points: `Explore Dojang`, `Explore Bojagi`, `View Lending`, `View Contracts`, `Read Docs`. Keep `/vault` available as a secondary technical route, not a primary landing CTA.
 - Show that this is a **testnet demonstration**, not an audited financial product.
 - No fake markets, TVL, APY, performance charts, or invented protocol activity.
 
@@ -129,34 +126,46 @@ Do not quietly merge these statuses. If the user lacks official Dojang verificat
 
 - Wallet connect; chain check; official Dojang Verified Address query; issuer details, UID and validity when present.
 - Differentiate `Official Verified`, `No Official Credential`, `Expired/Revoked`, `RPC Error`, `Demo Credential Issued`.
-- Show optional test-issuer onboarding for the demo flow, separate from official Dojang.
-- CTA to `/bojagi` only when the relevant eligibility demo credential exists; otherwise guide user to valid issuance/import.
+- Show optional test-issuer onboarding for the Lending demo as a separate project-issued credential path, not as official Dojang issuance.
+- Link official verified members to `/dao`; link eligible project-demo credential holders toward the ZK/Lending journey. Do not imply one credential qualifies for both paths.
 - Never depict local demo eligibility as official Upbit/GIWA verification.
+
+### `/dao` — Verified Governance
+
+- Show official Dojang membership status as a read; contract writes independently recheck official eligibility.
+- Present the proposal lifecycle and public votes accurately. A wallet is not equivalent to one person, and votes are not private or anonymous.
+- Never use a project-issued demo credential or ZK proof as DAO membership.
 
 ### `/bojagi` — Private Eligibility Proof
 
 - Explain the policy (sample: `>= 1,000 verified test units`), current credential type, privacy limits and public inputs.
 - Validate matching wallet, credential expiry/revocation and chain before allowing proof generation.
-- Generate proof, perform optional **local** verifier precheck, and submit to on-chain verifier via the vault action.
-- Distinguish `Proof Generated` from `Proof Verified On-chain` and `Vault Action Confirmed`.
+- Explain that this route presents the project's ZK eligibility approach. Its policy-1 proof is Vault-specific; it is not the policy-2 proof consumed by Lending.
+- Distinguish `Proof Generated` from `Proof Verified On-chain` and any confirmed contract action.
 - Expose no exact witness value through public logs, analytics, URL, transaction args or events.
 - If no browser proof support, a server/CLI prover may be used **only as a clearly flagged demo fallback**; explain that sending a witness to a server changes privacy properties. No hidden upload.
 
 ### `/vault` — Protected Action
 
-- Show active policy, eligibility requirement, proof readiness and **on-chain access state**.
+- Show active policy, eligibility requirement, proof readiness and **on-chain access state**. This is a secondary technical demo, not the primary public utility.
 - Main action: `Enter Vault`. This triggers a wallet transaction calling contract enforcement, not local navigation alone.
 - Show transaction lifecycle: simulation, wallet confirmation, submitted, confirmed, reverted/rejected.
 - Show explorer link and the access event after confirmation.
 - If proof is invalid/expired/revoked/wrong-wallet or user is on wrong chain, block submission or explain the on-chain rejection.
 - Do not handle real deposits, liquidity, withdrawals or custody.
 
+### `/lending` — Private Eligibility Utility
+
+- Explain that Lending consumes its own project-issued policy-2 demo credential and matching eligibility proof; neither is an official Dojang credential.
+- Present the controlled-market constraints and live contract states accurately. Do not describe the demo as production lending, real collateral valuation, yield, or audited financial service.
+- The Bojagi-inspired connection is the privacy principle. Do not reuse or label the policy-1 `/bojagi`-to-Vault proof as a Lending proof.
+
 ### `/contracts` — Verifiable Contract Evidence
 
 Separate:
 
 1. **GIWA infrastructure**: official addresses and links for DojangScroll, EAS, and any other **actually used** GIWA contracts.
-2. **Our deployed contracts**: DemoCredentialRegistry, EligibilityVerifier (or generated verifier + wrapper), RestrictedVault, and optional explicit adapter(s).
+2. **Our project-owned contracts**: Governance, DemoCredentialRegistry, verifier and adapter, LendingPool and controlled assets, and RestrictedVault. Show deployment evidence only when real addresses, bytecode, and receipts have been verified.
 
 For our contracts show chain, address, verified source status, role, ABI-supported read functions, most important state-changing functions, deployment transaction, explorer links, events and real transaction hashes. A contract that is **not yet deployed** must say so—never show example addresses as if real.
 
@@ -164,7 +173,7 @@ This page is not merely an address registry. It must make evidence of **real on-
 
 ### `/docs` — Architecture and Public Limitations
 
-- Protocol overview; Dojang vs Bojagi-inspired boundary; wallet/credential/proof/vault flows.
+- Protocol overview; Dojang vs Bojagi-inspired boundary; the Dojang-to-DAO and ZK-to-Lending journeys; the secondary Vault technical flow.
 - Issuer trust model; public vs private fields; demo data provenance; contract responsibilities; network/explorer links.
 - Exact limitations: no native Bojagi private transfer, no hidden sender/receiver, no private financial balances from GIWA Verified Balance attestation, no audit, no real DeFi market/custody.
 - How to run a reproducible local demo and verify explorer evidence.

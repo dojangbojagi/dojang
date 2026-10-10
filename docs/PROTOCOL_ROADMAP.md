@@ -12,14 +12,23 @@ This roadmap describes the independent Private Verifiable State Protocol. GIWA S
 | 4. Security and Risk Infrastructure | Planned | Requires an independent security review and explicit risk controls appropriate to any expanded use. No audit or review is claimed. |
 | 5. Ecosystem Expansion | Future | Consider only after the testnet launch and security work. No integrations, partnerships, grants, or accelerator participation are claimed. |
 
+## Product hierarchy
+
+The public product flow has two primary journeys:
+
+1. **Dojang → DAO Governance:** official Dojang Verified Address status is checked through external Dojang/EAS infrastructure and is the membership requirement enforced by the project governance contract.
+2. **Bojagi-inspired ZK → Lending:** a project-issued policy-2 demo credential supports a private eligibility proof for the controlled Lending demonstration. This credential is separate from official Dojang, and the proof is not a private transfer. The policy-1 `/bojagi` proof remains Vault-specific.
+
+**RestrictedVault** remains implemented as an available, project-owned proof-gated access utility at `/vault`, presented as a legacy/secondary technical route rather than a flagship product path. It does not custody funds. This public hierarchy does not deprecate the contract or change deployment status.
+
 ## Infrastructure boundaries
 
 - **GIWA Sepolia** is the external EVM execution network.
 - **Dojang and EAS** are external attestation infrastructure. The app reads the official Dojang Verified Address attestation; it does not own those contracts.
 - **Bojagi** is a conceptual privacy reference. This repository does not implement a Bojagi private-transfer protocol.
 - **EligibilityVerifierAdapter and the generated Honk verifier** are project-owned proof verification contracts.
-- **RestrictedVault** is project-owned proof-gated access state. It does not custody funds.
 - **LendingPool and ControlledTestToken** are project-owned, non-production lending demonstration contracts and capped demo assets.
+- **RestrictedVault** is a project-owned, secondary proof-gated access utility. It does not custody funds.
 - **GIWA Explorer** is an external source for inspecting public chain records. Explorer network totals are not protocol usage statistics.
 
 ## Status rules

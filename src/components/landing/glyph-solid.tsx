@@ -30,10 +30,11 @@ const NG = GLYPHS.length;
 const COUNT = 486; /* 6 faces x 81 */
 const CORE = 216; /* 6 faces x 36: the sealed core of state 2; the other 270 points are the ring */
 const PALETTE: readonly (readonly [number, number, number])[] = [
-  [228, 236, 255], /* 0 public, white */
-  [112, 168, 255], /* 1 public, blue */
-  [255, 122, 61], /* 2 private, orange */
-  [154, 164, 184], /* 3 sealed, grey (drawn as a small closed cell, not as a character) */
+  [226, 240, 250], /* 0 public, ice white */
+  [125, 211, 252], /* 1 public, ice blue */
+  [200, 255, 106], /* 2 private, lime */
+  [148, 163, 184], /* 3 sealed, slate (drawn as a small closed cell, not as a character) */
+  [214, 192, 141], /* 4 champagne, a rare accent */
 ];
 const SEALED = 3;
 const MORPH_MS = 1500;

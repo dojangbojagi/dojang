@@ -1,6 +1,6 @@
 # DAO Frontend Handoff
 
-This document defines the nonvisual integration surface for a future governance presentation. It does not add a route or require changes to the existing page layout. Governance contract writes, Dojang reads, receipt handling, and error mapping stay in `src/hooks/use-dao-governance.ts` and `src/lib/governance/service.ts`.
+This document defines the nonvisual integration surface for DAO presentation on the existing `/dao` route. Governance contract writes, Dojang reads, receipt handling, and error mapping stay in `src/hooks/use-dao-governance.ts` and `src/lib/governance/service.ts`.
 
 ## Configuration and trust boundary
 
@@ -83,7 +83,7 @@ On `createProposal`, the hook reads the proposal ID from the `ProposalCreated` r
 
 ## Presentation integration points
 
-Use the hook from a future presentation component on an existing route only if the product owner chooses that placement. Do not add a new route as part of this handoff. Keep these actions and views distinct:
+The `/dao` route renders the existing DAO workspace and proposal feed. Keep these actions and views distinct:
 
 1. Membership: show `isVerifiedMember` and the detailed `useDojangVerification` status; do not infer membership from a project demo credential.
 2. Policy: show `snapshot.minimumRemainingValidity` in seconds or a user-friendly duration.
@@ -101,3 +101,13 @@ Do not describe votes as private, anonymous, one-person-one-vote, or membership-
 ## Deployment status
 
 The ABI and hook are implemented, but the project governance address is not configured or deployed. Until an actual deployment is verified, the hook reports `unconfigured`; do not substitute local fixture or Anvil addresses in a production browser configuration.
+
+## Product-flow handoff for presentation
+
+Use this product hierarchy when adjusting public copy and navigation. It changes presentation priority only; protocol behavior and route availability stay as implemented.
+
+1. **Verified Governance:** `Dojang → DAO`. Dojang is an official, read-only GIWA credential check; DAO membership is enforced against that official trust path. Votes are public.
+2. **Private Utility:** `Bojagi-inspired ZK → Lending`. Lending uses its own project-issued policy-2 demo credential and eligibility proof. Do not describe that credential as official Dojang or imply that the `/bojagi` policy-1 Vault proof can be reused for Lending.
+3. **Legacy / Secondary Technical Utility:** `Vault`. Keep the existing `/vault` route and protocol accessible as a proof-gated access demonstration; it holds no funds and is not a primary landing journey.
+
+Suggested navigation grouping: `Dojang`, `DAO`; `Bojagi`, `Lending`; then `Vault` under a secondary technical/utilities grouping. Suggested landing summaries: “Verify official membership and participate in governance” and “Prove private demo eligibility for the Lending utility.” Avoid presenting Vault as a flagship card or equal primary journey. Retain a clear note that official Dojang credentials and project-issued ZK demo credentials are distinct trust paths.

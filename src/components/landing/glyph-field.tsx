@@ -2,161 +2,249 @@
 
 import { useEffect, useRef } from "react";
 
-/* The hero's background: two clouds of characters. The one above the headline is public data
-   (white and blue); the one below it is private data (orange). Neither is a picture or a logo:
-   each cloud is the part of a slowly moving noise field that rises above a per-cell threshold,
-   so the shapes come out of the animation itself, drift, breathe and never repeat.
+/* The hero's background: one object made of the same hex characters as the idea scene's, turning slowly
+   in 3D behind the headline. It has two forms and the scroll decides which one you see:
 
-   Pointer: while it really moves, the characters under it scramble and are sealed under a patch of
-   patchwork cloth (a pixelated circle) that lifts slowly behind it. The effect lives only as long as
-   the movement: when the pointer stops, the patch and the soft light behind it fade away on their own
-   and the field is exactly what it was before.
+     A  "Knot"   a woven tube of characters in ice blue and white, with a few champagne ones: verified,
+                 public state (Dojang -> DAO). It is what the hero opens on.
+     B  "Gyro"   three tilting rings around a lime core: the private proof and the action it unlocks
+                 (Bojagi -> Lending). The knot unspools into it while the camera pushes in.
 
-   Cost, because this page must stay light:
-   - one canvas, painted whole once and afterwards only the cells that changed, from a
-     pre-rendered sprite sheet (no text is laid out per frame);
-   - the field moves at about 9 steps a second, the pointer at the display rate while it is used;
-   - it rests while the page is being scrolled, while the opening is still small, while it is off
-     screen and while the tab is hidden. Decorative only: the wrapper is aria-hidden.        */
+   The scroll is not touched by any of this. cover-reveal.tsx already writes how far the camera has
+   pushed in (--q, 0 -> 1) on the stage; this file only reads that number, and the form is a pure function
+   of it, so it runs in reverse on its own. The zoom itself (scale, fade) is the CSS on .lp-field, unchanged.
+
+   Mouse: grab the hero and drag to turn the form (the automatic drift keeps its own clock, the hand adds
+   an offset, a flick glides); without a button the form leans a little towards the pointer. Touch is left
+   alone on purpose, so the page scrolls exactly as before.
+
+   Cost, because this page must stay light: about 1300 sprites copied from a pre-rendered sheet (no text is
+   laid out per frame), at most ~30 frames a second while it drifts, one frame per scroll frame while --q
+   moves, and nothing at all while the hero is closed, zoomed away, off screen or the tab is hidden.
+   Decorative only: the wrapper is aria-hidden. Technique: docs/GLYPH_SOLID_3D_HANDOFF.md. */
 
 const GLYPHS = "0123456789ABCDEF";
 const NG = GLYPHS.length;
-const RGB: readonly (readonly [number, number, number])[] = [
-  [228, 236, 255], /* 0  public: white */
-  [255, 122, 61], /* 1  private: orange */
-  [112, 168, 255], /* 2  public: blue */
+const SEG = 110; /* steps along the knot */
+const SIDE = 12; /* characters around its tube at each step */
+const COUNT = SEG * SIDE; /* 1320, shared by both forms: the knot's points become the gyro's */
+const RING_N = 330; /* characters per ring of the gyro; the last 330 are its core */
+const PALETTE: readonly (readonly [number, number, number])[] = [
+  [226, 240, 250], /* 0 ice white */
+  [125, 211, 252], /* 1 ice blue (public) */
+  [200, 255, 106], /* 2 lime (private) */
+  [96, 165, 250], /* 3 cool blue */
+  [214, 192, 141], /* 4 champagne, a rare accent */
 ];
-const ALPHA = [0.34, 0.58, 0.82, 1] as const; /* four tone levels, darkest at the edge of a cloud */
-const TICK_MS = 110;
-const VEIL_W = 160; /* css px: the size of public/landing/veil.svg */
+const FRAME_MS = 33;
+const CAMERA = 5; /* distance for the perspective; larger = flatter */
+const Q_FROM = 0; /* the camera has not moved yet: form A, fully formed */
+const Q_TO = 0.44; /* form B is complete here, while the field is still two thirds visible */
+const SPREAD = 0.24; /* how far apart in time the points leave */
+const TAU = Math.PI * 2;
 
-/* Pointer behaviour. */
-const STILL_MS = 140; /* no real movement for this long: the pointer is "still" and the effect starts to lift */
-const MOVE_PX = 1.6; /* a shorter move (a resting hand, a synthetic event after a scroll) is not movement */
-const LIFT_MOVING = 2.4; /* per second: how fast cloth lifts behind a moving pointer (the trail) */
-const LIFT_STILL = 1.5; /* per second: how fast the whole patch lifts once the pointer is still */
-const CLOTH_LO = 0.3; /* coverage at which the cloth starts to show; it gets more opaque up to 1 in eight steps */
-const RING_LO = 0.08; /* below this a cell is back to its normal character */
-const VEIL_H = 104;
+const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
+const rnd = (n: number) => {
+  const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+  return x - Math.floor(x);
+};
+const ease = (lp: number) => (lp < 0.5 ? 4 * lp * lp * lp : 1 - Math.pow(-2 * lp + 2, 3) / 2);
 
-/* [centre u, centre v, radius u, radius v, drift, speed a, speed b, phase], u and v as fractions of the field */
-type Lobe = readonly [number, number, number, number, number, number, number, number];
-const WIDE: readonly Lobe[] = [
-  /* public cloud, above the headline, its lower edge just behind the first line */
-  [0.4, 0.2, 0.22, 0.13, 0.02, 0.21, 0.17, 0.0],
-  [0.6, 0.215, 0.23, 0.14, 0.022, 0.16, 0.23, 2.1],
-  [0.5, 0.205, 0.3, 0.1, 0.015, 0.12, 0.14, 4.0],
-  /* private cloud, below the lede and the buttons */
-  [0.42, 0.835, 0.21, 0.085, 0.02, 0.19, 0.15, 1.3],
-  [0.6, 0.83, 0.22, 0.09, 0.02, 0.14, 0.21, 3.2],
-  [0.5, 0.84, 0.29, 0.065, 0.015, 0.11, 0.18, 5.1],
-];
-const NARROW: readonly Lobe[] = [
-  [0.34, 0.145, 0.3, 0.075, 0.02, 0.2, 0.16, 0.0],
-  [0.68, 0.165, 0.3, 0.08, 0.02, 0.15, 0.22, 2.1],
-  [0.5, 0.275, 0.4, 0.05, 0.015, 0.12, 0.14, 4.0],
-];
-
-function hash(x: number, y: number, seed: number): number {
-  let h = (Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(seed, 1442695041)) | 0;
-  h = Math.imul(h ^ (h >>> 13), 1274126177);
-  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+/* ---- the two forms, built once ---- */
+interface Model {
+  a: Float32Array; /* form A positions (static) */
+  palA: Uint8Array;
+  th0: Float32Array; /* form B: the angle each ring point starts at */
+  rad: Float32Array; /* ... its distance from the ring's axis */
+  off: Float32Array; /* ... and its offset along it (the ring is three thin strands) */
+  palB: Uint8Array;
+  pair: Uint16Array; /* the point of form B that point i of form A turns into */
+  glyph: Uint8Array;
+  delay: Float32Array;
+  jit: Float32Array;
 }
 
-function vnoise(x: number, y: number, seed: number): number {
-  const xi = Math.floor(x);
-  const yi = Math.floor(y);
-  const xf = x - xi;
-  const yf = y - yi;
-  const u = xf * xf * (3 - 2 * xf);
-  const v = yf * yf * (3 - 2 * yf);
-  const a = hash(xi, yi, seed);
-  const b = hash(xi + 1, yi, seed);
-  const c = hash(xi, yi + 1, seed);
-  const d = hash(xi + 1, yi + 1, seed);
-  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+function buildModel(): Model {
+  const a = new Float32Array(COUNT * 3);
+  /* a trefoil knot, fattened into a tube. The tube's frame follows the curve (tangent, normal, binormal)
+     and winds three times round it, so the characters run along it in spirals. */
+  const S = 1 / 3.15;
+  const R = 0.2;
+  for (let k = 0; k < SEG; k++) {
+    const t = (k / SEG) * TAU;
+    const cx = (Math.sin(t) + 2 * Math.sin(2 * t)) * S;
+    const cy = (Math.cos(t) - 2 * Math.cos(2 * t)) * S;
+    const cz = -Math.sin(3 * t) * S;
+    let tx = Math.cos(t) + 4 * Math.cos(2 * t);
+    let ty = -Math.sin(t) + 4 * Math.sin(2 * t);
+    let tz = -3 * Math.cos(3 * t);
+    const tl = Math.hypot(tx, ty, tz);
+    tx /= tl; ty /= tl; tz /= tl;
+    let nx = -Math.sin(t) - 8 * Math.sin(2 * t);
+    let ny = -Math.cos(t) + 8 * Math.cos(2 * t);
+    let nz = 9 * Math.sin(3 * t);
+    const d = nx * tx + ny * ty + nz * tz;
+    nx -= d * tx; ny -= d * ty; nz -= d * tz;
+    const nl = Math.hypot(nx, ny, nz);
+    nx /= nl; ny /= nl; nz /= nl;
+    const bx = ty * nz - tz * ny;
+    const by = tz * nx - tx * nz;
+    const bz = tx * ny - ty * nx;
+    for (let j = 0; j < SIDE; j++) {
+      const phi = ((j + (k & 1) * 0.5) / SIDE) * TAU + t * 3;
+      const c = Math.cos(phi) * R;
+      const s = Math.sin(phi) * R;
+      const o = (k * SIDE + j) * 3;
+      a[o] = cx + c * nx + s * bx;
+      a[o + 1] = cy + c * ny + s * by;
+      a[o + 2] = cz + c * nz + s * bz;
+    }
+  }
+
+  /* form B: ring points are (angle, radius, offset); the core is a small sphere, kept in the same arrays */
+  const th0 = new Float32Array(COUNT);
+  const rad = new Float32Array(COUNT);
+  const off = new Float32Array(COUNT);
+  const ringR = [0.98, 0.84, 0.7];
+  for (let i = 0; i < COUNT; i++) {
+    if (i < RING_N * 3) {
+      const g = (i / RING_N) | 0;
+      const k = i % RING_N;
+      const s = k % 3;
+      th0[i] = ((k / 3) | 0) / (RING_N / 3) * TAU + s * 0.5 + g * 1.3;
+      rad[i] = ringR[g] + (s - 1) * 0.045;
+      off[i] = (s - 1) * 0.045;
+    } else {
+      const j = i - RING_N * 3;
+      const y = 1 - ((j + 0.5) * 2) / RING_N;
+      th0[i] = j * 2.399963229728653; /* golden angle */
+      rad[i] = 0.3 * Math.sqrt(1 - y * y);
+      off[i] = 0.3 * y;
+    }
+  }
+
+  const palA = new Uint8Array(COUNT);
+  const palB = new Uint8Array(COUNT);
+  for (let i = 0; i < COUNT; i++) {
+    palA[i] = rnd(i * 3) > 0.93 ? 4 : rnd(i * 5 + 1) > 0.5 ? 0 : 1;
+    const g = (i / RING_N) | 0;
+    const v = rnd(i * 7 + 2);
+    palB[i] = g === 0 ? (v > 0.2 ? 1 : 0) : g === 1 ? (v > 0.9 ? 4 : v > 0.78 ? 0 : 2) : g === 2 ? (v > 0.45 ? 3 : 1) : v > 0.2 ? 2 : 0;
+  }
+
+  /* Pair the points by where they are, not by their number: both forms are sorted by azimuth around the
+     vertical axis (then by height) and matched in that order, so the change flows round the form
+     instead of scattering. */
+  const tmp = new Float32Array(3);
+  const keyOf = (x: number, y: number, z: number) => Math.floor(((Math.atan2(z, x) + Math.PI) / TAU) * 18) * 10 + clamp01((y + 1.2) / 2.4);
+  const keyA = Float32Array.from({ length: COUNT }, (_, i) => keyOf(a[i * 3], a[i * 3 + 1], a[i * 3 + 2]));
+  const keyB = Float32Array.from({ length: COUNT }, (_, i) => {
+    posB({ th0, rad, off }, i, 0, tmp);
+    return keyOf(tmp[0], tmp[1], tmp[2]);
+  });
+  const byA = Array.from({ length: COUNT }, (_, i) => i).sort((p, q) => keyA[p] - keyA[q]);
+  const byB = Array.from({ length: COUNT }, (_, i) => i).sort((p, q) => keyB[p] - keyB[q]);
+  const pair = new Uint16Array(COUNT);
+  for (let n = 0; n < COUNT; n++) pair[byA[n]] = byB[n];
+
+  return {
+    a,
+    palA,
+    th0,
+    rad,
+    off,
+    palB,
+    pair,
+    glyph: Uint8Array.from({ length: COUNT }, (_, i) => (i * 7 + 3) % NG),
+    delay: Float32Array.from({ length: COUNT }, (_, i) => rnd(i + 0.5) * SPREAD),
+    jit: Float32Array.from({ length: COUNT * 3 }, (_, n) => (rnd(n * 1.7 + 9) - 0.5) * 0.4),
+  };
 }
 
-function smoothstep(a: number, b: number, x: number): number {
-  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
-  return t * t * (3 - 2 * t);
+/* form B at time t: three rings that tilt about different axes, and a core that turns */
+const W0 = 0.42;
+const W1 = -0.33;
+const W2 = 0.27;
+function posB(M: Pick<Model, "th0" | "rad" | "off">, i: number, t: number, out: Float32Array) {
+  const th = M.th0[i];
+  if (i >= RING_N * 3) {
+    const x = Math.cos(th + t * 0.8) * M.rad[i];
+    const z = Math.sin(th + t * 0.8) * M.rad[i];
+    out[0] = x; out[1] = M.off[i]; out[2] = z;
+    return;
+  }
+  const g = (i / RING_N) | 0;
+  const a = th + t * (g === 1 ? -0.5 : 0.5);
+  const lx = Math.cos(a) * M.rad[i];
+  const ly = Math.sin(a) * M.rad[i];
+  const lz = M.off[i];
+  if (g === 0) { /* a ring in the XY plane, tipped about Y */
+    const w = 0.2 + t * W0;
+    const c = Math.cos(w), s = Math.sin(w);
+    out[0] = lx * c + lz * s; out[1] = ly; out[2] = -lx * s + lz * c;
+  } else if (g === 1) { /* a ring in the YZ plane, tipped about Z */
+    const w = 1.1 + t * W1;
+    const c = Math.cos(w), s = Math.sin(w);
+    const wx = lz, wy = lx, wz = ly;
+    out[0] = wx * c - wy * s; out[1] = wx * s + wy * c; out[2] = wz;
+  } else { /* a ring in the ZX plane, tipped about X */
+    const w = 2.2 + t * W2;
+    const c = Math.cos(w), s = Math.sin(w);
+    const wx = ly, wy = lz, wz = lx;
+    out[0] = wx; out[1] = wy * c - wz * s; out[2] = wy * s + wz * c;
+  }
 }
 
 export function GlyphField() {
   const wrapRef = useRef<HTMLDivElement>(null);
   const cvRef = useRef<HTMLCanvasElement>(null);
-  const lightRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const wrap = wrapRef.current;
     const cv = cvRef.current;
-    const light = lightRef.current;
-    if (!wrap || !cv) return;
-    const lightDot = (light?.firstElementChild as HTMLElement | null) ?? null;
-    const ctx = cv.getContext("2d");
-    if (!ctx) return;
+    const ctx = cv?.getContext("2d");
+    if (!wrap || !cv || !ctx) return;
     const host = wrap.closest<HTMLElement>("[data-lp-box]") ?? wrap;
-
+    const stage = host.closest<HTMLElement>(".lp-stage") ?? host;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const fine = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
-    const drift = !reduce && !fine; /* touch: the patch wanders on its own */
+    const live = !reduce;
 
-    /* geometry: device pixels unless the name says css */
+    const M = buildModel();
+    const cur = new Float32Array(3);
+    const sx = new Float32Array(COUNT);
+    const sy = new Float32Array(COUNT);
+    const sz = new Float32Array(COUNT);
+    const sc = new Uint8Array(COUNT);
+    const order = new Uint16Array(COUNT).map((_, i) => i);
+
     let dpr = 1;
-    let cssW = 0;
-    let cssH = 0;
-    let W = 0;
-    let H = 0;
-    let cw = 8;
-    let ch = 8;
-    let cols = 0;
-    let rows = 0;
-    let n = 0;
-    let lobes: readonly Lobe[] = WIDE;
-    let radiusCss = 118;
-    let fontFamily = 'ui-monospace, "SF Mono", Menlo, monospace';
+    let cs = 20; /* atlas cell, device px */
     let atlas: HTMLCanvasElement | null = null;
-    let veil: HTMLCanvasElement | null = null;
-    let tileW = 0;
-    let tileH = 0;
-
-    /* per cell */
-    let thr = new Float32Array(0); /* the field must exceed this for the cell to show */
-    let gly = new Uint8Array(0);
-    let col = new Uint8Array(0);
-    let bias = new Int8Array(0);
-    let dust = new Uint8Array(0);
-    let vis = new Uint8Array(0);
-    let lvl = new Uint8Array(0);
-    let cov = new Float32Array(0); /* pointer coverage, 0..1 */
-    let seen = new Uint32Array(0);
-    let drawn = new Uint32Array(0); /* what is on the canvas now (0 = empty) */
-    let inDirty = new Uint8Array(0);
-    let dirty = new Uint32Array(0);
-    let dcount = 0;
-    let fadeV = new Float32Array(0);
-    const lx = new Float32Array(8);
-    const ly = new Float32Array(8);
-    const active = new Set<number>();
-    /* x, y: the pointer in field coordinates (computed once per frame); clientX/Y: as last reported;
-       ax, ay and last: where and when it last really moved */
-    const ptr = { x: -9999, y: -9999, clientX: 0, clientY: 0, ax: -9999, ay: -9999, last: -1e9, inside: false };
-
-    let frameId = 0;
+    let fontFamily = "ui-monospace, monospace";
+    let inView = false;
+    let open = host.dataset.live === "1";
     let raf = 0;
-    let timer = 0;
-    let inView = true;
-    let ready = false;
-    let scrolling = false;
-    let scrollTimer = 0;
-    let lightOn = false;
-    let lastTick = 0;
-    let lastFrame = 0;
-    const t0 = performance.now();
+    let lastDraw = 0;
+    let lastQ = -1;
+    /* Turning by hand. The automatic motion keeps its own clock and the hand adds an offset on top, so letting
+       go never changes how the form drifts; it just carries on from where it was left. */
+    let clock = 0;
+    let autoYaw = 0;
+    let userYaw = 0;
+    let userPitch = 0;
+    let velYaw = 0;
+    let velPitch = 0;
+    let dragging = false;
+    let pointerId = -1;
+    let lastX = 0;
+    let lastY = 0;
+    let lastMoveAt = 0;
+    let leanX = 0;
+    let leanY = 0;
+    let leanTX = 0;
+    let leanTY = 0;
 
-    const opened = () => host.dataset.live !== "0"; /* the opening is still too small to show the field */
-    const canRun = () => ready && inView && !document.hidden && opened() && !reduce;
-    const isMoving = (now: number) => ptr.inside && now - ptr.last < STILL_MS;
+    const readQ = () => parseFloat(stage.style.getPropertyValue("--q")) || 0;
 
     function readFont() {
       const probe = document.createElement("span");
@@ -167,465 +255,265 @@ export function GlyphField() {
       if (fam) fontFamily = fam;
     }
 
-    /* every glyph, in every colour and tone, drawn once into a sheet; cells are then copied from it */
-    function buildAtlas(fontPx: number) {
+    /* every character in every colour, drawn once */
+    function buildAtlas() {
+      cs = Math.max(12, Math.round(20 * dpr));
       atlas = document.createElement("canvas");
-      atlas.width = cw * NG;
-      atlas.height = ch * 12;
+      atlas.width = cs * NG;
+      atlas.height = cs * PALETTE.length;
       const a = atlas.getContext("2d");
       if (!a) return;
-      a.font = `500 ${Math.round(fontPx * dpr)}px ${fontFamily}`;
       a.textAlign = "center";
       a.textBaseline = "middle";
-      for (let c = 0; c < 3; c++) {
-        for (let l = 0; l < 4; l++) {
-          const [r, g, b] = RGB[c];
-          a.fillStyle = `rgba(${r},${g},${b},${ALPHA[l]})`;
-          for (let k = 0; k < NG; k++) a.fillText(GLYPHS[k], k * cw + cw / 2, (c * 4 + l) * ch + ch / 2 + dpr);
-        }
+      a.font = `500 ${Math.round(cs * 0.68)}px ${fontFamily}`;
+      for (let c = 0; c < PALETTE.length; c++) {
+        const [r, g, b] = PALETTE[c];
+        a.fillStyle = `rgb(${r},${g},${b})`;
+        for (let k = 0; k < NG; k++) a.fillText(GLYPHS[k], k * cs + cs / 2, c * cs + cs / 2 + dpr * 0.5);
       }
     }
 
-    /* the patchwork tile, twice over in both directions, so a cell can be cut from it anywhere */
-    function loadVeil() {
-      const img = new Image();
-      img.onload = () => {
-        const tw = Math.round(VEIL_W * dpr);
-        const th = Math.round(VEIL_H * dpr);
-        const c = document.createElement("canvas");
-        c.width = tw * 2;
-        c.height = th * 2;
-        const v = c.getContext("2d");
-        if (!v) return;
-        for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) v.drawImage(img, i * tw, j * th, tw, th);
-        v.fillStyle = "rgba(6,9,18,.08)"; /* barely darker: the cloth keeps its colour */
-        v.fillRect(0, 0, c.width, c.height);
-        veil = c;
-        tileW = tw;
-        tileH = th;
-        for (const i of active) {
-          drawn[i] = 0xffffffff; /* sealed cells drawn flat so far: draw them again */
-          mark(i);
-        }
-        schedule();
-      };
-      img.src = "/landing/veil.svg";
+    function size() {
+      const w = cv!.clientWidth;
+      const h = cv!.clientHeight;
+      if (!w || !h) return false;
+      const d = Math.min(window.devicePixelRatio || 1, 2);
+      const pw = Math.round(w * d);
+      const ph = Math.round(h * d);
+      if (cv!.width !== pw || cv!.height !== ph || d !== dpr || !atlas) {
+        dpr = d;
+        cv!.width = pw;
+        cv!.height = ph;
+        buildAtlas();
+      }
+      return true;
     }
 
-    function mark(i: number) {
-      if (inDirty[i]) return;
-      inDirty[i] = 1;
-      dirty[dcount++] = i;
-    }
-
-    function build() {
-      const w = wrap!.offsetWidth;
-      const h = wrap!.offsetHeight;
-      if (w < 2 || h < 2) return;
-      cssW = w;
-      cssH = h;
-      dpr = Math.min(window.devicePixelRatio || 1, 1.5); /* a 2x canvas is four times the pixels for glyphs this small */
-      const compact = w < 760;
-      cw = Math.round((compact ? 13 : 17) * dpr);
-      ch = Math.round((compact ? 18 : 23) * dpr);
-      radiusCss = compact ? 74 : 100;
-      W = Math.round(w * dpr);
-      H = Math.round(h * dpr);
-      cv!.width = W;
-      cv!.height = H;
-      ctx!.imageSmoothingEnabled = false;
-      cols = Math.ceil(W / cw);
-      rows = Math.ceil(H / ch);
-      n = cols * rows;
-      lobes = w >= 860 ? WIDE : NARROW;
-
-      thr = new Float32Array(n);
-      gly = new Uint8Array(n);
-      col = new Uint8Array(n);
-      bias = new Int8Array(n);
-      dust = new Uint8Array(n);
-      vis = new Uint8Array(n);
-      lvl = new Uint8Array(n);
-      cov = new Float32Array(n);
-      seen = new Uint32Array(n);
-      drawn = new Uint32Array(n);
-      inDirty = new Uint8Array(n);
-      dirty = new Uint32Array(n);
-      dcount = 0;
-      fadeV = new Float32Array(rows);
-      active.clear();
-
-      for (let r = 0; r < rows; r++) {
-        const v = ((r + 0.5) * ch) / H;
-        /* quiet under the navigation and over the marquee */
-        fadeV[r] = smoothstep(0.03, 0.12, v) * (1 - smoothstep(0.84, 0.93, v));
+    function draw(now: number) {
+      if (!atlas || !cv || !ctx) return;
+      const w = cv.width;
+      const h = cv.height;
+      ctx.clearRect(0, 0, w, h);
+      const dt = lastDraw ? Math.min(0.1, (now - lastDraw) / 1000) : 0;
+      lastDraw = now;
+      if (live && !dragging) {
+        clock += dt;
+        autoYaw += dt * 0.28;
       }
-      for (let r = 0; r < rows; r++) {
-        const upper = ((r + 0.5) * ch) / H < 0.5;
-        for (let c = 0; c < cols; c++) {
-          const i = r * cols + c;
-          thr[i] = hash(c, r, 5) < 0.09 ? 9 : hash(c, r, 7) * 0.32; /* a few cells never show: holes in the cloud */
-          gly[i] = (hash(c, r, 17) * NG) | 0;
-          const k = hash(c, r, 23);
-          col[i] = upper ? (k < 0.62 ? 0 : k < 0.92 ? 2 : 1) : k < 0.62 ? 1 : k < 0.9 ? 0 : 2;
-          const b = hash(c, r, 31);
-          bias[i] = b < 0.18 ? -1 : b > 0.9 ? 1 : 0;
-          dust[i] = hash(c, r, 71) < 0.006 ? 1 : 0;
-        }
+      if (!dragging) {
+        /* after a flick the turn glides to a stop, and a tilt given by hand eases back to level */
+        userYaw += velYaw * dt;
+        userPitch += velPitch * dt;
+        const k = Math.exp(-3 * dt);
+        velYaw *= k;
+        velPitch *= k;
+        userPitch *= Math.exp(-0.5 * dt);
       }
-      buildAtlas(compact ? 12 : 14);
-      ready = true;
-      tickField((performance.now() - t0) / 1000);
-      flush(performance.now());
-    }
+      const lk = 1 - Math.exp(-4 * dt);
+      leanX += (leanTX - leanX) * lk;
+      leanY += (leanTY - leanY) * lk;
 
-    /* The field. Each cell shows while the field is above its own threshold, so a cloud is dense in
-       the middle, scattered at the edge, and its edge keeps moving as the field does. */
-    function tickField(t: number) {
-      const L = lobes.length;
-      for (let k = 0; k < L; k++) {
-        const l = lobes[k];
-        lx[k] = l[0] + l[4] * Math.sin(t * l[5] + l[7]);
-        ly[k] = l[1] + l[4] * 0.7 * Math.cos(t * l[6] + l[7] * 1.7);
-      }
-      for (let r = 0; r < rows; r++) {
-        const y = ((r + 0.5) * ch) / dpr;
-        const v = y / cssH;
-        const fv = fadeV[r];
-        for (let c = 0; c < cols; c++) {
-          const i = r * cols + c;
-          let v1 = 0;
-          let l1 = 0;
-          if (dust[i]) {
-            v1 = fv > 0.5 ? 1 : 0;
-          } else if (fv > 0.001) {
-            const x = ((c + 0.5) * cw) / dpr;
-            const u = x / cssW;
-            let m = -1;
-            for (let k = 0; k < L; k++) {
-              const dx = (u - lx[k]) / lobes[k][2];
-              const dy = (v - ly[k]) / lobes[k][3];
-              const kk = 1 - dx * dx - dy * dy;
-              if (kk > m) m = kk;
-            }
-            if (m > -0.5) {
-              const n1 = vnoise(x / 150 + t * 0.045, y / 120 - t * 0.032, 11);
-              const n2 = vnoise(x / 52 - t * 0.07, y / 44 + t * 0.05, 29);
-              const f = (m + (n1 - 0.5) * 0.7 + (n2 - 0.5) * 0.3) * fv;
-              if (f > thr[i]) {
-                v1 = 1;
-                l1 = Math.min(3, Math.max(0, Math.floor((f - thr[i]) * 4.4) + bias[i]));
-              }
-            }
-          }
-          if (v1 !== vis[i] || l1 !== lvl[i]) {
-            vis[i] = v1;
-            lvl[i] = l1;
-            mark(i);
-          }
-        }
-      }
-    }
+      const q = live ? readQ() : 0;
+      lastQ = q;
+      const m = live ? clamp01((q - Q_FROM) / (Q_TO - Q_FROM)) : 0;
+      const t = live ? clock : 0.6;
+      const yaw = 0.35 + (live ? autoYaw + q * 2.4 : 0) + userYaw + leanX * 0.45;
+      const pitch = 0.42 + (live ? Math.sin(clock * 0.35) * 0.05 : 0) + userPitch + leanY * 0.25;
+      const cy = Math.cos(yaw), sy_ = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+      const minDim = Math.min(w, h);
+      const wide = w > h * 1.25;
+      const Rr = minDim * (wide ? 0.34 : 0.3);
+      const cxp = w * (wide ? 0.6 : 0.5);
+      const cyp = h * (wide ? 0.5 : 0.36);
+      const base = Math.min(22, Math.max(13, minDim / dpr / 42)) * dpr;
 
-    /* a few cells change character each step, so the clouds are never still */
-    function flicker() {
-      const k = Math.max(6, (n * 0.012) | 0);
-      for (let j = 0; j < k; j++) {
-        const i = (Math.random() * n) | 0;
-        if (!vis[i]) continue;
-        gly[i] = (gly[i] + 1 + ((Math.random() * (NG - 1)) | 0)) % NG;
-        mark(i);
-      }
-    }
-
-    /* influence: the pointer is really moving, so it acts on the cells around it; without it every cell
-       just lifts, slowly, until the field is as it was */
-    function updatePointer(dt: number, influence: boolean) {
-      frameId++;
-      const kUp = 1 - Math.exp(-dt * 24);
-      const kDown = 1 - Math.exp(-dt * (influence ? LIFT_MOVING : LIFT_STILL));
-      if (influence) {
-        const px = ptr.x * dpr;
-        const py = ptr.y * dpr;
-        const rc = Math.ceil((radiusCss * dpr) / cw) + 1;
-        const rr = Math.ceil((radiusCss * dpr) / ch) + 1;
-        const cx0 = Math.floor(px / cw);
-        const cy0 = Math.floor(py / ch);
-        for (let y = Math.max(0, cy0 - rr); y <= Math.min(rows - 1, cy0 + rr); y++) {
-          for (let x = Math.max(0, cx0 - rc); x <= Math.min(cols - 1, cx0 + rc); x++) {
-            const dx = ((x + 0.5) * cw - px) / dpr;
-            const dy = ((y + 0.5) * ch - py) / dpr;
-            const dd = Math.sqrt(dx * dx + dy * dy) / radiusCss;
-            if (dd >= 1) continue;
-            const target = 1 - dd * dd;
-            const i = y * cols + x;
-            const c = cov[i];
-            cov[i] = c + (target - c) * (target > c ? kUp : kDown);
-            seen[i] = frameId;
-            active.add(i);
-            mark(i);
-          }
-        }
-      }
-      for (const i of active) {
-        if (seen[i] !== frameId) {
-          const c = cov[i] * (1 - kDown);
-          if (c < 0.02) {
-            cov[i] = 0;
-            active.delete(i);
+      for (let i = 0; i < COUNT; i++) {
+        const o = i * 3;
+        let x = M.a[o], y = M.a[o + 1], z = M.a[o + 2];
+        let pal = M.palA[i];
+        const lp = clamp01((m - M.delay[i]) / (1 - SPREAD));
+        if (lp > 0) {
+          const bi = M.pair[i];
+          posB(M, bi, t, cur);
+          if (lp >= 1) {
+            x = cur[0]; y = cur[1]; z = cur[2];
+            pal = M.palB[bi];
           } else {
-            cov[i] = c;
+            const e = ease(lp);
+            const arc = Math.sin(Math.PI * e);
+            x += (cur[0] - x) * e + M.jit[o] * arc;
+            y += (cur[1] - y) * e + M.jit[o + 1] * arc;
+            z += (cur[2] - z) * e + M.jit[o + 2] * arc;
+            if (e >= 0.5) pal = M.palB[bi];
           }
-          mark(i);
         }
+        sc[i] = pal;
+        const x1 = x * cy + z * sy_;
+        const z1 = -x * sy_ + z * cy;
+        const y1 = y * cp - z1 * sp;
+        const z2 = y * sp + z1 * cp;
+        const s = CAMERA / (CAMERA - z2);
+        sx[i] = cxp + x1 * s * Rr;
+        sy[i] = cyp + y1 * s * Rr;
+        sz[i] = z2;
       }
-    }
 
-    /* a patch that is not wanted any more (the opening closed, or the hero is zoomed away) goes at once */
-    function clearPatch() {
-      if (active.size) {
-        for (const i of active) {
-          cov[i] = 0;
-          mark(i);
+      /* far to near; the order hardly changes between frames, so an insertion sort is nearly free */
+      for (let n = 1; n < COUNT; n++) {
+        const idx = order[n];
+        const z = sz[idx];
+        let j = n - 1;
+        while (j >= 0 && sz[order[j]] > z) {
+          order[j + 1] = order[j];
+          j--;
         }
-        active.clear();
-        flush(performance.now());
+        order[j + 1] = idx;
       }
-      ptr.last = -1e9; /* whatever the pointer was doing, the field starts again from "still" */
-      if (lightOn) {
-        lightOn = false;
-        if (light) light.dataset.on = "0";
+      for (let n = 0; n < COUNT; n++) {
+        const i = order[n];
+        const dz = clamp01((sz[i] + 1.3) / 2.6);
+        const s = CAMERA / (CAMERA - sz[i]);
+        const dw = base * s * (0.62 + 0.5 * dz);
+        ctx.globalAlpha = 0.14 + 0.62 * Math.pow(dz, 1.25);
+        ctx.drawImage(atlas, M.glyph[i] * cs, sc[i] * cs, cs, cs, sx[i] - dw / 2, sy[i] - dw / 2, dw, dw);
       }
+      ctx.globalAlpha = 1;
     }
 
-    /* What a cell should look like right now, as one number (0 is empty). Layout, from the low bits:
-         0-3 character   4-5 tone   6-7 colour          (a character)
-         8-10 cloth opacity step   11 a character shows through   (cloth, kind 2)
-         14-15 kind: 0 character, 1 character being scrambled, 2 cloth */
-    function keyOf(i: number, now: number): number {
-      const c = cov[i];
-      if (c > CLOTH_LO) {
-        const a = Math.min(7, ((c - CLOTH_LO) * (8 / (1 - CLOTH_LO))) | 0);
-        let k = (2 << 14) | (a << 8);
-        /* until the cloth is nearly opaque the data underneath still shows through it, so it lifts like a veil */
-        if (a < 5 && vis[i]) k |= (1 << 11) | (col[i] << 6) | (lvl[i] << 4) | gly[i];
-        return 1 + k;
-      }
-      if (c > RING_LO) {
-        /* The edge of the patch: characters scrambling. As the cloth lifts, fewer and fewer cells still
-           scramble (each cell has its own turn, so it thins out like dust instead of vanishing as one
-           block) and the ones that do get dimmer; the others are already their normal selves again. */
-        const t = (c - RING_LO) / (CLOTH_LO - RING_LO);
-        if (hash(i, 0, 29) < t * t * (3 - 2 * t)) {
-          const g = (hash(i, (now / 85) | 0, 9) * NG) | 0;
-          const orange = hash(i, 0, 13) < 0.6 ? 1 : 0;
-          const tone = c > 0.2 ? 3 : c > 0.13 ? 2 : 1;
-          return 1 + ((1 << 14) | (orange << 6) | (tone << 4) | g);
-        }
-      }
-      if (!vis[i]) return 0;
-      return 1 + ((col[i] << 6) | (lvl[i] << 4) | gly[i]);
-    }
-
-    function drawGlyph(k: number, x: number, y: number) {
-      ctx!.drawImage(atlas!, (k & 15) * cw, (((k >> 6) & 3) * 4 + ((k >> 4) & 3)) * ch, cw, ch, x, y, cw, ch);
-    }
-
-    function paintCell(i: number, key: number) {
-      const x = (i % cols) * cw;
-      const y = ((i / cols) | 0) * ch;
-      ctx!.clearRect(x, y, cw, ch);
-      if (!key) return;
-      const k = key - 1;
-      if (k >> 14 === 2) {
-        if ((k >> 11) & 1) drawGlyph(k, x, y);
-        const alpha = 0.16 + ((k >> 8) & 7) * 0.115;
-        if (veil) {
-          ctx!.globalAlpha = alpha;
-          ctx!.drawImage(veil, x % tileW, y % tileH, cw, ch, x, y, cw, ch);
-          ctx!.globalAlpha = 1;
-        } else {
-          ctx!.fillStyle = `rgba(12,18,36,${alpha.toFixed(2)})`;
-          ctx!.fillRect(x, y, cw, ch);
-        }
-        return;
-      }
-      drawGlyph(k, x, y);
-    }
-
-    function flush(now: number) {
-      if (!atlas) return;
-      for (let j = 0; j < dcount; j++) {
-        const i = dirty[j];
-        inDirty[i] = 0;
-        const key = keyOf(i, now);
-        if (key !== drawn[i]) {
-          drawn[i] = key;
-          paintCell(i, key);
-        }
-      }
-      dcount = 0;
-    }
-
-    function loop() {
+    const canRun = () => live && open && inView && !document.hidden;
+    const frame = (now: number) => {
       raf = 0;
-      timer = 0;
       if (!canRun()) return;
-      const now = performance.now();
-      /* while the page scrolls the field rests: the pointer acts on nothing and the clouds hold still,
-         but a patch that is already there keeps lifting, so it can never be left hanging */
-      const moving = !scrolling && isMoving(now);
-      const acting = moving || (drift && !scrolling);
-      const busy = acting || active.size > 0;
-      const dt = busy ? Math.min(0.05, Math.max(0.001, (now - (lastFrame || now - 16)) / 1000)) : 0;
-      lastFrame = busy ? now : 0;
-
-      if (drift) {
-        if (acting) {
-          const tt = (now - t0) / 1000;
-          ptr.x = cssW * (0.5 + 0.34 * Math.sin(tt * 0.31));
-          ptr.y = cssH * (cssW < 860 ? 0.2 + 0.08 * Math.sin(tt * 0.19 + 1.3) : 0.5 + 0.24 * Math.sin(tt * 0.19 + 1.3));
-        }
-      } else if (moving) {
-        /* once per frame, not once per event: the field is scaled while the opening zooms, so ask where it is now */
-        const r = wrap!.getBoundingClientRect();
-        if (r.width > 1 && r.height > 1) {
-          ptr.x = ((ptr.clientX - r.left) / r.width) * cssW;
-          ptr.y = ((ptr.clientY - r.top) / r.height) * cssH;
-        }
-        if (lightDot) {
-          const hr = host.getBoundingClientRect();
-          lightDot.style.transform = `translate3d(${(ptr.clientX - hr.left).toFixed(0)}px, ${(ptr.clientY - hr.top).toFixed(0)}px, 0)`;
-        }
+      if (now - lastDraw >= FRAME_MS) draw(now);
+      raf = requestAnimationFrame(frame);
+    };
+    const kick = () => {
+      if (live) {
+        if (!raf && canRun()) raf = requestAnimationFrame(frame);
+      } else if (inView && size()) {
+        draw(performance.now());
       }
+    };
 
-      if (!scrolling && now - lastTick >= TICK_MS) {
-        lastTick = now;
-        tickField((now - t0) / 1000);
-        flicker();
+    /* While --q moves, draw right after cover-reveal has written it (a microtask after its frame callback),
+       so the form is always in step with the zoom and never a frame behind. */
+    const qWatch = live
+      ? new MutationObserver(() => {
+          if (!canRun() || !atlas) return;
+          if (Math.abs(readQ() - lastQ) > 0.0004) draw(performance.now());
+        })
+      : null;
+    qWatch?.observe(stage, { attributes: true, attributeFilter: ["style"] });
+
+    const onLive = () => {
+      open = host.dataset.live === "1";
+      if (open) {
+        size();
+        kick();
       }
-      if (acting || active.size) updatePointer(dt, acting);
+    };
 
-      /* the soft light behind the copy: on while the pointer moves, fading out slowly (CSS) once it stops */
-      const lit = moving && !drift;
-      if (lit !== lightOn) {
-        lightOn = lit;
-        if (light) light.dataset.on = lit ? "1" : "0";
-      }
-
-      flush(now);
-      schedule();
-    }
-
-    function schedule() {
-      if (raf || timer || !canRun()) return;
-      if (scrolling) {
-        if (active.size) raf = requestAnimationFrame(loop); /* only to let the patch lift */
+    /* grab and drag to turn it: mouse only, so touch scrolling is never intercepted */
+    const DRAG_RAD_PER_PX = 0.011;
+    const onDown = (e: PointerEvent) => {
+      if (e.pointerType !== "mouse" || e.button !== 0 || !canRun()) return;
+      if ((e.target as Element | null)?.closest("a, button, input, select, textarea, label")) return;
+      dragging = true;
+      pointerId = e.pointerId;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      lastMoveAt = e.timeStamp;
+      velYaw = 0;
+      velPitch = 0;
+      host.setPointerCapture(e.pointerId);
+      host.dataset.drag = "1";
+      host.dataset.grab = "1";
+      kick();
+    };
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType !== "mouse") return;
+      if (!dragging) {
+        leanTX = e.clientX / window.innerWidth - 0.5;
+        leanTY = e.clientY / window.innerHeight - 0.5;
         return;
       }
-      if (drift || active.size || isMoving(performance.now())) raf = requestAnimationFrame(loop);
-      else timer = window.setTimeout(loop, TICK_MS);
+      if (e.pointerId !== pointerId) return;
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      const dts = Math.max(0.001, (e.timeStamp - lastMoveAt) / 1000);
+      lastX = e.clientX;
+      lastY = e.clientY;
+      lastMoveAt = e.timeStamp;
+      userYaw += dx * DRAG_RAD_PER_PX;
+      velYaw = velYaw * 0.6 + ((dx * DRAG_RAD_PER_PX) / dts) * 0.4;
+      userPitch = Math.max(-1.2, Math.min(1.2, userPitch - dy * DRAG_RAD_PER_PX));
+      velPitch = velPitch * 0.6 - ((dy * DRAG_RAD_PER_PX) / dts) * 0.4;
+    };
+    const onUp = (e: PointerEvent) => {
+      if (!dragging || e.pointerId !== pointerId) return;
+      dragging = false;
+      delete host.dataset.drag;
+      if (host.hasPointerCapture(e.pointerId)) host.releasePointerCapture(e.pointerId);
+      if (e.timeStamp - lastMoveAt > 120) { velYaw = 0; velPitch = 0; } /* held still before letting go: no glide */
+      velYaw = Math.max(-6, Math.min(6, velYaw));
+      velPitch = Math.max(-6, Math.min(6, velPitch));
+      kick();
+    };
+    const onLeave = (e: PointerEvent) => {
+      if (e.pointerType === "mouse" && !dragging) { leanTX = 0; leanTY = 0; }
+    };
+    if (live) {
+      host.addEventListener("pointerdown", onDown);
+      host.addEventListener("pointermove", onMove);
+      host.addEventListener("pointerup", onUp);
+      host.addEventListener("pointercancel", onUp);
+      host.addEventListener("pointerleave", onLeave);
+      host.addEventListener("lp-live", onLive);
     }
 
-    function onMove(e: PointerEvent) {
-      if (reduce || e.pointerType === "touch") return;
-      ptr.clientX = e.clientX;
-      ptr.clientY = e.clientY;
-      ptr.inside = true;
-      /* only a real move counts: it must have travelled a little from where the last real move was */
-      const dx = e.clientX - ptr.ax;
-      const dy = e.clientY - ptr.ay;
-      if (dx * dx + dy * dy < MOVE_PX * MOVE_PX) return;
-      ptr.ax = e.clientX;
-      ptr.ay = e.clientY;
-      ptr.last = performance.now();
-      if (host.dataset.ptr !== "1") host.dataset.ptr = "1";
-      if (timer) {
-        window.clearTimeout(timer);
-        timer = 0;
-      }
-      schedule();
-    }
-    function onLeave() {
-      ptr.inside = false;
-      schedule();
-    }
-    function onLive() {
-      if (!opened()) clearPatch();
-      schedule();
-    }
-
-    /* Scrolling is the one moment the page cannot spare any GPU time, so the field rests until
-       the scroll has been still for a moment. The twinkle pauses for it; nobody sees that. */
-    function onScroll() {
-      scrolling = true;
-      if (active.size) schedule();
-      window.clearTimeout(scrollTimer);
-      scrollTimer = window.setTimeout(() => {
-        scrolling = false;
-        schedule();
-      }, 160);
-    }
-    function onVisibility() {
-      if (!document.hidden) schedule();
-    }
-
-    window.addEventListener("scroll", onScroll, { passive: true });
-    host.addEventListener("lp-live", onLive);
-    host.addEventListener("pointermove", onMove);
-    host.addEventListener("pointerleave", onLeave);
-    document.addEventListener("visibilitychange", onVisibility);
-
-    const io = new IntersectionObserver((entries) => {
-      inView = entries[0]?.isIntersecting ?? true;
-      if (inView) schedule();
-    });
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        inView = entry.isIntersecting;
+        if (inView) {
+          size();
+          kick();
+        }
+      },
+      { rootMargin: "80px 0px" },
+    );
     io.observe(wrap);
-
-    let rt = 0;
     const ro = new ResizeObserver(() => {
-      window.clearTimeout(rt);
-      rt = window.setTimeout(() => {
-        if (!ready) return;
-        build();
-        schedule();
-      }, 180);
+      if (size() && !live && inView) draw(performance.now());
     });
-    ro.observe(wrap);
+    ro.observe(cv);
+    const onVis = () => kick();
+    document.addEventListener("visibilitychange", onVis);
 
-    /* the sheet is made of the mono face: wait for it, then build; idle time, so first paint is not delayed */
+    readFont();
     let cancelled = false;
     const start = () => {
       if (cancelled) return;
       readFont();
-      build();
-      loadVeil();
-      schedule();
+      atlas = null; /* rebuild with the loaded font */
+      if (size()) kick();
     };
-    const whenIdle = () => {
-      readFont();
-      const f = document.fonts;
-      if (f && f.load) f.load(`500 13px ${fontFamily}`).then(start, start);
-      else start();
-    };
-    const idle = (window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }).requestIdleCallback;
-    if (idle) idle(whenIdle, { timeout: 600 });
-    else window.setTimeout(whenIdle, 60);
+    if (document.fonts?.ready) void document.fonts.ready.then(start);
+    else start();
 
     return () => {
       cancelled = true;
-      ready = false;
       if (raf) cancelAnimationFrame(raf);
-      window.clearTimeout(timer);
-      window.clearTimeout(scrollTimer);
-      window.clearTimeout(rt);
+      qWatch?.disconnect();
       io.disconnect();
       ro.disconnect();
-      window.removeEventListener("scroll", onScroll);
-      document.removeEventListener("visibilitychange", onVisibility);
-      host.removeEventListener("lp-live", onLive);
+      document.removeEventListener("visibilitychange", onVis);
+      host.removeEventListener("pointerdown", onDown);
       host.removeEventListener("pointermove", onMove);
+      host.removeEventListener("pointerup", onUp);
+      host.removeEventListener("pointercancel", onUp);
       host.removeEventListener("pointerleave", onLeave);
+      host.removeEventListener("lp-live", onLive);
+      delete host.dataset.drag;
     };
   }, []);
 
@@ -634,10 +522,7 @@ export function GlyphField() {
       <div className="lp-field" ref={wrapRef} aria-hidden="true">
         <canvas ref={cvRef} />
       </div>
-      {/* the soft light that follows a moving pointer; see .lp-light */}
-      <div className="lp-light" ref={lightRef} aria-hidden="true">
-        <i />
-      </div>
+      <p className="lp-drag-hint" aria-hidden="true">Drag to turn · scroll to change</p>
     </>
   );
 }

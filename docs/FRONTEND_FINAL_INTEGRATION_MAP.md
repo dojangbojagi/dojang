@@ -1,11 +1,11 @@
 # Frontend Final Integration Map
 
-**Updated:** 2026-10-10  
+**Updated:** 2026-10-11
 **Scope:** Current frontend integration contract. DAO proposal discovery and shared chain evidence were added without changing presentation, Solidity, circuits, or deployment state.
 
 ## Readiness summary
 
-The shared wallet providers, typed hooks, ABIs, and protocol services exist. The `/dojang`, `/bojagi`, `/vault`, and `/lending` routes already render components connected to those hooks. Most project-contract actions cannot operate against GIWA Sepolia until real project addresses are deployed and configured. DAO now has a bounded, read-only proposal page hook and support in the shared chain evidence service. It still has no route, page component, or navigation entry.
+The shared wallet providers, typed hooks, ABIs, and protocol services exist. The `/dojang`, `/bojagi`, `/vault`, `/lending`, and `/dao` routes render components connected to those interfaces. Most project-contract actions cannot operate against GIWA Sepolia until real project addresses are deployed and configured. DAO proposal discovery uses a bounded read-only feed, and the shared chain evidence service supports DAO contracts.
 
 “Ready for presentation integration” means the typed browser interface exists. It does not mean the project contract is deployed, the RPC is currently available, or an external credential has been observed.
 
@@ -15,27 +15,27 @@ The shared wallet providers, typed hooks, ABIs, and protocol services exist. The
 | Official Dojang | Ready for read-only presentation on `/dojang`. | Requires GIWA RPC. No positive personal credential result is established by the repository checkpoint. The demo vault and lending paths do not use this credential. |
 | Demo credentials and witness | Ready for presentation; `/dojang` has importer and issuer tools. | Requires the deployed project registry, vault binding, and a wallet authorized by the registry. This is a controlled project demo credential, not Dojang. |
 | Bojagi-inspired ZK | Ready for local proof-generation presentation on `/bojagi`. | Requires a matching private witness, active policy-1 demo credential, configured vault address, browser prover assets, and public CRS access. A local proof is not an on-chain verification or transaction. |
-| Restricted Vault | Ready for presentation on `/vault`. | Requires deployed registry, verifier, and vault; a matching current proof; and a GIWA Sepolia wallet. The vault is an access flag and holds no funds. |
+| Restricted Vault | The implemented `/vault` route is legacy/secondary in public information architecture. | Keep its protocol support available. It requires deployed registry, verifier, and vault; a matching current proof; and a GIWA Sepolia wallet. The vault is an access flag and holds no funds. |
 | Lending | Ready for presentation on `/lending`; the current `LendingWorkspace` already calls the lending hooks. | Requires deployed pool, registry and verifier, an issuer-authorized policy-2 demo credential for borrowing, and actual controlled demo token balances/liquidity. It is not production lending. |
-| DAO Governance | Protocol integration surface exists. | Requires a deployed governance address and official Dojang-verified wallets for proposal creation/voting. No `/dao` route or DAO transaction/history evidence adapter exists. |
+| DAO Governance | Ready for presentation on `/dao`; the route uses the governance hook and bounded proposal feed. | Requires a deployed governance address and official Dojang-verified wallets for proposal creation/voting. Proposal and chain evidence remains unavailable until real project contracts are deployed and configured. |
 | Contract evidence | Shared service ready; page integration pending. | The service now reads project code, dependencies, receipts, and bounded logs for configured project contracts, including DAO. The current `/contracts` page still reports configuration only, not verified deployment. |
 
 ## Application architecture and route map
 
 `src/app/layout.tsx` wraps the application in `Providers` from `src/components/providers.tsx`. That provider owns one wagmi configuration, one TanStack Query client, RainbowKit, and the in-memory `DemoWitnessProvider`. `src/lib/config/chain.ts` defines GIWA Sepolia, chain ID `91342`, and its explorer. Do not add page-level wallet providers. Use the existing `ConnectButton` through `WalletControl` or the landing navigation.
 
-The current App Router tree has **seven** routes. The older `FRONTEND_INTEGRATION_HANDOFF.md` still describes six routes; `/lending` is now present. `/dao` does not exist, and neither navigation component links to it.
+The current App Router tree has **eight** routes. The older `FRONTEND_INTEGRATION_HANDOFF.md` still describes six routes; `/dao` and `/lending` are also present.
 
 | Route | Current entry and integration | What the final UI should connect or preserve |
 | --- | --- | --- |
-| `/` | `src/app/page.tsx` renders `LandingPage`. `LandingNav` provides a RainbowKit connect button and links to the current six non-home routes. The landing status helper reads configuration only. | Keep landing presentation and wallet control on the existing provider. Do not label configured-address counts as deployed contracts or application usage. |
-| `/dojang` | `src/app/dojang/page.tsx` uses `useWalletNetwork()` and `useDojangVerification(wallet.address)`. `CredentialWitnessImporter` and `DemoCredentialTools` use the separate policy-1 demo credential/witness path. | Keep official Dojang status and project demo credential status visibly separate. Show issuer, UID, schema, expiry and revocation only from the returned record. Issuance/revocation need deployment and role authorization. |
-| `/bojagi` | `ProofGenerationPanel` calls `useEligibilityProof()`, `useDemoCredential()`, `useWalletNetwork()`, and the witness context. | Present proof creation and local verification as browser-side eligibility proof work. Do not call it a private transfer, anonymous action, or Solidity verification. |
-| `/vault` | `VaultActionPanel` calls `useVaultAccess()`, `useEligibilityProof()`, and `useWalletNetwork()`. | Enter only with a current matching proof on GIWA Sepolia. Show the transaction lifecycle and the `hasAccess` readback; the Vault does not custody or transfer funds. |
+| `/` | `src/app/page.tsx` renders `LandingPage`. `LandingNav` provides a RainbowKit connect button and links to the application routes. The landing status helper reads configuration only. | Lead with Dojang → DAO and Bojagi-inspired ZK → Lending. Keep the existing provider and wallet control. Do not label configured-address counts as deployed contracts or application usage. |
+| `/dojang` | `src/app/dojang/page.tsx` uses `useWalletNetwork()` and `useDojangVerification(wallet.address)`. `CredentialWitnessImporter` and `DemoCredentialTools` use the separate policy-1 demo credential/witness path. | Keep official Dojang status and project demo credential status visibly separate. Connect official verified membership to DAO; describe project-issued credentials as a separate path toward ZK utilities. Show issuer, UID, schema, expiry and revocation only from the returned record. Issuance/revocation need deployment and role authorization. |
+| `/bojagi` | `ProofGenerationPanel` calls `useEligibilityProof()`, `useDemoCredential()`, `useWalletNetwork()`, and the witness context. | Present proof creation and local verification as browser-side eligibility proof work. This policy-1 proof is Vault-specific; Lending has a separate project-issued policy-2 credential/proof. Do not call either path a private transfer, anonymous action, or Solidity verification. |
+| `/vault` | `VaultActionPanel` calls `useVaultAccess()`, `useEligibilityProof()`, and `useWalletNetwork()`. | Keep the route and protocol available as a legacy/secondary technical utility. Show the transaction lifecycle and `hasAccess` readback only after actual state changes; the Vault does not custody or transfer funds. |
 | `/lending` | `LendingWorkspace` calls `useLendingMarket()`, `useLendingCredential()`, `useLendingEligibilityProof(witness)`, and `useWalletNetwork()`. It composes supply, borrow, issuer tools, position and transaction panels. | Keep policy-2 demo credential/proof separate from Dojang DAO membership and the policy-1 Vault proof. Use asset decimals from the pool. State the fixed 1:1 demo price, 50% LTV, zero interest, no oracle, no liquidation, and no supplier yield. |
 | `/contracts` | `src/app/contracts/page.tsx` reads `projectContracts`, `invalidContractConfig`, official addresses, and the pool's token addresses through `LendingAssetRows`. It does **not** call `inspectProjectDeployment`. Its `PROJECT_CONTRACTS` array still has four entries and omits the configured `daoGovernance` key. | The existing rows mean “address configured / unset / invalid,” not code present or source verified. The shared `inspectProjectDeployment` adapter now provides bytecode/dependency evidence for Claude to connect in a presentation-only change. Do not claim deployment from an environment value. |
-| `/docs` | Static explanation plus a count of nonempty `projectContracts` config values. | Make clear that a configuration count is not deployment evidence. The page does not read the DAO hook or on-chain evidence service. |
-| `/dao` (recommended) | No route, page, DAO presentation component, or navigation entry exists. | Recommend a dedicated route for proposal discovery, membership, voting and execution. This audit does not create it; agree route and presentation scope before Claude adds it. |
+| `/docs` | Static protocol explanation plus a count of nonempty `projectContracts` config values. | Summarize the two primary journeys and the distinction between official Dojang and project-issued ZK credentials. Describe Vault as a secondary technical route. Make clear that a configuration count is not deployment evidence. |
+| `/dao` | `src/app/dao/page.tsx` renders `DaoWorkspace`, which uses the governance hook and proposal feed. | Keep official Dojang membership separate from demo credentials and ZK proofs. Show public vote totals and proposal lifecycle; no DAO contract is claimed as deployed. |
 
 ## Wallet, config, and trust boundary
 
@@ -419,7 +419,7 @@ For UI usage/evidence counts, scan only project-owned contract events and state.
 
 ## Integration gaps and checkpoint caveats
 
-- No DAO route/component/nav item exists. The typed `useDaoProposalFeed` hook is ready for presentation integration without a DAO page being implemented here.
+- The `/dao` route and presentation component use `useDaoProposalFeed` for proposal discovery and `useDaoGovernance` for membership/actions.
 - DAO contract code, dependency, receipt, log, and event-ABI evidence are available through the shared adapter. The Contracts page does not yet consume that evidence.
 - Contract page status is configuration-only. `inspectProjectDeployment()` exists for code and dependency evidence but is not wired into that page.
 - The app has separate wallet, credential, proof, Vault, Lending, and DAO state hooks, but no single normalized “all protocol readiness” interface. Compose the existing states in presentation; do not invent a universal success state.
@@ -435,7 +435,7 @@ For UI usage/evidence counts, scan only project-owned contract events and state.
 4. On `/vault`, enable entry only with GIWA wallet, configured deployment, current local proof and no write in flight. Treat access as successful only after receipt and `hasAccess` readback.
 5. Keep `/lending` on `LendingWorkspace` and its hooks. Gate borrow on current policy-2 credential, witness, local proof, collateral and market reads. Use explicit approvals and show every receipt/readback state.
 6. For `/contracts`, distinguish address configuration, code present, dependency readback, receipt evidence, and source verification. The existing page does not yet consume `inspectProjectDeployment` or DAO evidence.
-7. If adding a DAO route is in scope, use `useDaoProposalFeed({ beforeId, pageSize })` for proposal discovery and `useDaoGovernance(id)` for membership/actions. Use `useDojangVerification` for credential detail. Show quorum/timing and For/Against/Abstain; make voting/public membership semantics explicit. Do not use Lending credentials or ZK proofs for DAO authorization.
+7. For the existing `/dao` route, use `useDaoProposalFeed({ beforeId, pageSize })` for proposal discovery and `useDaoGovernance(id)` for membership/actions. Use `useDojangVerification` for credential detail. Show quorum/timing and For/Against/Abstain; make voting/public membership semantics explicit. Do not use Lending credentials or ZK proofs for DAO authorization.
 8. Keep `/docs` and all visual routes honest about no GIWA deployment, local-only evidence, demo issuer boundaries, and external GIWA infrastructure.
 
 ## File ownership boundary
@@ -444,8 +444,8 @@ Claude owns presentation: `src/app/**/page.tsx`, presentation-only components, a
 
 ## Validation record
 
-- `bun run typecheck` — passed.
-- `bun run build` — passed; Next.js generated the existing seven routes (`/`, `/bojagi`, `/contracts`, `/docs`, `/dojang`, `/lending`, `/vault`).
+- `bun run typecheck` — passed on 2026-10-11.
+- `bun run build` — passed on 2026-10-11; Next.js generated eight routes (`/`, `/bojagi`, `/contracts`, `/dao`, `/docs`, `/dojang`, `/lending`, `/vault`).
 - `bun run contracts:test` — 60 passed, 0 failed, 0 skipped across four Foundry suites, including 16 governance tests. Foundry emitted a non-fatal warning that it could not write its external signature cache under the workspace permission boundary.
 
 These are local validation results, not GIWA Sepolia deployment or transaction evidence.

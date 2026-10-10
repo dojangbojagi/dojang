@@ -10,7 +10,16 @@ Next.js App Router foundation for a GIWA Sepolia private eligibility demonstrati
 4. Verify the app and local protocol with `bun run typecheck`, `bun run build`, `bun run contracts:build`, and `bun run contracts:test`.
 5. Recompile and check circuit conformance with `bun run zk:compile` and `bun run zk:conformance`.
 
-The eight routes are `/`, `/dojang`, `/dao`, `/bojagi`, `/vault`, `/lending`, `/contracts`, and `/docs`. `/dao` is verified DAO governance (official Dojang membership, public votes, one governed policy); `/lending` is a proof-gated demonstration market; `/vault` is a proof-gated access flag. The browser proof path creates and locally verifies a Noir/Barretenberg proof when a matching credential witness and deployed context are configured. This workspace has no project contract deployment and no project wallet transactions have been verified.
+The eight routes are `/`, `/dojang`, `/dao`, `/bojagi`, `/vault`, `/lending`, `/contracts`, and `/docs`.
+
+## Product flow
+
+The public story connects two journeys:
+
+1. **Verified governance:** an official GIWA Dojang Verified Address check establishes eligibility for project DAO membership and public voting.
+2. **Private utility:** the controlled Lending demonstration uses its own project-issued policy-2 demo credential and matching Bojagi-inspired ZK eligibility proof. It is not an official Dojang credential and does not implement a Bojagi private transfer. The `/bojagi` policy-1 proof is Vault-specific and cannot be reused for Lending.
+
+The `/vault` route remains implemented and accessible as a legacy/secondary technical demonstration of proof-gated access. It holds no funds and is not a primary product path. The browser prover creates and locally verifies a Noir/Barretenberg proof when a matching credential witness and deployed context are configured. Project contracts have not been deployed in this workspace, and no project wallet transactions have been verified.
 
 Latest local validation checkpoint: `bun run contracts:test` passes 60 Foundry tests (including 16 governance tests), and `bun run typecheck` and `bun run build` pass. These are local results, not GIWA Sepolia deployment or transaction evidence.
 

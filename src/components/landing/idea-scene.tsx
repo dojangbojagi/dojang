@@ -139,7 +139,7 @@ export function IdeaScene() {
       <div className="lp-idea-pin">
         <div className="lp-wrap lp-idea" data-live={live ? "1" : "0"} inert={!live}>
           <div className="lp-idea__copy">
-            <p className="lp-eyebrow lp-ie" style={{ ["--ac" as string]: "var(--lp-blue)" }}>
+            <p className="lp-eyebrow lp-ie" style={{ ["--ac" as string]: "var(--lp-ice)" }}>
               <i aria-hidden="true" />
               01 — The idea
             </p>
