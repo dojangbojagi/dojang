@@ -10,10 +10,10 @@ const LINKS = [
   ["Dojang", "/dojang"],
   ["DAO", "/dao"],
   ["Bojagi", "/bojagi"],
-  ["Vault", "/vault"],
   ["Lending", "/lending"],
   ["Contracts", "/contracts"],
   ["Docs", "/docs"],
+  ["Vault", "/vault"],
 ] as const;
 
 function WalletPill() {

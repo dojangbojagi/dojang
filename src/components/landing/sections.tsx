@@ -4,8 +4,8 @@ import { Arrow } from "./arrow";
 
 /* Story sections between the hero and the curtain footer (01, the idea, is the sticky scene in idea-scene.tsx).
    Copy follows the prototype (docs/01-home.html): no invented numbers, no
-   claims the protocol does not make. Blue always means public / on-chain,
-   orange always means private / on your device. */
+   claims the protocol does not make. Ice blue always means public / on-chain,
+   lime always means private / on your device. */
 
 function Eyebrow({ n, children, ac }: { n: string; children: string; ac?: "blue" | "orange" }) {
   return (
@@ -46,7 +46,7 @@ const STEPS = [
     name: "Verified execution",
     lane: "public",
     where: "On-chain",
-    text: "The vault contract checks the sender, the commitment, the policy and the proof in one transaction, then records access.",
+    text: "A contract checks the sender, the commitment, the policy and the proof in one transaction, then unlocks the action: access in the restricted vault, or a loan in the lending demo.",
     pub: ["The proof and public inputs", "Your wallet address", "The access result and transaction"],
     priv: ["The value stays unpublished"],
   },
@@ -94,36 +94,94 @@ export function PathSection() {
 }
 
 /* ----------------------------------------------------------------- 03 */
-const DESTINATIONS = [
-  ["Dojang", "Inspect official GIWA Verified Address attestations and the separate project demo credential.", "/dojang"],
-  ["DAO Governance", "The flagship utility: verify with official Dojang, then propose and vote on the one policy this contract governs. Votes are public.", "/dao"],
-  ["Bojagi-inspired Protection", "Review the private eligibility policy and proof system readiness.", "/bojagi"],
-  ["Restricted Vault", "Inspect on-chain access state and the proof-gated action.", "/vault"],
-  ["Lending", "Supply, or borrow against collateral with a private eligibility proof: a controlled demonstration market.", "/lending"],
-  ["Contracts", "See official GIWA references and project deployment status.", "/contracts"],
-  ["Protocol Docs", "Read the trust model, data boundaries and current limitations.", "/docs"],
+/* The two ways through the product, each two pages long. A starts from what GIWA already trusts (public,
+   ice blue) and ends in a decision; B starts from a private fact (lime) and ends in an action. The vault is a
+   technical primitive, so it sits in the secondary row, not in either journey. */
+const JOURNEYS = [
+  {
+    key: "a",
+    tone: "public",
+    letter: "A",
+    name: "Verified governance",
+    chip: "Public · verified",
+    text: "Start from what GIWA already trusts, then use it to take part in a decision.",
+    steps: [
+      ["Dojang", "Inspect official GIWA Verified Address attestations and the separate project demo credential.", "/dojang"],
+      ["DAO governance", "Use that verified membership to propose and vote on the one policy this contract governs. Votes are public.", "/dao"],
+    ],
+  },
+  {
+    key: "b",
+    tone: "private",
+    letter: "B",
+    name: "Private utility",
+    chip: "Private · proven",
+    text: "Prove you qualify without showing the value, then unlock an action on-chain.",
+    steps: [
+      ["Bojagi-inspired protection", "Review the private eligibility policy and the proof system behind it.", "/bojagi"],
+      ["Lending", "Supply, or borrow against collateral with a private eligibility proof: a controlled demonstration market.", "/lending"],
+    ],
+  },
 ] as const;
 
-export function ExploreSection() {
+const TECHNICAL = [
+  ["Contracts", "Official GIWA references and project deployment status.", "/contracts"],
+  ["Docs", "The trust model, data boundaries and current limitations.", "/docs"],
+  ["Vault", "The proof-gated access contract, for anyone who wants to inspect it.", "/vault"],
+] as const;
+
+export function JourneysSection() {
   return (
-    <section className="lp-sec" id="explore" aria-labelledby="explore-title">
+    <section className="lp-sec" id="journeys" aria-labelledby="journeys-title">
       <div className="lp-wrap">
-        <Eyebrow n="03" ac="blue">Explore</Eyebrow>
-        <h2 className="lp-h2" id="explore-title" data-lp-reveal style={{ ["--i" as string]: 1 }}>
-          Every part, <em>open</em> to inspect.
+        <Eyebrow n="03" ac="blue">Two journeys</Eyebrow>
+        <h2 className="lp-h2" id="journeys-title" data-lp-reveal style={{ ["--i" as string]: 1 }}>
+          Two ways in. Both end <em>on-chain.</em>
         </h2>
-        <ul className="lp-routes">
-          {DESTINATIONS.map(([title, desc, href], i) => (
-            <li className="lp-route" key={href} data-spot data-lp-reveal={i % 2 ? "right" : "left"} style={{ ["--i" as string]: Math.min(i, 3) }}>
-              <Link href={href}>
-                <span className="lp-route__idx">{`0${i + 1}`}</span>
-                <span className="lp-route__title">{title}</span>
-                <span className="lp-route__desc">{desc}</span>
-                <span className="lp-route__arrow"><Arrow /></span>
-              </Link>
-            </li>
+        <p className="lp-lead" data-lp-reveal style={{ ["--i" as string]: 2 }}>
+          Verify first, then govern. Or prove privately, then borrow. Each journey is two pages, in order.
+        </p>
+
+        <div className="lp-jn">
+          {JOURNEYS.map((j, ji) => (
+            <article className="lp-jn__lane" data-tone={j.tone} key={j.key} data-lp-reveal={ji ? "right" : "left"} style={{ ["--i" as string]: 1 }}>
+              <header className="lp-jn__head">
+                <span className="lp-jn__letter" aria-hidden="true">{j.letter}</span>
+                <div>
+                  <p className="lp-jn__chip">{j.chip}</p>
+                  <h3>{j.name}</h3>
+                </div>
+              </header>
+              <p className="lp-jn__text">{j.text}</p>
+              <ol className="lp-jn__steps">
+                {j.steps.map(([title, desc, href], si) => (
+                  <li key={href} data-spot>
+                    <Link href={href}>
+                      <span className="lp-jn__idx">{`${j.letter}${si + 1}`}</span>
+                      <span className="lp-jn__title">{title}</span>
+                      <span className="lp-jn__desc">{desc}</span>
+                      <span className="lp-jn__arrow"><Arrow /></span>
+                    </Link>
+                  </li>
+                ))}
+              </ol>
+            </article>
           ))}
-        </ul>
+        </div>
+
+        <div className="lp-tech" data-lp-reveal style={{ ["--i" as string]: 2 }}>
+          <p className="lp-tech__label">Behind both journeys</p>
+          <ul>
+            {TECHNICAL.map(([title, desc, href]) => (
+              <li key={href}>
+                <Link href={href}>
+                  <span className="lp-tech__title">{title}<Arrow /></span>
+                  <span className="lp-tech__desc">{desc}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </section>
   );
@@ -141,10 +199,10 @@ const PHASES = [
     chip: "Verified locally",
     items: [
       "Read-only check of official Dojang Verified Address attestations",
+      "Verified DAO governance: official Dojang membership and public votes, tested locally",
       "A demo credential registry holding issuer-signed commitments",
       "A Noir circuit, proofs made in the browser and a generated Solidity verifier",
-      "A restricted vault that records access only after a verified proof",
-      "Verified DAO governance: official Dojang membership and public votes, tested locally",
+      "A restricted vault, the technical primitive that records access only after a verified proof",
     ],
   },
   {

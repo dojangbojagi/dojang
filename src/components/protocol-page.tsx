@@ -7,10 +7,10 @@ const PAGES = [
   { key: "dojang", label: "Dojang", href: "/dojang" },
   { key: "dao", label: "DAO", href: "/dao" },
   { key: "bojagi", label: "Bojagi", href: "/bojagi" },
-  { key: "vault", label: "Vault", href: "/vault" },
   { key: "lending", label: "Lending", href: "/lending" },
   { key: "contracts", label: "Contracts", href: "/contracts" },
   { key: "docs", label: "Docs", href: "/docs" },
+  { key: "vault", label: "Vault", href: "/vault" },
 ] as const;
 
 /** The page being shown. The pager at the foot follows the order of PAGES. */

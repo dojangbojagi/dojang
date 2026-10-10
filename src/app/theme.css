@@ -7,8 +7,8 @@
    the prototype files stay untouched. It loads after them (see layout.tsx).
 
    Same language as the landing (components/landing/landing.css):
-     near-black navy ink, vivid blue = public / on-chain, vivid orange = private / the proof /
-     primary actions. Sora for headings, Hanken Grotesk for text, JetBrains Mono for labels.
+     obsidian ink, ice blue = public / on-chain, lime = private / the proof /
+     primary actions (with a dark label). Sora for headings, Hanken Grotesk for text, JetBrains Mono for labels.
    ========================================================================== */
 
 :root {
@@ -29,8 +29,8 @@
   --text-muted: #94A3B8;
   --text-dim: #6B7A8F;
 
-  /* The protocol colours, re-pointed: trusted state (Dojang) is blue, the private proof
-     (Bojagi) is orange, and the vault and every primary action is the brand orange. */
+  /* The protocol colours, re-pointed: trusted state (Dojang) is ice blue, the private proof
+     (Bojagi) is lime, and the vault and every primary action is the brand lime. */
   --celadon: #7DD3FC;
   --celadon-deep: #3B9BD6;
   --periwinkle: #DDFF9A;
@@ -63,7 +63,7 @@
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* The atmosphere that follows the section in view, in blue and orange */
+/* The atmosphere that follows the section in view, in ice blue and lime */
 body[data-tone="neutral"] { --glow: rgba(125, 211, 252, 0.16); }
 body[data-tone="dojang"] { --glow: rgba(125, 211, 252, 0.22); }
 body[data-tone="bojagi"] { --glow: rgba(200, 255, 106, 0.17); }
@@ -387,8 +387,8 @@ h4 { font-weight: 600; }
 .stub__glyph ul { display: flex; flex-wrap: wrap; justify-content: center; gap: .4rem 1.1rem; margin: 0; padding: 0; list-style: none; }
 .stub__glyph li { display: inline-flex; align-items: center; gap: .45rem; }
 .stub__glyph li::before { content: ""; width: .5rem; height: .5rem; border-radius: 50%; background: var(--k); }
-.stub__glyph li[data-k="public"] { --k: #B3E6FD; }
-.stub__glyph li[data-k="private"] { --k: #DDFF9A; }
+.stub__glyph li[data-k="public"] { --k: #7DD3FC; }
+.stub__glyph li[data-k="private"] { --k: #C8FF6A; }
 .stub__glyph li[data-k="sealed"] { --k: #94A3B8; }
 @keyframes stub-glyph-in { from { opacity: 0; scale: .9; } to { opacity: 1; scale: 1; } }
 @media (max-width: 900px) {

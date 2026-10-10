@@ -73,7 +73,7 @@ export function FinalReveal({ appName }: { appName: string }) {
       <footer className="lp-final" ref={footerRef} aria-labelledby="final-title" inert>
         <div className="lp-final__main">
           <h2 className="lp-final__title" id="final-title">See what your wallet can <em>prove.</em></h2>
-          <p className="lp-final__lead">Check a credential with Dojang, generate a private proof, then enter the vault.</p>
+          <p className="lp-final__lead">Verify with Dojang and take part in the DAO, or prove privately and borrow in the lending demo.</p>
           <div className="lp-actions">
             <Link className="lp-btn lp-btn--primary" href="/dojang">Launch the demo <Arrow /></Link>
             <Link className="lp-btn lp-btn--ghost" href="/docs">Read the docs</Link>
@@ -95,7 +95,6 @@ export function FinalReveal({ appName }: { appName: string }) {
                 <li><Link href="/dojang">Dojang</Link></li>
                 <li><Link href="/dao">DAO governance</Link></li>
                 <li><Link href="/bojagi">Bojagi</Link></li>
-                <li><Link href="/vault">Vault</Link></li>
                 <li><Link href="/lending">Lending</Link></li>
               </ul>
             </nav>
@@ -104,6 +103,7 @@ export function FinalReveal({ appName }: { appName: string }) {
               <ul>
                 <li><Link href="/contracts">Contracts</Link></li>
                 <li><Link href="/docs">Docs</Link></li>
+                <li><Link href="/vault">Vault</Link></li>
               </ul>
             </nav>
             <nav aria-label="GIWA">

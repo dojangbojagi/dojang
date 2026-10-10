@@ -36,7 +36,8 @@ const PALETTE: readonly (readonly [number, number, number])[] = [
   [96, 165, 250], /* 3 cool blue */
   [214, 192, 141], /* 4 champagne, a rare accent */
 ];
-const FRAME_MS = 33;
+const FRAME_MS = 40; /* ~25 frames a second while it drifts; the turn is slow, so it still looks smooth */
+const Q_GONE = 0.8; /* the zoom has faded the field out completely by here (see .lp-field), so there is nothing to draw */
 const CAMERA = 5; /* distance for the perspective; larger = flatter */
 const Q_FROM = 0; /* the camera has not moved yet: form A, fully formed */
 const Q_TO = 0.44; /* form B is complete here, while the field is still two thirds visible */
@@ -277,7 +278,7 @@ export function GlyphField() {
       const w = cv!.clientWidth;
       const h = cv!.clientHeight;
       if (!w || !h) return false;
-      const d = Math.min(window.devicePixelRatio || 1, 2);
+      const d = Math.min(window.devicePixelRatio || 1, 1.5);
       const pw = Math.round(w * d);
       const ph = Math.round(h * d);
       if (cv!.width !== pw || cv!.height !== ph || d !== dpr || !atlas) {
@@ -321,10 +322,10 @@ export function GlyphField() {
       const pitch = 0.42 + (live ? Math.sin(clock * 0.35) * 0.05 : 0) + userPitch + leanY * 0.25;
       const cy = Math.cos(yaw), sy_ = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
       const minDim = Math.min(w, h);
-      const wide = w > h * 1.25;
-      const Rr = minDim * (wide ? 0.34 : 0.3);
-      const cxp = w * (wide ? 0.6 : 0.5);
-      const cyp = h * (wide ? 0.5 : 0.36);
+      /* the canvas is a square placed by CSS (see .lp-form), so the form is simply centred in it */
+      const Rr = minDim * 0.32;
+      const cxp = w / 2;
+      const cyp = h / 2;
       const base = Math.min(22, Math.max(13, minDim / dpr / 42)) * dpr;
 
       for (let i = 0; i < COUNT; i++) {
@@ -380,7 +381,7 @@ export function GlyphField() {
       ctx.globalAlpha = 1;
     }
 
-    const canRun = () => live && open && inView && !document.hidden;
+    const canRun = () => live && open && inView && !document.hidden && readQ() < Q_GONE;
     const frame = (now: number) => {
       raf = 0;
       if (!canRun()) return;
@@ -520,7 +521,7 @@ export function GlyphField() {
   return (
     <>
       <div className="lp-field" ref={wrapRef} aria-hidden="true">
-        <canvas ref={cvRef} />
+        <canvas className="lp-form" ref={cvRef} />
       </div>
       <p className="lp-drag-hint" aria-hidden="true">Drag to turn · scroll to change</p>
     </>

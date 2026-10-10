@@ -28,9 +28,9 @@ const STATES = [
 const CAPTION = "What a verifier sees about the same fact. An illustration, not real data.";
 const IDEA_SHAPES: readonly ShapeId[] = ["sphere", "cube", "seal"];
 const SOLID_LABEL = [
-  "A sphere of readable characters with a few orange ones among them: the private value, exposed.",
+  "A sphere of readable characters with a few lime ones among them: the private value, exposed.",
   "A closed cube of sealed grey cells: the value is hidden, but nothing can check it.",
-  "An orange core that stays sealed, inside a blue ring: the public proof the chain can check.",
+  "A lime core that stays sealed, inside an ice-blue ring: the public proof the chain can check.",
 ] as const;
 const PIN_QUERY = "(min-width: 1024px) and (min-height: 680px)"; /* keep in sync with landing.css */
 const BANDS = [0.33, 0.66];

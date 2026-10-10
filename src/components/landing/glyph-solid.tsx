@@ -2,16 +2,16 @@
 
 import { useEffect, useRef } from "react";
 
-/* The idea scene's picture: one object made of the same hex characters as the hero's clouds, turning
+/* The idea scene's picture: one object made of the same hex characters as the hero's forms, turning
    in 3D and reshaping itself as the story moves on. It replaces the made-up numbers.
 
      0  A public attestation          a sphere of readable characters. Everything is visible, including a few
-                                      orange ones: the private value, exposed.
+                                      lime ones: the private value, exposed.
      1  A private note                a closed cube of grey sealed cells: private, but nothing can check it.
-     2  A sealed credential + proof   an orange core, still sealed, inside a blue ring: the ring is the public
+     2  A sealed credential + proof   a lime core, still sealed, inside an ice-blue ring: the ring is the public
                                       proof. The chain checks the ring; the core is never shown.
 
-   Colour keeps the page's meaning: blue = public / on-chain, orange = private / on your device.
+   Colour keeps the page's meaning: ice blue = public / on-chain, lime = private / on your device.
 
    Cost, because this page must stay light: about 500 sprites copied from a pre-rendered sheet (no text is laid
    out per frame), at most ~30 frames a second, and only while the canvas is on screen and the tab is visible.

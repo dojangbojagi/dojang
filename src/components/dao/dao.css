@@ -1,5 +1,5 @@
 /* Governance page (/dao). Same language as the rest of the app: ink panels, thin lines, mono labels,
-   blue = public / on-chain. It reuses the .lend layout and panel styles from lending.css. */
+   ice blue = public / on-chain. It reuses the .lend layout and panel styles from lending.css. */
 
 .dao-anchor { scroll-margin-top: calc(var(--header-h) + var(--space-4)); }
 .dao-notice { display: block; padding: var(--space-4) var(--space-5); }
