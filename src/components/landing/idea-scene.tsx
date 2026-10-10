@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { GlyphSolid, type SolidState } from "./glyph-solid";
 import { scrollToY } from "./smooth-scroll";
 
 /* 01 · The idea. The same fact, seen three ways by a verifier.
@@ -9,10 +10,13 @@ import { scrollToY } from "./smooth-scroll";
    pinned, and scrolling moves one card through its three states. Everywhere else (phones,
    short windows, reduced motion) the three states are plain rows, from the same copy.
 
-   It also comes in behind the hero: each block marked .lp-ie fades in and rises (64px) as it
-   travels up from the bottom of the screen, scrubbed by scroll position, so it reverses too. */
+   It comes in behind the hero. On the pinned layout the scene is already in its final place while the
+   hero's camera finishes pushing in, and it grows from small to full size (and fades in) over the last
+   ZIN screens of that push: --zk, scrubbed by scroll position, so it reverses too. Everywhere else the
+   blocks marked .lp-ie fade in and rise (64px) as they travel up from the bottom of the screen. */
 
 const RISE = 64; /* px; keep in sync with .lp-ie in landing.css */
+const ZIN = 0.62; /* screens of scroll the scene takes to grow in; keep in sync with --lp-zin in landing.css */
 const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
 
 const STATES = [
@@ -21,7 +25,12 @@ const STATES = [
   { name: "A sealed credential with a proof", note: "The chain learns the answer and nothing else.", tone: "valid", chip: "Trusted and private" },
 ] as const;
 
-const CAPTION = "What a verifier sees about the same fact. Illustrative values, not real data.";
+const CAPTION = "What a verifier sees about the same fact. An illustration, not real data.";
+const SOLID_LABEL = [
+  "A sphere of readable characters with a few orange ones among them: the private value, exposed.",
+  "A closed cube of sealed grey cells: the value is hidden, but nothing can check it.",
+  "An orange core that stays sealed, inside a blue ring: the public proof the chain can check.",
+] as const;
 const PIN_QUERY = "(min-width: 1024px) and (min-height: 680px)"; /* keep in sync with landing.css */
 const BANDS = [0.33, 0.66];
 const HYSTERESIS = 0.025;
@@ -29,6 +38,7 @@ const HYSTERESIS = 0.025;
 export function IdeaScene() {
   const runRef = useRef<HTMLElement>(null);
   const [state, setState] = useState(0);
+  const [live, setLive] = useState(true);
 
   useEffect(() => {
     const run = runRef.current;
@@ -58,16 +68,32 @@ export function IdeaScene() {
       }
     };
 
+    let lastZ = -1;
+    let liveNow = true;
     const update = () => {
       raf = 0;
-      scrub();
+      const vh = window.innerHeight;
+      const r = run.getBoundingClientRect();
       if (!pinned.matches) {
+        scrub();
         run.style.setProperty("--ip", "0");
+        if (lastZ !== 1) { lastZ = 1; run.style.setProperty("--zk", "1"); }
+        if (!liveNow) { liveNow = true; setLive(true); }
         return;
       }
-      const r = run.getBoundingClientRect();
-      const travel = r.height - window.innerHeight;
-      const p = travel > 0 ? Math.min(1, Math.max(0, -r.top / travel)) : 0;
+      /* pinned: the scene sits in its final place from the moment the run reaches the top, and grows in over ZIN screens */
+      const zin = reduced ? 0 : vh * ZIN;
+      const z = zin > 0 ? clamp01(-r.top / zin) : 1;
+      const zk = z;
+      if (Math.abs(zk - lastZ) > 0.002 || (zk === 1) !== (lastZ === 1)) {
+        lastZ = zk;
+        run.style.setProperty("--zk", zk.toFixed(3));
+      }
+      const interactive = z > 0.92;
+      if (interactive !== liveNow) { liveNow = interactive; setLive(interactive); }
+
+      const travel = r.height - vh - zin;
+      const p = travel > 0 ? Math.min(1, Math.max(0, (-r.top - zin) / travel)) : 0;
       if (Math.abs(p - lastP) > 0.002) {
         lastP = p;
         run.style.setProperty("--ip", p.toFixed(3));
@@ -100,16 +126,17 @@ export function IdeaScene() {
   const goTo = (i: number) => {
     const run = runRef.current;
     if (!run) return;
-    const travel = run.offsetHeight - window.innerHeight;
+    const zin = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : window.innerHeight * ZIN;
+    const travel = run.offsetHeight - window.innerHeight - zin;
     const centre = i === 0 ? 0.12 : i === 1 ? 0.5 : 0.88;
-    const top = run.getBoundingClientRect().top + window.scrollY + travel * centre;
+    const top = run.getBoundingClientRect().top + window.scrollY + zin + travel * centre;
     scrollToY(top);
   };
 
   return (
     <section className="lp-idea-run" id="idea" ref={runRef} aria-labelledby="idea-title">
       <div className="lp-idea-pin">
-        <div className="lp-wrap lp-idea">
+        <div className="lp-wrap lp-idea" data-live={live ? "1" : "0"} inert={!live}>
           <div className="lp-idea__copy">
             <p className="lp-eyebrow lp-ie" style={{ ["--ac" as string]: "var(--lp-blue)" }}>
               <i aria-hidden="true" />
@@ -152,15 +179,9 @@ export function IdeaScene() {
                     <h3 key={s.name} data-on={state === i} data-past={state > i}>{s.name}</h3>
                   ))}
                 </div>
-                <div className="lp-vfield">
-                  <span>balance</span>
-                  <span className="lp-vval">
-                    <b className="lp-vval__num">1,250</b>
-                    <span className="lp-vval__veil" role="img" aria-label="Hidden value" />
-                  </span>
-                </div>
+                <GlyphSolid className="lp-solid" state={state as SolidState} label={SOLID_LABEL[state]} />
                 <div className="lp-vrule" aria-hidden={state !== 2}>
-                  <span>meets minimum of 1,000</span>
+                  <span>the rule is met, and the value stays hidden</span>
                   <span className="lp-yes">yes</span>
                 </div>
                 <div className="lp-vchips">
@@ -177,20 +198,18 @@ export function IdeaScene() {
               <p className="lp-ledger__cap">{CAPTION}</p>
               <div className="lp-lrow">
                 <h3>A public attestation</h3>
-                <div className="lp-lrow__view"><u>balance</u><b>1,250</b></div>
+                <GlyphSolid className="lp-solid lp-solid--row" state={0} animated={false} label={SOLID_LABEL[0]} />
                 <span className="lp-chip" data-tone="warn"><i aria-hidden="true" />Trusted, but exposed</span>
               </div>
               <div className="lp-lrow">
                 <h3>A private note</h3>
-                <div className="lp-lrow__view"><u>balance</u><span className="lp-veil" role="img" aria-label="Hidden value" /></div>
+                <GlyphSolid className="lp-solid lp-solid--row" state={1} animated={false} label={SOLID_LABEL[1]} />
                 <span className="lp-chip" data-tone="neutral"><i aria-hidden="true" />Private, but unverifiable</span>
               </div>
               <div className="lp-lrow lp-lrow--proof">
                 <h3>A sealed credential with a proof</h3>
-                <div className="lp-lrow__view">
-                  <u>balance</u><span className="lp-veil" role="img" aria-label="Hidden value" />
-                  <u>meets minimum of 1,000</u><span className="lp-yes">yes</span>
-                </div>
+                <GlyphSolid className="lp-solid lp-solid--row" state={2} animated={false} label={SOLID_LABEL[2]} />
+                <div className="lp-lrow__view"><u>the rule is met, and the value stays hidden</u><span className="lp-yes">yes</span></div>
                 <span className="lp-chip" data-tone="valid"><i aria-hidden="true" />Trusted and private</span>
               </div>
             </div>

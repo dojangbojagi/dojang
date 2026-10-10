@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {ControlledTestToken} from "../src/ControlledTestToken.sol";
 import {DemoCredentialRegistry} from "../src/DemoCredentialRegistry.sol";
 import {EligibilityVerifierAdapter} from "../src/EligibilityVerifierAdapter.sol";
-import {LendingPool} from "../src/LendingPool.sol";
 import {RestrictedVault} from "../src/RestrictedVault.sol";
 import {HonkVerifier} from "../src/generated/EligibilityHonkVerifier.sol";
 
@@ -22,92 +20,47 @@ contract DeployGIWASepolia {
 
     uint256 private constant GIWA_SEPOLIA_CHAIN_ID = 91_342;
 
-    struct Deployment {
-        address registry;
-        address generatedVerifier;
-        address verifierAdapter;
-        address restrictedVault;
-        address lendingAsset;
-        address collateralAsset;
-        address lendingPool;
-        address admin;
-        address issuer;
-    }
-
-    event ProtocolDeployment(
+    event CoreDeployment(
         address indexed registry,
-        address indexed generatedVerifier,
         address indexed verifierAdapter,
-        address restrictedVault,
-        address lendingAsset,
-        address collateralAsset,
-        address lendingPool,
+        address indexed restrictedVault,
+        address generatedVerifier,
         address admin,
         address issuer
     );
 
-    function run() external returns (Deployment memory deployment) {
+    function run() external returns (address registryAddress, address adapterAddress, address vaultAddress) {
         require(block.chainid == GIWA_SEPOLIA_CHAIN_ID, "wrong chain: expected GIWA Sepolia");
 
         address admin = vm.envAddress("GIWA_ADMIN_ADDRESS");
         address issuer = vm.envAddress("GIWA_ISSUER_ADDRESS");
+        address generatedVerifierAddress = vm.envAddress("GIWA_HONK_VERIFIER_ADDRESS");
         require(admin != address(0), "GIWA_ADMIN_ADDRESS is zero");
         require(issuer != address(0), "GIWA_ISSUER_ADDRESS is zero");
         require(issuer != admin, "use a distinct credential issuer account");
+        require(generatedVerifierAddress.code.length > 0, "GIWA_HONK_VERIFIER_ADDRESS has no code");
 
         vm.startBroadcast(admin);
 
         DemoCredentialRegistry registry = new DemoCredentialRegistry();
-        HonkVerifier generatedVerifier = new HonkVerifier();
-        EligibilityVerifierAdapter verifierAdapter = new EligibilityVerifierAdapter(generatedVerifier);
+        EligibilityVerifierAdapter verifierAdapter = new EligibilityVerifierAdapter(
+            HonkVerifier(generatedVerifierAddress)
+        );
         RestrictedVault restrictedVault = new RestrictedVault(registry, verifierAdapter);
-
-        ControlledTestToken lendingAsset = new ControlledTestToken(
-            "GIWA Demo Lending Dollar",
-            "gUSD",
-            6,
-            10 ** 15,
-            admin
-        );
-        ControlledTestToken collateralAsset = new ControlledTestToken(
-            "GIWA Demo Collateral",
-            "gCOL",
-            18,
-            10 ** 27,
-            admin
-        );
-        LendingPool lendingPool = new LendingPool(
-            registry,
-            verifierAdapter,
-            lendingAsset,
-            collateralAsset
-        );
-
         registry.grantRole(registry.ISSUER_ROLE(), issuer);
 
         vm.stopBroadcast();
 
-        deployment = Deployment({
-            registry: address(registry),
-            generatedVerifier: address(generatedVerifier),
-            verifierAdapter: address(verifierAdapter),
-            restrictedVault: address(restrictedVault),
-            lendingAsset: address(lendingAsset),
-            collateralAsset: address(collateralAsset),
-            lendingPool: address(lendingPool),
-            admin: admin,
-            issuer: issuer
-        });
-        emit ProtocolDeployment(
-            deployment.registry,
-            deployment.generatedVerifier,
-            deployment.verifierAdapter,
-            deployment.restrictedVault,
-            deployment.lendingAsset,
-            deployment.collateralAsset,
-            deployment.lendingPool,
-            deployment.admin,
-            deployment.issuer
+        registryAddress = address(registry);
+        adapterAddress = address(verifierAdapter);
+        vaultAddress = address(restrictedVault);
+        emit CoreDeployment(
+            registryAddress,
+            adapterAddress,
+            vaultAddress,
+            generatedVerifierAddress,
+            admin,
+            issuer
         );
     }
 }

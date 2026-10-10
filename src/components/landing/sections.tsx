@@ -127,6 +127,103 @@ export function ExploreSection() {
   );
 }
 
+/* ----------------------------------------------------------------- 04 */
+/* The roadmap states what exists and what does not, from the project's own status notes
+   (docs/LENDING_MVP_ARCHITECTURE.md, docs/FRONTEND_INTEGRATION_HANDOFF.md): no dates, no invented numbers,
+   and nothing is called deployed until its address and receipt exist. */
+const PHASES = [
+  {
+    n: "01",
+    name: "Foundation",
+    status: "done",
+    chip: "Verified locally",
+    items: [
+      "Read-only check of official Dojang Verified Address attestations",
+      "A demo credential registry holding issuer-signed commitments",
+      "A Noir circuit, proofs made in the browser and a generated Solidity verifier",
+      "A restricted vault that records access only after a verified proof",
+    ],
+  },
+  {
+    n: "02",
+    name: "Lending demo",
+    status: "done",
+    chip: "Verified locally",
+    items: [
+      "One proof-gated market with two controlled test tokens",
+      "Supply, collateral, borrow, repay and withdraw, accounted on-chain",
+      "A 50% loan-to-value cap, a fixed 1:1 price and zero interest",
+      "A full interface, run end to end on a local chain",
+    ],
+  },
+  {
+    n: "03",
+    name: "GIWA Sepolia deployment",
+    status: "next",
+    chip: "Next · not deployed",
+    items: [
+      "Deploy and verify the registry, verifier, vault, tokens and pool",
+      "Grant the issuer role and run every flow on the public testnet",
+      "Publish the real addresses and transaction receipts on the Contracts page",
+    ],
+  },
+  {
+    n: "04",
+    name: "Beyond the demo",
+    status: "later",
+    chip: "Not started",
+    items: [
+      "An independent audit before any production claim",
+      "A price oracle, interest, liquidation and bad-debt handling for lending",
+      "Native Bojagi private transfer, which this project does not claim today",
+    ],
+  },
+] as const;
+
+export function RoadmapSection() {
+  return (
+    <section className="lp-sec lp-road" id="roadmap" aria-labelledby="road-title">
+      <div className="lp-wrap">
+        <Eyebrow n="04" ac="blue">Roadmap</Eyebrow>
+        <h2 className="lp-h2" id="road-title" data-lp-reveal style={{ ["--i" as string]: 1 }}>
+          Verified locally. <em className="o">Testnet</em> is next.
+        </h2>
+        <p className="lp-lead" data-lp-reveal style={{ ["--i" as string]: 2 }}>
+          Where the project stands today and what each step needs before it can be claimed. Nothing here is deployed to GIWA Sepolia yet.
+        </p>
+
+        {/* the route: solid where the work is done, dotted where it is not. Decorative; the list below says the same in words. */}
+        <div className="lp-road__map" data-lp-rail aria-hidden="true">
+          <svg className="lp-road__svg lp-road__svg--todo" viewBox="0 0 1000 120" preserveAspectRatio="none" focusable="false">
+            <path d="M375 28 C500 28 500 92 625 92 C750 92 750 28 875 28 L1000 28" />
+          </svg>
+          <svg className="lp-road__svg lp-road__svg--done" viewBox="0 0 1000 120" preserveAspectRatio="none" focusable="false">
+            <path d="M0 92 L125 92 C250 92 250 28 375 28" />
+          </svg>
+          {PHASES.map((ph, i) => (
+            <span className="lp-road__node" data-status={ph.status} key={ph.n} style={{ ["--x" as string]: 12.5 + i * 25, ["--y" as string]: i % 2 ? 23.3 : 76.7 }}>
+              {ph.status === "done" ? "✓" : ph.n}
+            </span>
+          ))}
+        </div>
+
+        <ol className="lp-road__list">
+          {PHASES.map((ph, i) => (
+            <li className="lp-phase" data-status={ph.status} key={ph.n} data-spot data-lp-reveal style={{ ["--i" as string]: i + 1 }}>
+              <p className="lp-phase__top">
+                <span className="lp-phase__n">Phase {ph.n}</span>
+                <span className="lp-chip" data-tone={ph.status === "done" ? "valid" : ph.status === "next" ? "warn" : "neutral"}><i aria-hidden="true" />{ph.chip}</span>
+              </p>
+              <h3>{ph.name}</h3>
+              <ul>{ph.items.map((t) => <li key={t}>{t}</li>)}</ul>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+  );
+}
+
 /* --------------------------------------------------------------- facts */
 export function FactsSection({ contracts }: { contracts: string }) {
   return (

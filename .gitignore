@@ -26,6 +26,8 @@ contracts/lib/
 # Documentation & Handoffs (keep the source-controlled Next.js /docs route)
 /docs/*
 !/docs/LENDING_MVP_ARCHITECTURE.md
+!/docs/DEPLOYMENT_READINESS.md
+!/docs/PROTOCOL_ROADMAP.md
 
 # Playwright output
 playwright-report/

@@ -632,8 +632,11 @@
 .lp-vcard__eye { display: inline-flex; align-items: center; gap: .55rem; flex: none; font: 500 .66rem/1 var(--lp-font-mono); letter-spacing: .16em; text-transform: uppercase; color: var(--lp-blue-hi); }
 .lp-vcard__eye i { position: relative; width: .5rem; height: .5rem; border-radius: 50%; background: currentColor; }
 .lp-vcard__eye i::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 1px solid currentColor; animation: lp-ring 2.6s ease-out infinite; }
-.lp-vcard__body { display: grid; gap: 1.7rem; align-content: start; padding: 2rem 1.5rem 1.6rem; }
+.lp-vcard__body { display: grid; gap: 1.2rem; align-content: start; padding: 2rem 1.5rem 1.6rem; }
 .lp-vtitles { position: relative; height: 3.4rem; }
+/* the object made of characters; drawn by glyph-solid.tsx */
+.lp-solid { display: block; width: 100%; height: clamp(12rem, 35svh, 19rem); }
+.lp-solid--row { height: 10.5rem; }
 .lp-vtitles h3 {
   position: absolute; left: 0; top: 0; max-width: 20ch; font: 700 clamp(1.3rem, 1rem + .85vw, 1.85rem) / 1.12 var(--lp-font-display); letter-spacing: -.015em;
   opacity: 0; transform: translateY(22px); filter: blur(4px);
@@ -641,19 +644,6 @@
 }
 .lp-vtitles h3[data-on="true"] { opacity: 1; transform: none; filter: none; transition-delay: .12s; }
 .lp-vtitles h3[data-past="true"] { transform: translateY(-22px); transition-delay: 0s; }
-.lp-vfield { display: flex; align-items: center; flex-wrap: wrap; gap: 1.2rem; font: 500 1rem/1 var(--lp-font-mono); color: var(--lp-muted); }
-.lp-vval {
-  position: relative; display: inline-grid; place-items: center; min-width: 15rem; height: 4.8rem; overflow: hidden;
-  border-radius: 16px; border: 1px solid var(--lp-line-2); background: rgba(0, 0, 0, .28);
-}
-.lp-vval__num { font: 500 clamp(2rem, 1.4rem + 1.8vw, 3.1rem) / 1 var(--lp-font-mono); color: var(--lp-text); transition: opacity .5s ease, filter .6s ease, transform .8s var(--lp-ease); }
-.lp-vcard:not([data-s="0"]) .lp-vval__num { opacity: 0; filter: blur(10px); transform: scale(.92); }
-.lp-vval__veil {
-  position: absolute; inset: 0; background: #0a0f1c var(--lp-veil) 0 0 / 130px 85px;
-  clip-path: inset(0 100% 0 0); transition: clip-path 1s var(--lp-ease);
-}
-.lp-vval__veil::after { content: ""; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, .3) 50%, transparent 62%); animation: lp-glint 5.5s ease-in-out infinite; }
-.lp-vcard:not([data-s="0"]) .lp-vval__veil { clip-path: inset(0 0 0 0); }
 .lp-vrule {
   display: flex; align-items: center; flex-wrap: wrap; gap: 1rem; font: 500 1rem/1 var(--lp-font-mono); color: var(--lp-muted);
   opacity: 0; transform: translateY(16px); transition: opacity .5s ease, transform .8s var(--lp-ease);
@@ -686,7 +676,14 @@
 .lp-istep[data-on="true"] .lp-istep__note { max-height: 4.5em; opacity: 1; }
 
 @media (min-width: 1024px) and (min-height: 680px) {
-  .lp-idea-run { height: 360svh; }
+  /* The run starts a screen and --lp-zin above the end of the hero's push-in, so the pinned scene is already in its
+     final place while the hero finishes zooming; idea-scene.tsx writes --zk (0..1) and the scene grows from small. */
+  .lp-idea-run { --lp-zin: 62svh; --zk: 0; margin-top: calc(-100svh - var(--lp-zin)); height: calc(360svh + var(--lp-zin)); }
+  .lp-ie { opacity: 1; translate: none; }
+  /* it only becomes visible once the hero is almost gone (--zk .6), so the two never fight; the growth is the same --zk */
+  .lp-idea__copy { opacity: clamp(0, calc((var(--zk) - .6) * 2.5), 1); scale: calc(.7 + .3 * var(--zk)); }
+  .lp-idea__stage { opacity: clamp(0, calc((var(--zk) - .6) * 2.5), 1); scale: calc(.35 + .65 * var(--zk)); }
+  .lp-idea[data-live="0"] { pointer-events: none; }
   .lp-idea-pin { position: sticky; top: 0; height: 100svh; display: flex; align-items: center; padding-block: calc(var(--lp-nav-h) + .5rem) 2rem; }
   .lp-idea { width: 100%; }
   .lp-ledger--static { display: none; }
@@ -763,6 +760,47 @@
 .lp-route:hover .lp-route__arrow { background: var(--rc); border-color: var(--rc); color: #fff; transform: scale(1.1); }
 .lp-route:hover .lp-route__arrow svg { transform: translateX(2px) rotate(-45deg); }
 
+/* ---- 04 Roadmap ---- */
+.lp-road__map { position: relative; height: 7.5rem; margin-top: 3.5rem; }
+.lp-road__svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.lp-road__svg path { fill: none; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.lp-road__svg--done path { stroke: var(--lp-text); stroke-width: 2; }
+.lp-road__svg--todo path { stroke: var(--lp-line-2); stroke-width: 1.5; stroke-dasharray: 3 8; }
+/* the solid part of the route draws itself from the left; the dotted part fades in after it */
+.lp-road__svg--done { clip-path: inset(0 0 0 0); transition: clip-path 1.8s var(--lp-ease) .15s; }
+.lp-road__svg--todo { transition: opacity 1.2s ease .9s; }
+.lp[data-js] .lp-road__map:not([data-rs="in"]) .lp-road__svg--done { clip-path: inset(0 100% 0 0); }
+.lp[data-js] .lp-road__map:not([data-rs="in"]) .lp-road__svg--todo { opacity: 0; }
+.lp-road__node {
+  position: absolute; left: calc(var(--x) * 1%); top: calc(var(--y) * 1%); width: 3rem; height: 3rem; margin: -1.5rem 0 0 -1.5rem;
+  display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--lp-line-2); background: var(--lp-bg); color: var(--lp-dim);
+  font: 500 .86rem/1 var(--lp-font-mono); box-shadow: 0 0 0 7px var(--lp-bg);
+}
+.lp-road__node[data-status="done"] { background: var(--lp-text); border-color: var(--lp-text); color: var(--lp-bg); font-weight: 700; }
+.lp-road__node[data-status="next"] { border-color: var(--lp-orange); color: var(--lp-orange); }
+.lp-road__node[data-status="next"]::after { content: ""; position: absolute; inset: -7px; border-radius: 50%; border: 1px solid var(--lp-orange); animation: lp-ring 2.6s ease-out infinite; }
+.lp-road__node[data-status="later"] { border-style: dashed; }
+
+.lp-road__list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(.8rem, 1.6vw, 1.4rem); margin-top: 1.4rem; }
+.lp-phase {
+  --sc: var(--lp-blue);
+  position: relative; display: grid; align-content: start; gap: .9rem; padding: 1.5rem 1.4rem 1.7rem; border-radius: 22px;
+  border: 1px solid var(--lp-line); background: linear-gradient(180deg, rgba(255, 255, 255, .04), rgba(255, 255, 255, .01));
+  transition: background-color .4s ease, border-color .4s ease;
+}
+.lp-phase[data-status="next"] { border-color: color-mix(in srgb, var(--lp-orange) 55%, transparent); }
+.lp-phase[data-status="later"] { border-style: dashed; border-color: var(--lp-line-2); }
+.lp-phase:hover { border-color: var(--lp-line-2); background-color: rgba(255, 255, 255, .02); }
+.lp-phase[data-status="next"]:hover { border-color: var(--lp-orange); }
+.lp-phase__top { display: grid; justify-items: start; gap: .7rem; }
+.lp-phase__n { font: 500 .7rem/1 var(--lp-font-mono); letter-spacing: .16em; text-transform: uppercase; color: var(--lp-dim); }
+.lp-phase h3 { font: 700 clamp(1.2rem, 1rem + .6vw, 1.5rem) / 1.15 var(--lp-font-display); letter-spacing: -.01em; }
+.lp-phase ul { display: grid; gap: .6rem; padding-top: 1rem; border-top: 1px solid var(--lp-line); }
+.lp-phase li { position: relative; padding-left: 1rem; color: var(--lp-muted); font-size: .92rem; line-height: 1.45; }
+.lp-phase li::before { content: ""; position: absolute; left: 0; top: .52em; width: .38rem; height: .38rem; background: var(--lp-dim); }
+.lp-phase[data-status="done"] li::before { background: var(--lp-text); }
+.lp-phase[data-status="next"] li::before { background: var(--lp-orange); }
+
 /* ---- Status strip ---- */
 .lp-facts { padding-block: clamp(3rem, 2rem + 4vw, 5rem); }
 .lp-facts__grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid var(--lp-line-2); border-radius: 20px; overflow: hidden; }
@@ -775,6 +813,8 @@
 .lp-facts__title { margin-bottom: 1.4rem; }
 
 @media (max-width: 1040px) {
+  .lp-road__map { display: none; }
+  .lp-road__list { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 3rem; }
   .lp-path { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lp-path::before { display: none; }
   .lp-facts__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -789,6 +829,7 @@
   .lp-route__arrow { grid-column: 3; grid-row: 1 / span 2; }
 }
 @media (max-width: 640px) {
+  .lp-road__list { grid-template-columns: 1fr; }
   .lp-path { grid-template-columns: 1fr; }
   .lp-path::before { display: block; left: 1.6rem; right: auto; top: 0; bottom: 0; border-top: 0; border-left: 1px dashed var(--lp-line-2); transform-origin: top; }
   .lp[data-js] .lp-path:not([data-rs="in"])::before { transform: scaleY(0); }
@@ -881,7 +922,7 @@
   .lp-pointer-hint { opacity: 1; }
   .lp[data-phase] .lp-marq { position: relative; background: var(--lp-bg); color: var(--lp-muted); border-top-color: rgba(255, 255, 255, .07); }
   .lp-marq__track { animation: none; }
-  .lp-badge i::after, .lp-hint i::after, .lp-veil::after, .lp-vval__veil::after, .lp-vcard__eye i::after { animation: none; }
+  .lp-badge i::after, .lp-hint i::after, .lp-veil::after, .lp-vcard__eye i::after { animation: none; }
   .lp[data-js] [data-lp-reveal], .lp[data-js] [data-lp-reveal][data-rs] { opacity: 1; translate: none; scale: none; filter: none; transition: none; }
   .lp[data-js] .lp-path::before { transform: none; }
   .lp-spacer { display: none; }
@@ -891,6 +932,10 @@
   .lp-idea-run { height: auto; margin-top: 0; }
   .lp-idea-pin { position: static; height: auto; }
   .lp-ie { --k: 1 !important; }
+  .lp-idea__copy, .lp-idea__stage { opacity: 1; scale: none; }
+  .lp-road__svg--done { clip-path: inset(0) !important; transition: none; }
+  .lp-road__svg--todo { opacity: 1 !important; transition: none; }
+  .lp-road__node[data-status="next"]::after { animation: none; }
   .lp-ledger--static { display: block; }
   .lp-vcard, .lp-idea__steps { display: none; }
   .lp .lp-btn, .lp .lp-pill { transition: none; }

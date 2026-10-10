@@ -44,6 +44,10 @@ export interface ProjectDeploymentEvidence {
   chainId: number;
   contracts: readonly ContractCodeEvidence[];
   dependencies: readonly ContractDependencyEvidence[];
+  discoveryWarnings: readonly {
+    contract: EvidenceContractName;
+    reason: "read-failed";
+  }[];
 }
 
 export interface ProjectEventLog {
@@ -133,6 +137,7 @@ export async function inspectProjectDeployment(
   const chainId = await requireGiwaChain(client);
   const contracts: ContractCodeEvidence[] = [];
   const dependencies: ContractDependencyEvidence[] = [];
+  const discoveryWarnings: ProjectDeploymentEvidence["discoveryWarnings"][number][] = [];
   const codeByAddress = new Map<string, Hex>();
   const configuredByName = new Map(configuredAddresses.map(({ name, address }) => [name, address]));
 
@@ -188,7 +193,7 @@ export async function inspectProjectDeployment(
       }
       if (hasCode) codeByAddress.set(honkVerifier.toLowerCase(), code!);
     } catch {
-      // A contract at the configured address may be the wrong ABI or version.
+      discoveryWarnings.push({ contract: "proofVerifier", reason: "read-failed" });
     }
   }
 
@@ -211,7 +216,7 @@ export async function inspectProjectDeployment(
         matchesConfiguredAddress: sameAddress(actualVerifier, verifier),
       });
     } catch {
-      // Keep the configured code evidence even if an address does not expose this ABI.
+      discoveryWarnings.push({ contract: "restrictedVault", reason: "read-failed" });
     }
   }
 
@@ -254,11 +259,11 @@ export async function inspectProjectDeployment(
         if (hasCode) codeByAddress.set(address.toLowerCase(), code!);
       }
     } catch {
-      // The lending pool may not be deployed or may not match the expected ABI.
+      discoveryWarnings.push({ contract: "lendingPool", reason: "read-failed" });
     }
   }
 
-  return { chainId, contracts, dependencies };
+  return { chainId, contracts, dependencies, discoveryWarnings };
 }
 
 /** Fetches an authentic receipt and logs emitted by configured project contracts. */
