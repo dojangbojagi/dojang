@@ -12,6 +12,8 @@
     "contracts:build": "bash contracts/run-forge.sh build",
     "lending:proof-fixture": "bun circuits/scripts/lending-conformance.mjs",
     "lending:anvil": "bun circuits/scripts/lending-anvil.mjs",
+    "lending:v2:anvil": "bun run contracts:build && bun circuits/scripts/lending-v2-anvil.mjs",
+    "test:lending-v2-adapters": "bun test tests/lending-v2-adapters.test.mjs",
     "governance:anvil": "bun run contracts:build && bun scripts/governance-anvil.mjs",
     "deployment:gas-local": "bun scripts/estimate-giwa-sepolia-deployment-gas.mjs",
     "deployment:simulate": "bash scripts/forge-simulate.sh",

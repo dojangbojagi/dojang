@@ -24,6 +24,7 @@ export const projectContracts = {
   proofVerifier: checkedAddress(appEnv.contracts.proofVerifier),
   restrictedVault: checkedAddress(appEnv.contracts.restrictedVault),
   lendingPool: checkedAddress(appEnv.contracts.lendingPool),
+  lendingPoolV2: checkedAddress(appEnv.contracts.lendingPoolV2),
   daoGovernance: checkedAddress(appEnv.contracts.daoGovernance),
 } as const;
 
