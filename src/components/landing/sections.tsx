@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { GIWA_CHAIN_ID } from "@/lib/config/chain";
+import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
 import { Arrow } from "./arrow";
 
 /* Story sections between the hero and the curtain footer (01, the idea, is the sticky scene in idea-scene.tsx).
@@ -65,7 +65,7 @@ export function PathSection() {
         </p>
         <p className="lp-legend" data-lp-reveal style={{ ["--i" as string]: 3 }}>
           <span className="pv"><i aria-hidden="true" />Private: stays on your device</span>
-          <span className="pb"><i aria-hidden="true" />Public: on GIWA Sepolia</span>
+          <span className="pb"><i aria-hidden="true" />Public: on the selected testnet</span>
         </p>
 
         <ol className="lp-path" data-lp-rail>
@@ -104,10 +104,10 @@ const JOURNEYS = [
     letter: "A",
     name: "Verified governance",
     chip: "Public · verified",
-    text: "Start from what GIWA already trusts, then use it to take part in a decision.",
+    text: "Check official GIWA Dojang separately; Robinhood DAO membership uses a BOJOGAY project-issued policy-4 credential.",
     steps: [
-      ["Dojang", "Inspect official GIWA Verified Address attestations and the separate project demo credential.", "/dojang"],
-      ["DAO governance", "Use that verified membership to propose and vote on the one policy this contract governs. Votes are public.", "/dao"],
+      ["Dojang", "Inspect official GIWA Verified Address attestations and the separate BOJOGAY-issued Robinhood project credentials.", "/dojang"],
+      ["DAO governance", "Use an active policy-4 project credential to propose and vote on Robinhood Testnet. Official Dojang is not used for Robinhood authorization.", "/dao"],
     ],
   },
   {
@@ -116,16 +116,16 @@ const JOURNEYS = [
     letter: "B",
     name: "Private utility",
     chip: "Private · proven",
-    text: "Prove you qualify without showing the value, then unlock an action on-chain.",
+    text: "Use an issuer-delivered policy-3 witness to prove eligibility privately, then act on Robinhood Testnet.",
     steps: [
-      ["Bojagi-inspired protection", "Review the private eligibility policy and the proof system behind it.", "/bojagi"],
-      ["Lending", "Supply, or borrow against collateral with a private eligibility proof: a controlled demonstration market.", "/lending"],
+      ["Bojagi-inspired proof", "Import the private witness for your Robinhood project credential and generate a genuine browser proof.", "/bojagi"],
+      ["Lending", "Use policy 3 to supply or borrow in a controlled test market with test tokens and a synthetic oracle.", "/lending"],
     ],
   },
 ] as const;
 
 const TECHNICAL = [
-  ["Contracts", "Official GIWA references and project deployment status.", "/contracts"],
+  ["Contracts", "Robinhood Testnet project deployments and separate official GIWA references.", "/contracts"],
   ["Docs", "The trust model, data boundaries and current limitations.", "/docs"],
   ["Vault", "The proof-gated access contract, for anyone who wants to inspect it.", "/vault"],
 ] as const;
@@ -247,10 +247,10 @@ export function RoadmapSection() {
       <div className="lp-wrap">
         <Eyebrow n="04" ac="blue">Roadmap</Eyebrow>
         <h2 className="lp-h2" id="road-title" data-lp-reveal style={{ ["--i" as string]: 1 }}>
-          Verified locally. <em className="o">Testnet</em> is next.
+          Robinhood contracts deployed. <em className="o">GIWA</em> deployment remains pending.
         </h2>
         <p className="lp-lead" data-lp-reveal style={{ ["--i" as string]: 2 }}>
-          Where the project stands today and what each step needs before it can be claimed. Nothing here is deployed to GIWA Sepolia yet.
+          The Robinhood Testnet contracts are deployed on chain {ROBINHOOD_TESTNET_CHAIN_ID}. A GIWA Sepolia deployment remains separate and is not claimed here.
         </p>
 
         {/* the route: solid where the work is done, dotted where it is not. Decorative; the list below says the same in words. */}
@@ -295,9 +295,9 @@ export function FactsSection({ contracts }: { contracts: string }) {
           What is live today
         </p>
         <dl className="lp-facts__grid" data-lp-reveal>
-          <div className="lp-fact" data-spot><dt>Network</dt><dd>GIWA Sepolia</dd></div>
-          <div className="lp-fact" data-spot><dt>Chain ID</dt><dd className="mono">{GIWA_CHAIN_ID}</dd></div>
-          <div className="lp-fact" data-spot><dt>Project contracts</dt><dd>{contracts}</dd></div>
+          <div className="lp-fact" data-spot><dt>Demo network</dt><dd>Robinhood Chain Testnet</dd></div>
+          <div className="lp-fact" data-spot><dt>Chain ID</dt><dd className="mono">{ROBINHOOD_TESTNET_CHAIN_ID}</dd></div>
+          <div className="lp-fact" data-spot><dt>GIWA project contracts</dt><dd>{contracts}</dd></div>
           <div className="lp-fact" data-spot><dt>Audit</dt><dd>None</dd></div>
           <div className="lp-fact" data-spot><dt>Funds held</dt><dd>None</dd></div>
         </dl>

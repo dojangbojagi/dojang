@@ -7,6 +7,7 @@ import { DemoCredentialTools } from "@/components/demo-credential-tools";
 import { ProtocolPage } from "@/components/protocol-page";
 import { StateChip } from "@/components/protocol-state";
 import { WalletNetworkCard } from "@/components/wallet-network-card";
+import { RobinhoodProjectCredentialStatus } from "@/components/robinhood-project-credential-status";
 import { useDojangVerification } from "@/hooks/use-dojang-verification";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import { officialDojang } from "@/lib/config/contracts";
@@ -82,11 +83,13 @@ export default function DojangPage() {
           </section>
         </div>
 
+        <RobinhoodProjectCredentialStatus />
+
         <section className="protocol-section" aria-labelledby="demo-path-heading">
           <header className="protocol-section__head">
-            <p className="stub__num">PROJECT DEMO PATH · NOT OFFICIAL</p>
-            <h2 id="demo-path-heading">Separate from official Dojang</h2>
-            <p>The issuer-controlled commitment flow exists for the demo path. It needs the configured project contracts and an authorized issuer wallet, and no issuer keys or credentials are provided by this app.</p>
+            <p className="stub__num">LEGACY GIWA PROJECT DEMO · NOT OFFICIAL</p>
+            <h2 id="demo-path-heading">Legacy GIWA demo credential tools</h2>
+            <p>This separate path uses the GIWA project registry. For Robinhood Testnet project credentials, use the policy status above. Neither path is official Dojang verification, and issuance still requires an authorized issuer.</p>
           </header>
           <div className="protocol-grid protocol-grid--even">
             <CredentialWitnessImporter />

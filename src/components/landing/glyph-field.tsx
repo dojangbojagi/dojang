@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { buildLattice, buildTopology, type HeroForm } from "./hero-forms";
+import { buildLattice, buildTopology, HIDDEN, type HeroForm } from "./hero-forms";
 
 /* The hero's picture: one object made of the same hex characters as the idea scene's, turning slowly
    in 3D on the right of the headline (behind it on narrow screens). It has four forms and the scroll decides
@@ -467,6 +467,7 @@ export function GlyphField() {
         const dw = base * s * (0.62 + 0.5 * dz);
         ctx.globalAlpha = K * (0.2 + 0.8 * Math.pow(dz, 1.25));
         /* the far side of the form falls into burgundy, like silk in shadow; wine and garnet flecks keep their colour */
+        if (sc[i] === HIDDEN) continue; /* a point the current form does not use */
         const col = sc[i] <= 1 && dz < 0.36 ? 3 : sc[i];
         ctx.drawImage(atlas, M.glyph[i] * cs, col * cs, cs, cs, sx[i] - dw / 2, sy[i] - dw / 2, dw, dw);
       }

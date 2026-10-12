@@ -41,13 +41,14 @@ const PROPOSED_PRICES = { rUSD2: "1.00", rCOL2: "2.00" };
 const TOKEN_IDS = { rUSD2: "rUSD2", rCOL2: "rCOL2" };
 const authLabels = {
   price: "oracle-price",
+  "refresh-price": "oracle-price-refresh",
   mint: "token-mint",
   "issue-dao": "credential-policy-4",
   "issue-lending": "credential-policy-3",
 };
 
 function usage() {
-  console.log(`Robinhood Testnet demo bootstrap — chain ${CHAIN_ID}\n\nRead-only:\n  bun run robinhood:bootstrap status\n  bun run robinhood:bootstrap plan\n  bun run robinhood:bootstrap price <rUSD2|rCOL2> <decimal-price>\n  bun run robinhood:bootstrap mint <rUSD2|rCOL2> <wallet> <decimal-amount>\n  bun run robinhood:bootstrap issue-dao <wallet> [expiry-days]\n  bun run robinhood:bootstrap prepare-lending <wallet> <expiry-days> <witness-file>\n  bun run robinhood:bootstrap issue-lending <witness-file>\n  bun run robinhood:bootstrap credential <wallet> <3|4>\n  bun run robinhood:bootstrap participant <wallet>\n  bun run robinhood:bootstrap proposal <proposal-id>\n\nA write requires BOTH --execute and the matching --authorize-public-testnet-write=<label>,\na matching Foundry keystore alias, and a typed confirmation phrase. Simulations are always run first.\n\nWrite authorizations:\n  price:         oracle-price\n  mint:          token-mint\n  issue-dao:     credential-policy-4\n  issue-lending: credential-policy-3\n\nNo command deploys contracts. There is no mainnet mode.`);
+  console.log(`Robinhood Testnet demo bootstrap — chain ${CHAIN_ID}\n\nRead-only:\n  bun run robinhood:bootstrap status\n  bun run robinhood:bootstrap plan\n  bun run robinhood:bootstrap price <rUSD2|rCOL2> <decimal-price>\n  bun run robinhood:bootstrap refresh-price <rUSD2|rCOL2>\n  bun run robinhood:bootstrap mint <rUSD2|rCOL2> <wallet> <decimal-amount>\n  bun run robinhood:bootstrap issue-dao <wallet> [expiry-days]\n  bun run robinhood:bootstrap prepare-lending <wallet> <expiry-days> <witness-file>\n  bun run robinhood:bootstrap issue-lending <witness-file>\n  bun run robinhood:bootstrap credential <wallet> <3|4>\n  bun run robinhood:bootstrap participant <wallet>\n  bun run robinhood:bootstrap proposal <proposal-id>\n\nA write requires BOTH --execute and the matching --authorize-public-testnet-write=<label>,\na matching Foundry keystore alias, and a typed confirmation phrase. Simulations are always run first.\n\nWrite authorizations:\n  price:         oracle-price\n  refresh-price: oracle-price-refresh\n  mint:          token-mint\n  issue-dao:     credential-policy-4\n  issue-lending: credential-policy-3\n\nNo command deploys contracts. There is no mainnet mode.`);
 }
 
 function readArgs(argv) {
@@ -375,10 +376,11 @@ async function printAndMaybeSend(ctx, action, actor, target, abi, functionName, 
   assert.ok(sameAddress(receipt.from, actor), `Receipt sender ${receipt.from} did not match authorized role ${actor}.`);
   assert.ok(sameAddress(receipt.to, target), `Receipt target ${receipt.to} did not match ${target}.`);
   assert.equal(Number(await client.getChainId()), CHAIN_ID);
-  const eventName = action === "price" ? "TestPriceUpdated" : action === "mint" ? "Transfer" : "CredentialCommitted";
+  const isPriceAction = action === "price" || action === "refresh-price";
+  const eventName = isPriceAction ? "TestPriceUpdated" : action === "mint" ? "Transfer" : "CredentialCommitted";
   const events = parseEventLogs({ abi, logs: receipt.logs, eventName, strict: false });
   const eventMatches = events.some(({ args: event }) => {
-    if (action === "price") return sameAddress(event.asset, args[0]) && event.priceWad === args[1] && sameAddress(event.updater, actor);
+    if (isPriceAction) return sameAddress(event.asset, args[0]) && event.priceWad === args[1] && sameAddress(event.updater, actor);
     if (action === "mint") return sameAddress(event.from, zeroAddress) && sameAddress(event.to, args[0]) && event.value === args[1];
     return sameAddress(event.wallet, args[0]) && event.policyId === args[1] && event.commitment.toLowerCase() === args[2].toLowerCase() && sameAddress(event.issuer, actor);
   });
@@ -440,6 +442,34 @@ async function actionPrice(symbol, price, options) {
     const after = await read(ctx.client, ctx.addresses.ControlledTestOracle, controlledTestOracleAbi, "getPriceBounds", [ctx.addresses[symbol]]);
     assert.equal(after[2], priceWad); assert.ok(after[3] > 0n);
     return `${symbol} oracle price=${formatUnits(after[2], 18)} updatedAt=${after[3].toString()}`;
+  });
+}
+
+async function actionRefreshPrice(symbol, options) {
+  assert.ok(Object.hasOwn(PROPOSED_PRICES, symbol), "Asset must be rUSD2 or rCOL2.");
+  const ctx = await liveContext(); ctx.options = options;
+  const asset = ctx.addresses[symbol];
+  const [bounds, reserve, updaterRole, now] = await Promise.all([
+    read(ctx.client, ctx.addresses.ControlledTestOracle, controlledTestOracleAbi, "getPriceBounds", [asset]),
+    read(ctx.client, ctx.addresses.LendingPoolV2, lendingPoolV2Abi, "getReserveConfig", [asset]),
+    read(ctx.client, ctx.addresses.ControlledTestOracle, controlledTestOracleAbi, "PRICE_UPDATER_ROLE"),
+    chainTimestamp(ctx),
+  ]);
+  const expectedPrice = parseUnits(PROPOSED_PRICES[symbol], 18);
+  assert.ok(bounds[2] > 0n && bounds[3] > 0n, `${symbol} has no initialized oracle price; use the separately guarded initial price command first.`);
+  assert.equal(bounds[2], expectedPrice, `${symbol} price differs from the approved synthetic demo value; refusing to overwrite it.`);
+  assert.ok(bounds[2] >= bounds[0] && bounds[2] <= bounds[1], `${symbol} price is outside its on-chain bounds.`);
+  assert.ok(bounds[3] <= now, `${symbol} oracle timestamp is in the future; refusing a refresh.`);
+  const maxOracleAge = BigInt(reserve.maxOracleAge ?? reserve[4]);
+  const age = now - bounds[3];
+  assert.ok(age > maxOracleAge, `${symbol} oracle price is still fresh (${age}s old; max ${maxOracleAge}s); no refresh write is needed.`);
+  await requireRole(ctx.client, ctx.addresses.ControlledTestOracle, updaterRole, ctx.admin, "Oracle updater");
+  console.log(`Guarded refresh only: re-submit the existing ${symbol} synthetic test price ${formatUnits(bounds[2], 18)} WAD (not a market quote). Age ${age}s exceeds reserve max ${maxOracleAge}s.`);
+  await printAndMaybeSend(ctx, "refresh-price", ctx.admin, ctx.addresses.ControlledTestOracle, controlledTestOracleAbi, "setPrice", [asset, bounds[2]], async () => {
+    const after = await read(ctx.client, ctx.addresses.ControlledTestOracle, controlledTestOracleAbi, "getPriceBounds", [asset]);
+    assert.equal(after[2], expectedPrice);
+    assert.ok(after[3] > bounds[3] && after[3] <= await chainTimestamp(ctx));
+    return `${symbol} unchanged at ${formatUnits(after[2], 18)} WAD · updatedAt=${after[3].toString()}`;
   });
 }
 
@@ -606,6 +636,10 @@ async function main() {
   if (command === "price") {
     if (positional.length !== 2) throw new Error("Usage: price <rUSD2|rCOL2> <decimal-price>");
     return actionPrice(positional[0], positional[1], options);
+  }
+  if (command === "refresh-price") {
+    if (positional.length !== 1) throw new Error("Usage: refresh-price <rUSD2|rCOL2>");
+    return actionRefreshPrice(positional[0], options);
   }
   if (command === "mint") {
     if (positional.length !== 3) throw new Error("Usage: mint <rUSD2|rCOL2> <wallet> <decimal-amount>");

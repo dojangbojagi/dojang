@@ -12,7 +12,7 @@ export default function DaoPage() {
       status="Verified DAO governance"
       glyph={{ shape: "assembly", label: "Tiered half-circle seating made of characters: a governing body voting in public.", caption: "Verified wallets, public votes", legend: ["public"] }}
       title="Govern with a verified wallet."
-      lead="Propose and vote on the one policy this contract controls, using an official Dojang Verified Address credential. Votes are public. Nothing here changes lending or the vault."
+      lead="Choose the governance network. GIWA Sepolia uses official Dojang Verified Address membership; Robinhood Testnet uses BOJOGAY project-issued policy-4 credentials, not official Dojang verification. Votes are public on either network."
     >
       <div className="protocol-section">
         <DaoWorkspace />

@@ -7,6 +7,7 @@ import { formatAmount, shortAddress } from "@/components/lending/format";
 import { Chip, type Tone } from "@/components/lending-v2/v2-parts";
 import { dateTimeText } from "@/components/lending-v2/v2-format";
 import type { V2Market, V2Proof } from "@/components/lending-v2/v2-types";
+import { WitnessUpload } from "@/components/lending-v2/v2-witness-upload";
 import { StateChip, TransactionSummary } from "@/components/protocol-state";
 import { useDojangVerification } from "@/hooks/use-dojang-verification";
 import { useLendingV2CredentialIssuance } from "@/hooks/use-lending-v2-credential-issuance";
@@ -112,6 +113,8 @@ export function EligibilityCard({ market, proof, witness, onWitness }: {
   const wallet = useWalletNetwork(ROBINHOOD_TESTNET_CHAIN_ID);
   const dojang = useDojangVerification(wallet.address);
   const [importMessage, setImportMessage] = useState("");
+  const [importFailed, setImportFailed] = useState(false); /* presentation only: the picker shows the last attempt */
+  const [witnessFile, setWitnessFile] = useState("");
   const [proofMessage, setProofMessage] = useState("");
   const registry = market.snapshot?.credentialRegistry;
   const role = useReadContract({
@@ -138,6 +141,8 @@ export function EligibilityCard({ market, proof, witness, onWitness }: {
   async function importWitness(file?: File) {
     if (!file) return;
     setImportMessage("");
+    setImportFailed(false);
+    setWitnessFile(file.name);
     try {
       const candidate = parseDemoCredentialWitness(JSON.parse(await file.text()));
       if (!wallet.address || candidate.wallet.toLowerCase() !== wallet.address.toLowerCase()) throw new Error("This witness is not bound to the connected wallet.");
@@ -151,6 +156,7 @@ export function EligibilityCard({ market, proof, witness, onWitness }: {
       setImportMessage("The witness metadata matches the credential on record. The circuit checks the private value and salt when the proof is generated.");
     } catch (cause) {
       onWitness(null);
+      setImportFailed(true);
       setImportMessage(cause instanceof SyntaxError ? "That file is not valid JSON." : cause instanceof Error && !("code" in cause) ? cause.message : explainProtocolError(cause));
     }
   }
@@ -211,17 +217,22 @@ export function EligibilityCard({ market, proof, witness, onWitness }: {
         the contract is the final authority. Repaying, withdrawing and liquidation never need a current credential.
       </p>
 
-      <label className="protocol-field" htmlFor="lendv2-witness-file"><span>Private witness JSON (delivered by the project issuer)</span>
-        <input id="lendv2-witness-file" type="file" accept="application/json,.json" disabled={!record || proof.state === "generating"} onChange={(event) => { void importWitness(event.currentTarget.files?.[0]); event.currentTarget.value = ""; }} />
-      </label>
-      {witness && <p className="small muted" role="status">Witness loaded in memory for <span className="addr">{shortAddress(witness.wallet)}</span>. It is not uploaded or stored.</p>}
-      {importMessage && <p className={`callout ${witness ? "callout--demo" : "callout--caution"}`} role="status" aria-live="polite">{importMessage}</p>}
+      <WitnessUpload
+        disabled={!record || proof.state === "generating"}
+        disabledReason={!record ? "A policy-3 credential has to be on record for this wallet before a witness can be imported." : "Wait for the proof to finish."}
+        fileName={witnessFile}
+        status={witness ? "loaded" : importFailed ? "invalid" : "idle"}
+        message={importMessage}
+        loadedFor={witness ? shortAddress(witness.wallet) : undefined}
+        onFile={(file) => void importWitness(file)}
+        onRemove={() => { onWitness(null); setImportFailed(false); setWitnessFile(""); setImportMessage("Witness cleared from memory."); }}
+      />
 
       <div className="protocol-actions">
         <button className="btn btn--primary" type="button" onClick={() => void generate()} disabled={!canProve}>
           {proof.state === "generating" ? "Generating proof…" : proof.state === "proof-ready" ? "Generate a new proof" : "Generate private proof"}
         </button>
-        <button className="btn btn--secondary" type="button" onClick={() => { onWitness(null); setImportMessage("Witness cleared from memory."); }} disabled={!witness}>Clear witness</button>
+        <button className="btn btn--secondary" type="button" onClick={() => { onWitness(null); setImportFailed(false); setWitnessFile(""); setImportMessage("Witness cleared from memory."); }} disabled={!witness}>Clear witness</button>
         <button className="btn btn--secondary" type="button" onClick={() => void proof.refetchCredential()} disabled={!record && proof.state !== "credential-required"}>Re-check credential</button>
       </div>
       {proofMessage && proof.state !== "invalid" && <p className="small" role="status" aria-live="polite">{proofMessage}</p>}
@@ -236,7 +247,7 @@ export function EligibilityCard({ market, proof, witness, onWitness }: {
       </details>
 
       {isIssuer.data === true ? (
-        <IssuerTools market={market} onIssued={(issued) => { onWitness(issued); setImportMessage("The new credential and its witness are ready."); void proof.refetchCredential(); }} />
+        <IssuerTools market={market} onIssued={(issued) => { onWitness(issued); setImportFailed(false); setWitnessFile(""); setImportMessage("The new credential and its witness are ready."); void proof.refetchCredential(); }} />
       ) : (
         <p className="xsmall muted">Project Test Credentials are issued only by wallets that hold the project registry&apos;s issuer role. Ordinary wallets receive a witness file from the project issuer.</p>
       )}

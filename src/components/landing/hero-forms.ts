@@ -16,9 +16,12 @@ type V3 = [number, number, number];
 export interface HeroForm {
   /* where point i is at time t (the hero's own clock, seconds), in a space about one unit in radius */
   pos(i: number, t: number, out: Float32Array): void;
-  /* its colour: 0 white, 1 silver, 2 wine, 3 burgundy, 4 garnet (the palette in glyph-field.tsx) */
+  /* its colour: 0 white, 1 silver, 2 wine, 3 burgundy, 4 garnet (the palette in glyph-field.tsx),
+     or HIDDEN for a point this form does not use (the renderer skips it) */
   pal(i: number, t: number): number;
 }
+
+export const HIDDEN = 255;
 
 const rnd = (n: number) => {
   const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
@@ -195,184 +198,228 @@ export function buildLattice(count: number): HeroForm {
 
 /* ================================================================ D: access topology */
 
-interface Seg { a: V3; b: V3; la: number; lb: number; route: boolean; s0: number; s1: number }
-interface Gate { p: V3; axis: number; layer: number; route: boolean }
+/* A small kinetic tower, composed by hand so that it reads at a glance and from every three-quarter view:
+   three stacked slabs (back, middle, front) that turn on one shared core, each standing on four posts;
+   bridges leave every level, branch once or twice, and end in gates. One route climbs the core and out
+   along the top bridge; a pulse of light runs up it. The rest is silver and white, the back slab burgundy,
+   so depth reads by colour as well as by perspective. Everything is a chain of characters on a line, with
+   whole characters of air between the lines, so nothing piles up. */
 
-const DIRS: V3[] = [[1, 0, 0], [0, 0, 1], [-1, 0, 0], [0, 0, -1]];
-const LAYER_DY = 0.62;
+interface Prim {
+  pts: V3[]; /* polyline, absolute coordinates before fitting */
+  closed: boolean;
+  group: number; /* 0 back slab and what stands on it, 1 middle, 2 front, 3 the far dust */
+  rails: number; /* 1 a line, 2 a walkway, 4 a square tube */
+  railW: number;
+  weight: number; /* share of the points, per unit of length */
+  route: boolean;
+  s0: number; /* position along the lit route at the start of the polyline */
+  pick: (r: number) => number;
+}
 
 export function buildTopology(count: number): HeroForm {
-  const segs: Seg[] = [];
-  const nodes: { p: V3; layer: number; route: boolean }[] = [];
-  const gates: Gate[] = [];
+  const prims: Prim[] = [];
+  const AX = 0.05; /* the core the levels turn on */
+  const AZ = 0.05;
+  const Y0 = 0.62, Y1 = 0.02, Y2 = -0.56; /* back, middle, front level */
 
-  /* Right-angled growth: turn left, turn right, and (near the root) carry straight on one layer down.
-     From the third generation on a branch may simply be missing, so the tree is lopsided. */
-  const grow = (p: V3, di: number, len: number, depth: number, layer: number, route: boolean, acc: number, seed: number) => {
-    const d = DIRS[di];
-    const q: V3 = [p[0] + d[0] * len, p[1], p[2] + d[2] * len];
-    segs.push({ a: p, b: q, la: layer, lb: layer, route, s0: acc, s1: acc + len });
-    nodes.push({ p: q, layer, route });
-    const acc1 = acc + len;
-    if (depth >= 3 || len < 0.12) {
-      gates.push({ p: q, axis: di % 2, layer, route });
+  const white = (r: number) => (r > 0.25 ? 0 : 1);
+  const silver = (r: number) => (r > 0.7 ? 0 : 1);
+  const deep = (r: number) => (r > 0.55 ? 3 : 1);
+  const add = (pts: V3[], o: Partial<Prim> & { group: number; pick: (r: number) => number }) => {
+    prims.push({ closed: false, rails: 1, railW: 0.05, weight: 1, route: false, s0: 0, ...o, pts });
+  };
+  const rect = (cx: number, y: number, cz: number, hx: number, hz: number): V3[] => [
+    [cx - hx, y, cz - hz], [cx + hx, y, cz - hz], [cx + hx, y, cz + hz], [cx - hx, y, cz + hz],
+  ];
+
+  /* slabs and the posts that carry them */
+  const slabs: { y: number; cx: number; cz: number; hx: number; hz: number; g: number; pick: (r: number) => number }[] = [
+    { y: Y0, cx: -0.05, cz: -0.2, hx: 0.95, hz: 0.55, g: 0, pick: deep },
+    { y: Y1, cx: 0.12, cz: -0.02, hx: 0.62, hz: 0.38, g: 1, pick: silver },
+    { y: Y2, cx: -0.2, cz: 0.26, hx: 0.36, hz: 0.26, g: 2, pick: white },
+  ];
+  slabs.forEach((sl, k) => {
+    add(rect(sl.cx, sl.y, sl.cz, sl.hx, sl.hz), { group: sl.g, closed: true, weight: 1.15, pick: sl.pick });
+    if (k > 0) {
+      const below = slabs[k - 1];
+      for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+        const x = sl.cx + sx * sl.hx, z = sl.cz + sz * sl.hz;
+        add([[x, sl.y, z], [x, below.y, z]], { group: sl.g, weight: 1.1, pick: k === 1 ? deep : silver });
+      }
+    }
+  });
+
+  /* the core: a square tube from the back slab to the front one, and the lit route */
+  const coreLen = Y0 - Y2;
+  add([[AX, Y0, AZ], [AX, Y2, AZ]], { group: 0, rails: 4, railW: 0.07, weight: 1.0, route: true, s0: 0, pick: () => 2 });
+
+  /* bridges: [level index, start, direction axis, length, [branch lengths]], branching once more at the end */
+  type Bridge = { lv: number; from: V3; axis: 0 | 2; sign: 1 | -1; len: number; kids: { axis: 0 | 2; sign: 1 | -1; len: number }[]; route?: boolean };
+  const bridges: Bridge[] = [
+    { lv: 0, from: [0.9, Y0, -0.35], axis: 0, sign: 1, len: 0.5, kids: [{ axis: 2, sign: 1, len: 0.3 }, { axis: 2, sign: -1, len: 0.36 }] },
+    { lv: 0, from: [-0.4, Y0, -0.75], axis: 2, sign: -1, len: 0.42, kids: [] },
+    { lv: 1, from: [-0.5, Y1, 0.1], axis: 0, sign: -1, len: 0.5, kids: [{ axis: 2, sign: 1, len: 0.3 }, { axis: 0, sign: -1, len: 0.22 }] },
+    { lv: 1, from: [0.3, Y1, 0.36], axis: 2, sign: 1, len: 0.4, kids: [] },
+    { lv: 2, from: [0.16, Y2, 0.3], axis: 0, sign: 1, len: 0.62, kids: [{ axis: 2, sign: 1, len: 0.26 }, { axis: 2, sign: -1, len: 0.2 }], route: true },
+    { lv: 2, from: [-0.3, Y2, 0.0], axis: 2, sign: -1, len: 0.36, kids: [] },
+  ];
+  const picks = [deep, silver, white];
+  const gateAt = (c: V3, axis: 0 | 2, g: number, route: boolean, big: boolean) => {
+    const hw = big ? 0.11 : 0.085, hh = big ? 0.19 : 0.15;
+    const mid: V3 = [c[0], c[1] - hh, c[2]];
+    const pts: V3[] = axis === 0
+      ? [[mid[0], mid[1] - hh, mid[2] - hw], [mid[0], mid[1] - hh, mid[2] + hw], [mid[0], mid[1] + hh, mid[2] + hw], [mid[0], mid[1] + hh, mid[2] - hw]]
+      : [[mid[0] - hw, mid[1] - hh, mid[2]], [mid[0] + hw, mid[1] - hh, mid[2]], [mid[0] + hw, mid[1] + hh, mid[2]], [mid[0] - hw, mid[1] + hh, mid[2]]];
+    add(pts, { group: g, closed: true, weight: 1.3, route, pick: route ? (r) => (r > 0.5 ? 4 : 0) : (r) => (r > 0.8 ? 2 : 0) });
+  };
+  const nodes: { p: V3; g: number }[] = [];
+  let routeLen = coreLen;
+  bridges.forEach((b) => {
+    const end: V3 = [b.from[0] + (b.axis === 0 ? b.sign * b.len : 0), b.from[1], b.from[2] + (b.axis === 2 ? b.sign * b.len : 0)];
+    add([b.from, end], { group: b.lv, rails: 2, railW: 0.06, weight: 1.0, route: Boolean(b.route), s0: b.route ? routeLen : 0, pick: b.route ? () => 2 : picks[b.lv] });
+    nodes.push({ p: b.from, g: b.lv }, { p: end, g: b.lv });
+    if (b.route) routeLen += b.len;
+    if (!b.kids.length) {
+      gateAt(end, b.axis, b.lv, Boolean(b.route), b.lv === 2);
       return;
     }
-    const kids: { di: number; len: number; down: boolean }[] = [];
-    kids.push({ di: (di + 1) % 4, len: len * (0.86 + 0.24 * rnd(seed + 1)), down: false });
-    kids.push({ di: (di + 3) % 4, len: len * (0.78 + 0.3 * rnd(seed + 2)), down: false });
-    if (depth === 0 || (depth === 1 && rnd(seed + 3) > 0.35) || (depth === 2 && rnd(seed + 6) > 0.62)) {
-      kids.push({ di, len: len * (0.7 + 0.25 * rnd(seed + 4)), down: true });
-    }
-    const kept = kids.filter((k, n) => !(depth >= 2 && n === 1 && rnd(seed + 5) < 0.4));
-    const routeKid = route ? (kept.find((k) => k.down) ?? kept[0]) : null;
-    kept.forEach((k, n) => {
-      const isRoute = k === routeKid;
-      const s = seed * 3 + n * 7 + depth;
-      if (k.down) {
-        const q2: V3 = [q[0], q[1] + LAYER_DY, q[2]];
-        segs.push({ a: q, b: q2, la: layer, lb: layer + 1, route: isRoute, s0: acc1, s1: acc1 + LAYER_DY });
-        nodes.push({ p: q2, layer: layer + 1, route: isRoute });
-        grow(q2, k.di, k.len, depth + 1, layer + 1, isRoute, acc1 + LAYER_DY, s);
-      } else {
-        grow(q, k.di, k.len, depth + 1, layer, isRoute, acc1, s);
-      }
+    b.kids.forEach((k, ki) => {
+      const kend: V3 = [end[0] + (k.axis === 0 ? k.sign * k.len : 0), end[1], end[2] + (k.axis === 2 ? k.sign * k.len : 0)];
+      const lit = Boolean(b.route) && ki === 0;
+      add([end, kend], { group: b.lv, rails: 2, railW: 0.05, weight: 0.9, route: lit, s0: lit ? routeLen : 0, pick: lit ? () => 2 : picks[b.lv] });
+      if (lit) routeLen += k.len;
+      gateAt(kend, k.axis, b.lv, lit, false);
     });
-  };
-  grow([-1.0, -0.62, -0.1], 0, 0.66, 0, 0, true, 0, 5);
+  });
+  const total = routeLen;
+  /* junction cubes where the core meets the levels */
+  for (const y of [Y0, Y1, Y2]) nodes.push({ p: [AX, y, AZ], g: y === Y0 ? 0 : y === Y1 ? 1 : 2 });
 
-  /* centre it and fit it into the space the other forms use */
+  /* fit it into the space the other forms use (before the points are laid out, so spacing is in final units) */
   let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity, z0 = Infinity, z1 = -Infinity;
-  for (const s of segs) for (const p of [s.a, s.b]) {
+  for (const pr of prims) for (const p of pr.pts) {
     x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]);
-    y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]);
+    y0 = Math.min(y0, p[1] - 0.2); y1 = Math.max(y1, p[1]);
     z0 = Math.min(z0, p[2]); z1 = Math.max(z1, p[2]);
   }
   const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, cz = (z0 + z1) / 2;
-  const fit = Math.min(1.05 / Math.max(0.01, (x1 - x0) / 2), 0.95 / Math.max(0.01, (y1 - y0) / 2), 1.0 / Math.max(0.01, (z1 - z0) / 2));
-  const T = (p: V3): V3 => [(p[0] - cx) * fit, (p[1] - cy) * fit, (p[2] - cz) * fit];
-  const dyL = LAYER_DY * fit;
-  const yL0 = T([0, -0.62, 0])[1]; /* the top layer's height after fitting */
-  const total = segs.reduce((m, s) => Math.max(m, s.route ? s.s1 : 0), 0) || 1;
-  const maxLayer = segs.reduce((m, s) => Math.max(m, s.lb), 0);
+  const fit = Math.min(1.08 / ((x1 - x0) / 2), 0.98 / ((y1 - y0) / 2), 1.0 / ((z1 - z0) / 2));
+  const F = (p: V3): V3 => [(p[0] - cx) * fit, (p[1] - cy) * fit, (p[2] - cz) * fit];
+  const pivX = (AX - cx) * fit;
+  const pivZ = (AZ - cz) * fit;
+
+  /* lay the characters out: points in proportion to length, whole rails, a little jitter along the line */
+  const lenOf = (pr: Prim) => {
+    let L = 0;
+    const n = pr.pts.length - (pr.closed ? 0 : 1);
+    for (let i = 0; i < n; i++) L += dist(pr.pts[i], pr.pts[(i + 1) % pr.pts.length]);
+    return L * fit;
+  };
+  const nodePts = 8;
+  const nHalo = Math.round(count * 0.03);
+  /* A character is about 0.045 wide, so a line of them needs about 0.05 between points to stay a clean chain.
+     The structure only has that much length, so the rest of the points are not drawn in this form: they
+     vanish as it resolves, and come back when it dissolves. */
+  const nPool = Math.round(count * 0.34);
+  const nStruct = count - nHalo - nPool - nodePts * nodes.length;
+  const weights = prims.map((pr) => lenOf(pr) * pr.weight * pr.rails);
+  const counts = allocate(weights, nStruct);
 
   const bx = new Float32Array(count);
   const by = new Float32Array(count);
   const bz = new Float32Array(count);
-  const lf = new Float32Array(count); /* layer, fractional on a riser: the layers drift, the risers follow */
-  const rs = new Float32Array(count).fill(-1); /* position along the lit route, or -1 */
+  const grp = new Uint8Array(count);
+  const rs = new Float32Array(count).fill(-1);
   const pal = new Uint8Array(count);
   let n = 0;
-  const put = (p: V3, layer: number, p0: number, s = -1) => {
+  const put = (p: V3, g: number, color: number, s = -1) => {
     if (n >= count) return;
-    bx[n] = p[0]; by[n] = p[1]; bz[n] = p[2]; lf[n] = layer; pal[n] = p0; rs[n] = s; n++;
+    bx[n] = p[0]; by[n] = p[1]; bz[n] = p[2]; grp[n] = g; pal[n] = color; rs[n] = s; n++;
   };
-  const shade = (layer: number, r: number) => (layer >= 2 ? (r > 0.5 ? 3 : 1) : r > 0.72 ? 0 : 1);
 
-  const nGate = Math.round(count * 0.16);
-  const nNode = Math.round(count * 0.1);
-  const nPlate = Math.round(count * 0.07); /* each layer's outline */
-  const nFloor = Math.round(count * 0.06); /* and a sparse grid inside it */
-  const perGate = Math.max(8, Math.floor(nGate / Math.max(1, gates.length)));
-  const perNode = Math.max(3, Math.floor(nNode / Math.max(1, nodes.length)));
-  const plates = maxLayer + 1;
-  const perPlate = Math.floor(nPlate / plates);
-  const perFloor = Math.floor(nFloor / plates);
-  const hx = ((x1 - x0) / 2 + 0.1) * fit;
-  const hz = ((z1 - z0) / 2 + 0.1) * fit;
-  const cols = Math.max(3, Math.round(Math.sqrt(perFloor * (hx / Math.max(0.05, hz)))));
-  const rows = Math.max(3, Math.floor(perFloor / cols));
-  const nPath = count - perGate * gates.length - perNode * nodes.length - (perPlate + cols * rows) * plates; /* what is left is pathway, so the count is exact */
-
-  /* pathways: two rails each (a corridor), points in proportion to length */
-  const SW = 0.06;
-  const segLen = segs.map((s) => dist(s.a, s.b));
-  allocate(segLen, nPath).forEach((c, si) => {
-    const s = segs[si];
-    const vertical = s.la !== s.lb;
-    const horizX = Math.abs(s.b[0] - s.a[0]) > Math.abs(s.b[2] - s.a[2]);
-    const strands = 2;
+  prims.forEach((pr, pi) => {
+    const c = counts[pi];
+    const segN = pr.pts.length - (pr.closed ? 0 : 1);
+    const segLen: number[] = [];
+    let L = 0;
+    for (let i = 0; i < segN; i++) { const d = dist(pr.pts[i], pr.pts[(i + 1) % pr.pts.length]); segLen.push(d); L += d; }
+    const per = Math.ceil(c / pr.rails);
+    const offs: [number, number][] = pr.rails === 1 ? [[0, 0]] : pr.rails === 2 ? [[-0.5, 0], [0.5, 0]] : [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]];
     for (let j = 0; j < c; j++) {
-      const strand = j % strands;
-      const u = Math.min(0.99, Math.max(0.01, (Math.floor(j / strands) + 0.5 + (rnd(si * 53 + j) - 0.5) * 0.4) / Math.ceil(c / strands)));
-      const w = (strand - 0.5) * SW;
+      const rail = j % pr.rails;
+      const u = ((Math.floor(j / pr.rails) + 0.5 + (rnd(pi * 131 + j) - 0.5) * 0.3) / per) * L;
+      let acc = 0, si = 0;
+      while (si < segN - 1 && acc + segLen[si] < u) { acc += segLen[si]; si++; }
+      const a = pr.pts[si], b = pr.pts[(si + 1) % pr.pts.length];
+      const f = segLen[si] > 0 ? Math.min(1, Math.max(0, (u - acc) / segLen[si])) : 0;
+      const dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2];
+      const dl = Math.hypot(dx, dy, dz) || 1;
+      /* two directions at right angles to the line, to put the rails on */
+      let n1: V3, n2: V3;
+      if (Math.abs(dy / dl) > 0.9) { n1 = [1, 0, 0]; n2 = [0, 0, 1]; }
+      else { const hl = Math.hypot(dx, dz) || 1; n1 = [-dz / hl, 0, dx / hl]; n2 = [0, 1, 0]; }
+      const o = offs[rail];
       const p: V3 = [
-        s.a[0] + (s.b[0] - s.a[0]) * u + (vertical || !horizX ? w / fit : 0),
-        s.a[1] + (s.b[1] - s.a[1]) * u,
-        s.a[2] + (s.b[2] - s.a[2]) * u + (!vertical && horizX ? w / fit : 0),
+        a[0] + dx * f + (n1[0] * o[0] + n2[0] * o[1]) * pr.railW,
+        a[1] + dy * f + (n1[1] * o[0] + n2[1] * o[1]) * pr.railW,
+        a[2] + dz * f + (n1[2] * o[0] + n2[2] * o[1]) * pr.railW,
       ];
-      const layer = s.la + (s.lb - s.la) * u;
-      const t = T(p);
-      if (s.route) put(t, layer, 2, s.s0 + (s.s1 - s.s0) * u);
-      else put(t, layer, shade(layer, rnd(si * 17 + j + 3)));
+      const sLocal = pr.route ? (pr.s0 + (pr.pts.length > 1 ? (u / L) * (L) : 0)) / total : -1;
+      put(F(p), pr.group, pr.pick(rnd(pi * 17 + j + 3)), sLocal);
     }
   });
-
-  /* junctions: a few characters at the corners of a small cube */
+  /* junction cubes */
   nodes.forEach((nd, k) => {
-    const c = T(nd.p);
-    for (let j = 0; j < perNode; j++) {
+    for (let j = 0; j < nodePts; j++) {
       const sx = j & 1 ? 1 : -1, sy = j & 2 ? 1 : -1, sz = j & 4 ? 1 : -1;
-      put([c[0] + sx * 0.032, c[1] + sy * 0.032, c[2] + sz * 0.032], nd.layer, nd.route ? 0 : rnd(k * 9 + j) > 0.5 ? 0 : 1);
+      put(F([nd.p[0] + sx * 0.035, nd.p[1] - 0.035 + sy * 0.035, nd.p[2] + sz * 0.035]), nd.g, 0);
+      void k;
     }
   });
-
-  /* gates: an upright frame facing the way the pathway was going */
-  gates.forEach((g, k) => {
-    const c = T(g.p);
-    const hw = 0.1, hh = 0.17;
-    for (let j = 0; j < perGate; j++) {
-      const f = (j + 0.5) / perGate; /* around the perimeter */
-      const per = 2 * (2 * hw + 2 * hh);
-      let d = f * per;
-      let a = 0, b = 0;
-      if (d < 2 * hw) { a = -hw + d; b = -hh; }
-      else if ((d -= 2 * hw) < 2 * hh) { a = hw; b = -hh + d; }
-      else if ((d -= 2 * hh) < 2 * hw) { a = hw - d; b = hh; }
-      else { d -= 2 * hw; a = -hw; b = hh - d; }
-      const p: V3 = g.axis === 0 ? [c[0], c[1] + b, c[2] + a] : [c[0] + a, c[1] + b, c[2]];
-      put(p, g.layer, g.route ? (j % 3 === 0 ? 0 : 4) : rnd(k * 31 + j) > 0.7 ? 2 : 0);
-    }
-  });
-
-  /* the layers themselves: a dotted outline and a sparse grid at each level, so the depth between
-     them reads and the pathways seem to stand on something */
-  for (let L = 0; L < plates; L++) {
-    const yy = yL0 + L * dyL + 0.04;
-    for (let j = 0; j < perPlate; j++) {
-      const per = 2 * (2 * hx + 2 * hz);
-      let d = ((j + 0.5) / perPlate) * per;
-      let x = 0, z = 0;
-      if (d < 2 * hx) { x = -hx + d; z = -hz; }
-      else if ((d -= 2 * hx) < 2 * hz) { x = hx; z = -hz + d; }
-      else if ((d -= 2 * hz) < 2 * hx) { x = hx - d; z = hz; }
-      else { d -= 2 * hx; x = -hx; z = hz - d; }
-      put([x, yy, z], L, 3);
-    }
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const jx = (rnd(L * 211 + r * 17 + c * 3 + 1) - 0.5) * 0.35;
-        const jz = (rnd(L * 197 + r * 13 + c * 7 + 2) - 0.5) * 0.35;
-        const x = -hx + ((c + 0.5 + jx) / cols) * 2 * hx;
-        const z = -hz + ((r + 0.5 + jz) / rows) * 2 * hz;
-        put([x, yy, z], L, rnd(L * 53 + r * 5 + c) > 0.9 ? 1 : 3);
-      }
-    }
+  /* a thin halo of far, dim characters: the background layer */
+  for (let j = 0; j < nHalo; j++) {
+    const th = j * 2.399963229728653;
+    const yy = 1 - ((j + 0.5) * 2) / Math.max(1, nHalo);
+    const r = 1.05 + 0.2 * rnd(j * 3.1 + 5);
+    const rr = Math.sqrt(Math.max(0, 1 - yy * yy));
+    put([Math.cos(th) * rr * r, yy * r * 0.8, Math.sin(th) * rr * r], 3, rnd(j + 40) > 0.5 ? 3 : 1);
   }
-  while (n < count) put([0, 0, 0], 0, 3);
+  /* the unused ones, whatever is left: not drawn, but placed on a sphere so they fade from, and into, a spread */
+  for (let j = 0; n < count; j++) {
+    const th = j * 2.399963229728653;
+    const yy = 1 - ((j + 0.5) * 2) / Math.max(1, nPool);
+    const rr = Math.sqrt(Math.max(0, 1 - yy * yy));
+    put([Math.cos(th) * rr * 0.9, yy * 0.9, Math.sin(th) * rr * 0.9], 3, HIDDEN);
+  }
+
+  /* each level turns on the core by its own small amount: the parallax that gives the tower its depth */
+  const turn = (g: number, t: number) =>
+    g === 0 ? 0 : g === 1 ? 0.34 * Math.sin(t * 0.23 + 0.5) : g === 2 ? -0.46 * Math.sin(t * 0.19 + 1.7) : t * 0.04;
+  let tm = Number.NaN;
+  const ang = new Float32Array(4);
+  const sinA = new Float32Array(4);
+  const cosA = new Float32Array(4);
 
   return {
     pos(i, t, out) {
-      out[0] = bx[i];
-      out[1] = by[i] + Math.sin(t * 0.5 + lf[i] * 1.9) * 0.032;
-      out[2] = bz[i];
+      if (t !== tm) {
+        tm = t;
+        for (let g = 0; g < 4; g++) { ang[g] = turn(g, t); sinA[g] = Math.sin(ang[g]); cosA[g] = Math.cos(ang[g]); }
+      }
+      const g = grp[i];
+      const lx = bx[i] - pivX;
+      const lz = bz[i] - pivZ;
+      out[0] = pivX + lx * cosA[g] + lz * sinA[g];
+      out[1] = by[i] + (g < 3 ? Math.sin(t * 0.4 + g * 2.1) * 0.014 : 0);
+      out[2] = pivZ - lx * sinA[g] + lz * cosA[g];
     },
     pal(i, t) {
       const s = rs[i];
       if (s < 0) return pal[i];
-      const pulse = ((t * 0.16) % 1.25) * total; /* a packet of light, then a rest */
+      const pulse = (t * 0.16) % 1.3; /* a packet of light, then a rest */
       const d = Math.abs(s - pulse);
-      return d < 0.06 * total ? 0 : d < 0.13 * total ? 4 : 2;
+      return d < 0.07 ? 0 : d < 0.15 ? 4 : 2;
     },
   };
 }

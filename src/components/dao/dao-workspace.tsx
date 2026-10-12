@@ -25,7 +25,7 @@ import type { GovernanceProposal } from "@/lib/protocol/types";
  */
 export function DaoWorkspace() {
   const observedWallet = useWalletNetwork(GIWA_CHAIN_ID);
-  const [selectedChainId, setSelectedChainId] = useState<ProtocolChainId>(GIWA_CHAIN_ID);
+  const [selectedChainId, setSelectedChainId] = useState<ProtocolChainId>(ROBINHOOD_TESTNET_CHAIN_ID);
   const [selectedId, setSelectedId] = useState<bigint | undefined>();
   const [fallback, setFallback] = useState<GovernanceProposal | undefined>(); /* the list's copy, shown while the detail is read */
   useEffect(() => {

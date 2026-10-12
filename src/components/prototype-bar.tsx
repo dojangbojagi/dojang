@@ -8,7 +8,7 @@ export function PrototypeBar() {
   return (
     <div className="proto-bar">
       <div className="container proto-bar__inner">
-        <span><strong>GIWA Sepolia testnet.</strong> Official Dojang is read-only; project contracts are not deployed.</span>
+        <span><strong>Robinhood Testnet demo · chain 46630.</strong> Project contracts are deployed; Robinhood credentials are BOJOGAY-issued. Official Dojang verification is a separate GIWA integration.</span>
       </div>
     </div>
   );

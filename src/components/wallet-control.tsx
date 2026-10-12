@@ -8,22 +8,21 @@ export function WalletControl({ expectedChainId }: { expectedChainId?: ProtocolC
   const wallet = useWalletNetwork(expectedChainId);
   return (
     <ConnectButton.Custom>
-      {({ account, chain, openAccountModal, openChainModal, openConnectModal, mounted }) => {
-        const ready = mounted && Boolean(account) && Boolean(chain);
+      {({ account, openAccountModal, openConnectModal, mounted }) => {
         const state = !mounted || wallet.state === "connecting"
           ? "connecting"
-          : !ready
+          : !wallet.isConnected
             ? "disconnected"
-            : chain?.unsupported || wallet.state === "wrong-network"
+            : wallet.state === "wrong-network"
               ? "wrong-network"
               : "connected";
         const label = state === "connecting" ? "Connecting…"
           : state === "disconnected" ? "Connect Wallet"
-            : state === "wrong-network" ? "Wrong Network"
+            : state === "wrong-network" ? wallet.isSwitching ? "Switching…" : wallet.switchError ? "Switch failed" : "Wrong Network"
               : account?.displayName ?? "Connected";
         const openWallet = () => {
           if (state === "disconnected" || state === "connecting") openConnectModal();
-          else if (state === "wrong-network") openChainModal();
+          else if (state === "wrong-network") void wallet.switchToExpectedNetwork();
           else openAccountModal();
         };
 
@@ -35,10 +34,12 @@ export function WalletControl({ expectedChainId }: { expectedChainId?: ProtocolC
             onClick={openWallet}
             disabled={!mounted}
             aria-label={label}
+            title={wallet.switchError ?? label}
           >
             <span className="btn__dot" aria-hidden="true" />
             <span className="wl-full">{label}</span>
-            <span className="wl-short" aria-hidden="true">{state === "connected" ? account?.displayName : state === "wrong-network" ? "Switch" : "Connect"}</span>
+            <span className="wl-short" aria-hidden="true">{state === "connected" ? account?.displayName : state === "wrong-network" ? wallet.isSwitching ? "Switching" : wallet.switchError ? "Retry" : "Switch" : "Connect"}</span>
+            {wallet.switchError && <span className="visually-hidden" role="alert">{wallet.switchError}</span>}
           </button>
         );
       }}

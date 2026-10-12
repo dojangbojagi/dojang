@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { ProofGenerationPanel } from "@/components/proof-generation-panel";
+import { RobinhoodBojagiProof } from "@/components/robinhood-bojagi-proof";
 import { ProtocolPage } from "@/components/protocol-page";
 import { WalletNetworkCard } from "@/components/wallet-network-card";
 import { GIWA_CHAIN_ID } from "@/lib/config/chain";
+import "@/components/lending-v2/lending-v2.css";
 
 export default function BojagiPage() {
   return (
@@ -16,9 +18,8 @@ export default function BojagiPage() {
       lead="Your device checks the issuer-backed witness against the current on-chain commitment, then proves that it meets the policy. The exact value stays hidden; the wallet and proof remain public."
     >
       <div className="protocol-stack protocol-section">
-        <WalletNetworkCard expectedChainId={GIWA_CHAIN_ID} />
         <div className="protocol-grid protocol-grid--stretch">
-          <ProofGenerationPanel />
+          <RobinhoodBojagiProof />
           <section className="panel panel--ticks protocol-panel" aria-labelledby="cloth-heading">
             <div className="protocol-panel__head"><h2 id="cloth-heading">A sealed fact, opened only to a rule</h2></div>
             <div className="protocol-cloth" role="img" aria-label="Four stitched cloth panels surround a private proof window">
@@ -54,6 +55,13 @@ export default function BojagiPage() {
             </article>
           </div>
         </section>
+
+        <details className="protocol-section">
+          <summary className="protocol-inline-link">Legacy GIWA Sepolia proof for the Restricted Vault</summary>
+          <p className="protocol-copy">This preserved proof path uses the separate GIWA credential registry, GIWA chain ID 91342, and the configured Restricted Vault. It does not authorize Robinhood Lending V2.</p>
+          <WalletNetworkCard expectedChainId={GIWA_CHAIN_ID} />
+          <ProofGenerationPanel />
+        </details>
 
         <div className="protocol-actions">
           <Link className="btn btn--secondary" href="/dojang">Check credential ↗</Link>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useWalletNetwork } from "@/hooks/use-wallet-network";
 
 /* Same destinations as the app header. Light over the white cover, dark glass after it. */
 const LINKS = [
@@ -17,17 +18,18 @@ const LINKS = [
 ] as const;
 
 function WalletPill() {
+  const wallet = useWalletNetwork();
   return (
     <ConnectButton.Custom>
       {({
         account,
-        chain,
         openAccountModal,
-        openChainModal,
         openConnectModal,
         mounted,
       }) => {
-        const connected = mounted && account && chain;
+        const connected = mounted && account && wallet.isConnected;
+        const wrongNetwork = connected && wallet.state === "wrong-network";
+        const label = wallet.isSwitching ? "Switching…" : wallet.switchError ? "Switch failed" : "Wrong network";
         return (
           <div
             className="lp-wallet"
@@ -43,13 +45,15 @@ function WalletPill() {
                 <span className="lp-pill__long">Connect wallet</span>
                 <span className="lp-pill__short">Connect</span>
               </button>
-            ) : chain.unsupported ? (
+            ) : wrongNetwork ? (
               <button
                 type="button"
                 className="lp-pill lp-pill--warn"
-                onClick={openChainModal}
+                onClick={() => void wallet.switchToExpectedNetwork()}
+                title={wallet.switchError ?? `Switch to Robinhood Chain Testnet · chain ${wallet.expectedChainId}`}
+                aria-label={wallet.switchError ?? `Switch to Robinhood Chain Testnet · chain ${wallet.expectedChainId}`}
               >
-                Wrong network
+                {label}
               </button>
             ) : (
               <button
@@ -61,6 +65,7 @@ function WalletPill() {
                 {account.displayName}
               </button>
             )}
+            {wallet.switchError && <span className="visually-hidden" role="alert">{wallet.switchError}</span>}
           </div>
         );
       }}
