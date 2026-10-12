@@ -30,6 +30,7 @@ export function FeaturesMenu() {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelId = useId();
   const pathname = usePathname();
+  const current = FEATURES.find((feature) => pathname === feature.href || pathname.startsWith(`${feature.href}/`));
 
   useEffect(() => {
     if (!open) return;
@@ -88,10 +89,12 @@ export function FeaturesMenu() {
         type="button"
         aria-expanded={open}
         aria-controls={panelId}
+        data-active={current ? "true" : "false"}
         onClick={() => setOpen((value) => !value)}
         onKeyDown={onButtonKey}
       >
         <span>Features</span>
+        {current ? <span className="visually-hidden">, current page: {current.name}</span> : null}
         <Chevron />
       </button>
       {open ? (

@@ -114,38 +114,58 @@ export function TrustLayerSection() {
 
         <div className="lp-trust__stage">
           <article className="lp-layer lp-layer--public" data-lp-reveal="left" data-spot style={{ ["--i" as string]: 1 }}>
-            <div className="lp-cred" aria-hidden="true">
-              <div className="lp-cred__top"><i /><span>Credential</span><b>Policy 4</b></div>
-              <div className="lp-cred__row"><span>Wallet</span><u /></div>
-              <div className="lp-cred__row"><span>Commitment</span><u /></div>
-              <div className="lp-cred__row"><span>Status</span><em>Active</em></div>
-              <span className="lp-cred__seal">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12.5 4.2 4.2L19 7" /></svg>
-              </span>
-            </div>
+            <figure className="lp-figure">
+              <div className="lp-cred" aria-hidden="true">
+                <div className="lp-cred__top"><i /><span>Project credential</span><b>Policy 4</b></div>
+                <div className="lp-cred__row"><span>Wallet</span><u /></div>
+                <div className="lp-cred__row"><span>Commitment</span><u /></div>
+                <div className="lp-cred__row"><span>Status</span><em>Active · example</em></div>
+                <span className="lp-cred__seal">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12.5 4.2 4.2L19 7" /></svg>
+                </span>
+              </div>
+              <figcaption>Illustration, not a live result</figcaption>
+            </figure>
             <p className="lp-layer__tag">Credential layer · public</p>
-            <h3>DOJANG</h3>
+            <h3>
+              <span className="lp-layer__name">DOJANG</span>
+              <span className="lp-layer__sub">Credential Access</span>
+            </h3>
             <p className="lp-layer__text">A project credential layer that establishes eligibility for on-chain participation.</p>
+            <p className="lp-policy">
+              <span className="lp-policy__badge">Policy 4</span>
+              <span>Grants eligible project credential holders <strong>DAO participation</strong>.</span>
+            </p>
             <ul className="lp-layer__facts">
               <li>Issued by the project and bound to one wallet</li>
-              <li>Policy, expiry and revocation are recorded on-chain</li>
+              <li>Expiry and revocation are recorded on-chain</li>
             </ul>
             <Link className="lp-layer__link" href="/dojang">Explore DOJANG <Arrow /></Link>
           </article>
 
           <article className="lp-layer lp-layer--private" data-lp-reveal="right" data-spot style={{ ["--i" as string]: 2 }}>
-            <div className="lp-proof" aria-hidden="true">
-              <div className="lp-proof__top"><span>Private proof</span><b>Policy 3</b></div>
-              <div className="lp-proof__row"><span>Value</span><i className="lp-veil" /></div>
-              <div className="lp-proof__row"><span>Salt</span><i className="lp-veil" /></div>
-              <div className="lp-proof__row"><span>Proof</span><em>Valid</em></div>
-            </div>
+            <figure className="lp-figure">
+              <div className="lp-proof" aria-hidden="true">
+                <div className="lp-proof__top"><span>Private proof</span><b>Policy 3</b></div>
+                <div className="lp-proof__row"><span>Value</span><i className="lp-veil" /></div>
+                <div className="lp-proof__row"><span>Salt</span><i className="lp-veil" /></div>
+                <div className="lp-proof__row"><span>Proof</span><em>Valid · example</em></div>
+              </div>
+              <figcaption>Illustration, not a live result</figcaption>
+            </figure>
             <p className="lp-layer__tag">Proof layer · private</p>
-            <h3>BOJAGI</h3>
+            <h3>
+              <span className="lp-layer__name">BOJAGI</span>
+              <span className="lp-layer__sub">Private Eligibility Proof</span>
+            </h3>
             <p className="lp-layer__text">A zero-knowledge proof layer that confirms eligibility without exposing the underlying private value.</p>
+            <p className="lp-policy">
+              <span className="lp-policy__badge">Policy 3</span>
+              <span>Lets a credential holder show <strong>Lending eligibility</strong> through a genuine zero-knowledge proof check.</span>
+            </p>
             <ul className="lp-layer__facts">
               <li>The proof is generated in your browser</li>
-              <li>The value and its salt never leave your device</li>
+              <li>The private eligibility value never needs to appear publicly on-chain</li>
             </ul>
             <Link className="lp-layer__link" href="/bojagi">Explore BOJAGI <Arrow /></Link>
           </article>
@@ -164,7 +184,7 @@ export function TrustLayerSection() {
             </div>
             <ol className="lp-flow__routes">
               <li className="lp-route" data-kind="public" style={{ ["--r" as string]: 0 }}>
-                <span className="lp-route__policy">Policy 4</span>
+                <span className="lp-route__policy"><b>DAO access</b><small>Policy 4</small></span>
                 <span className="lp-route__wire" aria-hidden="true" />
                 <span className="lp-route__node" data-lp-reveal style={{ ["--i" as string]: 2 }}>
                   <b>DAO governance</b>
@@ -173,7 +193,7 @@ export function TrustLayerSection() {
                 </span>
               </li>
               <li className="lp-route" data-kind="private" style={{ ["--r" as string]: 1 }}>
-                <span className="lp-route__policy">Policy 3</span>
+                <span className="lp-route__policy"><b>Lending proof</b><small>Policy 3</small></span>
                 <span className="lp-route__wire" aria-hidden="true" />
                 <span className="lp-route__node lp-route__node--proof" data-lp-reveal style={{ ["--i" as string]: 3 }}>
                   <b>BOJAGI private proof</b>
@@ -211,7 +231,7 @@ const PHASES = [
     chip: "Verified locally",
     items: [
       "Read-only check of official Dojang Verified Address attestations",
-      "Verified DAO governance: official Dojang membership and public votes, tested locally",
+      "DAO governance gated by a project-issued policy-4 credential, with public votes",
       "A demo credential registry holding issuer-signed commitments",
       "A Noir circuit, proofs made in the browser and a generated Solidity verifier",
     ],
@@ -230,13 +250,13 @@ const PHASES = [
   },
   {
     n: "03",
-    name: "GIWA Sepolia deployment",
-    status: "next",
-    chip: "Next · not deployed",
+    name: "Robinhood Testnet deployment",
+    status: "done",
+    chip: "Deployed · chain 46630",
     items: [
-      "Deploy and verify the registry, verifier, tokens and pool",
-      "Grant the issuer role and run every flow on the public testnet",
-      "Publish the real addresses and transaction receipts on the Contracts page",
+      "Project-issued credential registry, HonkVerifier and verifier adapter",
+      "RobinhoodGovernancePhase1 for DAO participation (policy 4)",
+      "LendingPoolV2 with controlled demo tokens and a test oracle (policy 3 with a real proof)",
     ],
   },
   {
@@ -267,10 +287,10 @@ export function RoadmapSection() {
         {/* the route: solid where the work is done, dotted where it is not. Decorative; the list below says the same in words. */}
         <div className="lp-road__map" data-lp-rail aria-hidden="true">
           <svg className="lp-road__svg lp-road__svg--todo" viewBox="0 0 1000 120" preserveAspectRatio="none" focusable="false">
-            <path d="M375 28 C500 28 500 92 625 92 C750 92 750 28 875 28 L1000 28" />
+            <path d="M625 92 C750 92 750 28 875 28 L1000 28" />
           </svg>
           <svg className="lp-road__svg lp-road__svg--done" viewBox="0 0 1000 120" preserveAspectRatio="none" focusable="false">
-            <path d="M0 92 L125 92 C250 92 250 28 375 28" />
+            <path d="M0 92 L125 92 C250 92 250 28 375 28 C500 28 500 92 625 92" />
           </svg>
           {PHASES.map((ph, i) => (
             <span className="lp-road__node" data-status={ph.status} key={ph.n} style={{ ["--x" as string]: 12.5 + i * 25, ["--y" as string]: i % 2 ? 23.3 : 76.7 }}>
@@ -284,7 +304,7 @@ export function RoadmapSection() {
             <li className="lp-phase" data-status={ph.status} key={ph.n} data-spot data-lp-reveal style={{ ["--i" as string]: i + 1 }}>
               <p className="lp-phase__top">
                 <span className="lp-phase__n">Phase {ph.n}</span>
-                <span className="lp-chip" data-tone={ph.status === "done" ? "valid" : ph.status === "next" ? "warn" : "neutral"}><i aria-hidden="true" />{ph.chip}</span>
+                <span className="lp-chip" data-tone={ph.status === "done" ? "valid" : "neutral"}><i aria-hidden="true" />{ph.chip}</span>
               </p>
               <h3>{ph.name}</h3>
               <ul>{ph.items.map((t) => <li key={t}>{t}</li>)}</ul>
@@ -297,7 +317,7 @@ export function RoadmapSection() {
 }
 
 /* --------------------------------------------------------------- facts */
-export function FactsSection({ contracts }: { contracts: string }) {
+export function FactsSection() {
   return (
     <section className="lp-sec lp-facts" aria-labelledby="facts-title">
       <div className="lp-wrap">
@@ -308,7 +328,7 @@ export function FactsSection({ contracts }: { contracts: string }) {
         <dl className="lp-facts__grid" data-lp-reveal>
           <div className="lp-fact" data-spot><dt>Demo network</dt><dd>Robinhood Chain Testnet</dd></div>
           <div className="lp-fact" data-spot><dt>Chain ID</dt><dd className="mono">{ROBINHOOD_TESTNET_CHAIN_ID}</dd></div>
-          <div className="lp-fact" data-spot><dt>GIWA project contracts</dt><dd>{contracts}</dd></div>
+          <div className="lp-fact" data-spot><dt>Project contracts</dt><dd>Deployed on Robinhood Testnet</dd></div>
           <div className="lp-fact" data-spot><dt>Audit</dt><dd>None</dd></div>
           <div className="lp-fact" data-spot><dt>Funds held</dt><dd>None</dd></div>
         </dl>

@@ -192,6 +192,7 @@
   font: 700 .74rem/1 var(--lp-font-display); letter-spacing: .07em; text-transform: uppercase; white-space: nowrap;
   transition: background-color .2s ease, box-shadow .3s ease, color .2s ease, border-color .2s ease, transform .25s var(--lp-ease), scale .2s ease;
 }
+.lp a.lp-pill, .lp a.lp-pill:hover, .lp a.lp-pill:visited, .lp a.lp-pill:focus-visible { color: #fff; } /* a visited or hovered link must not fall back to the bar's ink */
 .lp .lp-pill:hover { background: linear-gradient(180deg, #951A38 0%, #7C0A24 55%, #55001A 100%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .32), 0 12px 30px -8px rgba(150, 14, 44, .85); }
 .lp .lp-pill--ok { background: var(--lp-ink); color: #fff; border-color: transparent; text-shadow: none; }
 .lp[data-phase="dark"] .lp-pill--ok { background: rgba(255, 255, 255, .08); border-color: var(--lp-line-2); }
@@ -235,6 +236,19 @@
   font: 600 1.15rem/1 var(--lp-font-display); letter-spacing: .04em; text-transform: uppercase;
 }
 .lp-menu[data-open="true"] { display: flex; }
+.lp-launch { position: relative; display: inline-flex; }
+.lp-launch__hint {
+  position: absolute; z-index: 70; top: calc(100% + .7rem); right: 0; width: max-content; max-width: 17rem; padding: .7rem .9rem; border-radius: 14px;
+  display: grid; gap: .25rem; text-align: left; color: #F7F3F4; pointer-events: none;
+  background: rgba(14, 10, 12, .97); border: 1px solid rgba(255, 255, 255, .14); box-shadow: 0 24px 50px -22px rgba(0, 0, 0, .8);
+  font: 400 .8rem/1.35 var(--lp-font-ui); opacity: 0; translate: 0 -6px; visibility: hidden;
+  transition: opacity .25s ease, translate .35s var(--lp-ease), visibility 0s linear .25s;
+}
+.lp-launch__hint b { font: 700 .72rem/1.2 var(--lp-font-display); letter-spacing: .08em; text-transform: uppercase; }
+.lp-launch__hint span { color: #A89DA1; font-family: var(--lp-font-mono); font-size: .68rem; letter-spacing: .06em; }
+.lp-launch:hover .lp-launch__hint, .lp-launch:focus-within .lp-launch__hint { opacity: 1; translate: 0 0; visibility: visible; transition-delay: .15s, .15s, 0s; }
+@media (hover: none) { .lp-launch__hint { display: none; } }
+.lp-menu__hint { margin: .7rem 0 0; text-align: center; font-size: .82rem; color: var(--lp-dim); }
 .lp-menu__label { padding: 1rem 0 .4rem; font: 500 .66rem/1 var(--lp-font-mono); letter-spacing: .2em; text-transform: uppercase; color: var(--lp-dim); }
 .lp-menu a { display: grid; gap: .35rem; }
 .lp-menu__name { font: 700 1.15rem/1 var(--lp-font-display); letter-spacing: .06em; }
@@ -789,7 +803,28 @@
 }
 .lp-layer__tag { font: 500 .66rem/1.2 var(--lp-font-mono); letter-spacing: .18em; text-transform: uppercase; color: var(--ac); margin-top: .6rem; }
 .lp-layer--public .lp-layer__tag { color: var(--lp-muted); }
-.lp-layer h3 { font: 700 clamp(2rem, 1.3rem + 2.4vw, 3.4rem) / 1 var(--lp-font-display); letter-spacing: .01em; }
+.lp-layer h3 { display: grid; gap: .5rem; }
+.lp-layer__name { font: 700 clamp(2.2rem, 1.4rem + 2.6vw, 3.6rem) / 1 var(--lp-font-display); letter-spacing: .01em; }
+.lp-layer__sub { font: 600 clamp(.95rem, .85rem + .35vw, 1.15rem) / 1.2 var(--lp-font-display); letter-spacing: .1em; text-transform: uppercase; color: var(--ac); }
+.lp-layer--public .lp-layer__sub { color: var(--lp-text); }
+/* what the policy grants, in words first; the policy number is metadata */
+.lp-policy {
+  display: flex; align-items: flex-start; gap: .8rem; max-width: 46ch; padding: .85rem 1rem; border-radius: 14px;
+  border: 1px solid var(--lp-line-2); background: rgba(255, 255, 255, .03); color: var(--lp-muted); font-size: .95rem; line-height: 1.45;
+}
+.lp-layer--private .lp-policy { border-color: rgba(184, 26, 52, .4); background: rgba(109, 0, 26, .22); }
+.lp-policy strong { color: var(--lp-text); font-weight: 600; }
+.lp-policy__badge {
+  flex: none; margin-top: .12rem; padding: .28rem .55rem; border-radius: 999px; border: 1px solid var(--ac);
+  font: 600 .6rem/1 var(--lp-font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--lp-text); white-space: nowrap;
+}
+.lp-figure { margin: 0; display: grid; gap: .55rem; }
+.lp-figure figcaption { font: 500 .6rem/1.2 var(--lp-font-mono); letter-spacing: .16em; text-transform: uppercase; color: var(--lp-dim); }
+.lp-layer--private .lp-figure figcaption { text-align: right; }
+.lp-layer { transition: border-color .4s ease, translate .5s var(--lp-ease), box-shadow .5s ease; --tx-own: border-color .4s ease, translate .5s var(--lp-ease), box-shadow .5s ease; }
+.lp-layer:hover { border-color: color-mix(in srgb, var(--ac) 65%, transparent); }
+.lp-cred, .lp-proof { transition: transform .7s var(--lp-ease); }
+.lp-layer:hover .lp-cred, .lp-layer:hover .lp-proof { transform: perspective(900px) rotateY(0) rotateX(0); }
 .lp-layer__text { max-width: 40ch; color: var(--lp-text); font-size: clamp(1rem, .95rem + .3vw, 1.18rem); }
 .lp-layer__facts { display: grid; gap: .5rem; margin-top: .2rem; }
 .lp-layer__facts li { position: relative; padding-left: 1.3rem; color: var(--lp-muted); font-size: .95rem; }
@@ -842,10 +877,11 @@
 .lp-route { position: relative; display: flex; align-items: stretch; gap: 0; --ac: var(--lp-public); }
 .lp-route[data-kind="private"] { --ac: var(--lp-wine); }
 .lp-route__policy {
-  flex: none; align-self: center; padding: .5rem .85rem; border-radius: 999px; border: 1px solid var(--ac);
-  font: 600 .66rem/1 var(--lp-font-mono); letter-spacing: .14em; text-transform: uppercase; color: #fff;
-  background: color-mix(in srgb, var(--ac) 20%, transparent);
+  flex: none; align-self: center; display: grid; gap: .22rem; justify-items: center; padding: .6rem .95rem; border-radius: 16px; border: 1px solid var(--ac);
+  color: #fff; background: color-mix(in srgb, var(--ac) 20%, transparent);
 }
+.lp-route__policy b { font: 700 .72rem/1 var(--lp-font-display); letter-spacing: .08em; text-transform: uppercase; }
+.lp-route__policy small { font: 500 .56rem/1 var(--lp-font-mono); letter-spacing: .16em; text-transform: uppercase; color: rgba(255, 255, 255, .62); }
 .lp-route__wire { position: relative; flex: 1 1 1.4rem; min-width: 1.2rem; align-self: center; height: 1px; background: var(--ac); transform-origin: left; }
 .lp-route__wire::after { content: ""; position: absolute; right: -1px; top: -3px; width: 7px; height: 7px; border-top: 1px solid var(--ac); border-right: 1px solid var(--ac); transform: rotate(45deg); }
 .lp-route[data-kind="private"] .lp-route__wire { height: 2px; background: repeating-linear-gradient(90deg, var(--ac) 0 8px, transparent 8px 13px); } /* private stretches are dashed: they happen on your device */

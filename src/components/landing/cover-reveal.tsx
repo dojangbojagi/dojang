@@ -16,7 +16,7 @@ import { scrollToId } from "./smooth-scroll";
    numbers written on the stage (see the header of landing.css), and every animated value
    in the stylesheet reads them. Nothing here animates by itself, so it runs in reverse. */
 
-const STACK = ["GIWA Sepolia", "Dojang", "EAS", "Noir", "Barretenberg", "UltraHonk", "Solidity"];
+const STACK = ["Robinhood Testnet", "Dojang", "EAS", "Noir", "Barretenberg", "UltraHonk", "Solidity"];
 
 /* "Prove more. Reveal less." -> ["Prove more", "Reveal less."]; the stop after "more" becomes the dot */
 function splitTagline(tagline: string): [string, string] {
@@ -215,7 +215,7 @@ export function CoverReveal({ tagline }: Props) {
           </h1>
           <p className="lp-sub">
             Verify trusted state, prove eligibility privately, then unlock an <span style={{ whiteSpace: "nowrap" }}>on-chain</span> action.
-            A testnet demonstration on GIWA Sepolia.
+            A testnet demonstration on Robinhood Testnet.
           </p>
           <p className="lp-hint" aria-hidden="true">
             <span>Scroll to open</span>

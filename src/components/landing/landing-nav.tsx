@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useEffect, useState } from "react";
+import { BrandLogo } from "@/components/brand-logo";
 import { FEATURES, FeaturesMenu } from "@/components/features-menu";
 
 /* The public bar: the logo, one Features menu (DOJANG and BOJAGI) and the way into the product.
@@ -31,7 +31,7 @@ export function LandingNav({ appName }: { appName: string }) {
     <>
       <header className="lp-nav" data-open={open}>
         <Link className="lp-brand" href="/" aria-label={`${appName} home`}>
-          <Image src="/logo.svg" alt="" width={38} height={38} priority />
+          <BrandLogo size={40} priority />
           <span>{appName}</span>
         </Link>
 
@@ -40,9 +40,15 @@ export function LandingNav({ appName }: { appName: string }) {
         </nav>
 
         <div className="lp-nav__right">
-          <Link className="lp-pill lp-pill--launch" href="/app">
-            Launch App
-          </Link>
+          <div className="lp-launch">
+            <Link className="lp-pill lp-pill--launch" href="/app" aria-describedby="lp-launch-hint">
+              Launch App
+            </Link>
+            <span className="lp-launch__hint" id="lp-launch-hint" role="tooltip">
+              <b>Opens the application</b>
+              <span>Lending · DAO · Docs · Contracts</span>
+            </span>
+          </div>
           <button
             type="button"
             className="lp-menu-btn"
@@ -73,6 +79,7 @@ export function LandingNav({ appName }: { appName: string }) {
         <Link className="lp-menu__launch" href="/app" onClick={() => setOpen(false)}>
           Launch App
         </Link>
+        <p className="lp-menu__hint">Opens the application: Lending, DAO, Docs and Contracts.</p>
       </nav>
     </>
   );

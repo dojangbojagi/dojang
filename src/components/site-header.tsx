@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { appEnv } from "@/lib/config/env";
-import { BrandMark } from "@/components/brand-mark";
+import { BrandLogo } from "@/components/brand-logo";
 import { FEATURES, FeaturesMenu } from "@/components/features-menu";
 import { WalletControl } from "@/components/wallet-control";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
@@ -52,7 +52,7 @@ export function SiteHeader() {
       <header className="site-header site-header--public" data-scrolled={scrolled}>
         <div className="container site-header__inner">
           <Link className="brand" href="/" aria-label={`${appEnv.appName}, home`}>
-            <BrandMark size={28} />
+            <BrandLogo size={34} />
             <span className="brand__name">{appEnv.appName}</span>
           </Link>
           <nav className="nav nav--features" aria-label="Primary">
@@ -92,7 +92,7 @@ export function SiteHeader() {
     <header className="site-header site-header--app" data-scrolled={scrolled}>
       <div className="container site-header__inner">
         <Link className="brand" href="/app" aria-label={`${appEnv.appName}, app home`}>
-          <BrandMark size={28} />
+          <BrandLogo size={34} />
           <span className="brand__name">{appEnv.appName}</span>
         </Link>
         <nav className="nav" aria-label="Primary">

@@ -9,7 +9,7 @@ import type { WalletState } from "@/lib/protocol/types";
 
 export type ProtocolChainId = typeof GIWA_CHAIN_ID | typeof ROBINHOOD_TESTNET_CHAIN_ID;
 
-function describeSwitchError(error: unknown, chainId: number): string {
+function describeSwitchError(error: unknown, chainId: number, connectorName?: string): string {
   const parts: string[] = [];
   const codes: number[] = [];
   const visited = new Set<unknown>();
@@ -29,6 +29,9 @@ function describeSwitchError(error: unknown, chainId: number): string {
   if (codes.includes(-32002) || detail.includes("request already pending")) {
     return "Your wallet already has a request waiting. Complete or dismiss it, then retry.";
   }
+  if (detail.includes("disconnected") || detail.includes("not connected") || detail.includes("wallet is locked")) {
+    return "The selected wallet is disconnected or locked. Reconnect and unlock it, then retry.";
+  }
   if (detail.includes("failed to fetch") || detail.includes("network error") || detail.includes("timed out") || detail.includes("timeout") || detail.includes("http request failed")) {
     return `Could not reach the network RPC while switching to chain ${chainId}. Check your connection or the wallet's network RPC, then retry.`;
   }
@@ -36,12 +39,16 @@ function describeSwitchError(error: unknown, chainId: number): string {
     return "Network switching was rejected in your wallet. You are still connected to the current network.";
   }
   if (codes.includes(4902) || detail.includes("unknown chain") || detail.includes("chain not added")) {
-    return `Your wallet does not have chain ${chainId} configured. Add the Robinhood Testnet network in the wallet and retry.`;
+    return `The selected wallet could not add chain ${chainId}. Add Robinhood Testnet in that wallet, then retry.`;
   }
-  if (detail.includes("switchchainnotsupported") || detail.includes("switch chain not supported") || detail.includes("does not support switching")) {
-    return `This wallet cannot switch networks from the app. Select chain ${chainId} in the wallet, then refresh.`;
+  if (detail.includes("switchchainnotsupported") || detail.includes("switch chain not supported") || detail.includes("does not support switching") || detail.includes("method not found") || codes.some((code) => code === 4200 || code === 4901 || code === -32601)) {
+    return `${connectorName ?? "This wallet"} cannot switch networks from the app. Select chain ${chainId} in the wallet, or disconnect and choose another EVM wallet that supports this chain.`;
   }
-  return `Could not switch the wallet to chain ${chainId}. Check the wallet request and retry.`;
+  const remainedOnChain = detail.match(/wallet stayed on chain (\d+)/);
+  if (remainedOnChain) {
+    return `${connectorName ?? "The selected wallet"} remained on chain ${remainedOnChain[1]}; this app requires chain ${chainId}. Choose another EVM wallet and confirm it supports this chain.`;
+  }
+  return `Could not switch ${connectorName ? `${connectorName} ` : "the wallet "}to chain ${chainId}. Check the wallet request and retry.`;
 }
 
 export function useWalletNetwork(expectedChainId: ProtocolChainId = ROBINHOOD_TESTNET_CHAIN_ID) {
@@ -67,6 +74,14 @@ export function useWalletNetwork(expectedChainId: ProtocolChainId = ROBINHOOD_TE
       setSwitchError(`Chain ${chainId} is not configured in this application.`);
       return false;
     }
+    if (!account.isConnected || !account.connector) {
+      setSwitchError(`Connect an EVM wallet before switching to ${target.name} (chain ${chainId}).`);
+      return false;
+    }
+    if (switchChain.isPending) {
+      setSwitchError("A network switch request is already pending in your wallet. Complete or dismiss it before retrying.");
+      return false;
+    }
     try {
       await switchChain.switchChainAsync({
         chainId,
@@ -85,10 +100,10 @@ export function useWalletNetwork(expectedChainId: ProtocolChainId = ROBINHOOD_TE
       }
       return true;
     } catch (error) {
-      setSwitchError(describeSwitchError(error, chainId));
+      setSwitchError(describeSwitchError(error, chainId, account.connector.name));
       return false;
     }
-  }, [account.connector, switchChain.switchChainAsync]);
+  }, [account.connector, account.isConnected, switchChain.isPending, switchChain.switchChainAsync]);
 
   return {
     ...account,

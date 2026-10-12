@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { GIWA_EXPLORER_URL } from "@/lib/config/chain";
+import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
 import { Arrow } from "./arrow";
-import { BrandMark } from "@/components/brand-mark";
-import Image from "next/image";
+import { BrandLogo } from "@/components/brand-logo";
 
 /* The last section. A fixed footer sits under the opaque content (the curtain);
    a one-screen spacer after the content lets the curtain peel away and reveal it.
@@ -110,12 +110,12 @@ export function FinalReveal({ appName }: { appName: string }) {
                 href="/"
                 aria-label={`${appName} home`}
               >
-                <Image src="/logo.svg" alt="" width={38} height={38} priority />
+                <BrandLogo size={40} />
                 <span>{appName}</span>
               </Link>
               <p>
-                A testnet demonstration of private eligibility proofs on GIWA
-                Sepolia. An independent project.
+                A testnet demonstration of private eligibility proofs on Robinhood
+                Testnet. An independent project, not affiliated with GIWA, Dojang or Upbit.
               </p>
             </div>
             <nav aria-label="Protocol">
@@ -146,12 +146,12 @@ export function FinalReveal({ appName }: { appName: string }) {
                 </li>
               </ul>
             </nav>
-            <nav aria-label="GIWA">
-              <h2>GIWA</h2>
+            <nav aria-label="GIWA references">
+              <h2>GIWA · external</h2>
               <ul>
                 <li>
                   <a href={GIWA_DOCS} target="_blank" rel="noopener noreferrer">
-                    Network setup
+                    GIWA network setup
                     <span className="arr" aria-hidden="true">
                       ↗
                     </span>
@@ -175,7 +175,7 @@ export function FinalReveal({ appName }: { appName: string }) {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    Explorer
+                    GIWA explorer
                     <span className="arr" aria-hidden="true">
                       ↗
                     </span>
@@ -185,7 +185,7 @@ export function FinalReveal({ appName }: { appName: string }) {
             </nav>
           </div>
           <p className="lp-legal">
-            <span>GIWA Sepolia demonstration</span>
+            <span>Robinhood Testnet · chain {ROBINHOOD_TESTNET_CHAIN_ID}</span>
             <span>Not audited · No funds held</span>
           </p>
           <span

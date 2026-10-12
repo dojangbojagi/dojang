@@ -1,6 +1,5 @@
 import "./landing.css";
 import { appEnv } from "@/lib/config/env";
-import { contractsStatus } from "./contracts-status";
 import { CoverReveal } from "./cover-reveal";
 import { FinalReveal } from "./final-reveal";
 import { jetbrainsMono, quicksandDisplay, quicksandUi } from "@/components/fonts";
@@ -13,8 +12,6 @@ import { FactsSection, PathSection, RoadmapSection, TrustLayerSection } from "./
 /* The landing page. Presentation only: wallet, chain, credential and proof logic
    stay in the hooks and protocol modules, untouched. */
 export function LandingPage() {
-  const contracts = contractsStatus();
-
   return (
     <div className={`lp ${quicksandDisplay.variable} ${quicksandUi.variable} ${jetbrainsMono.variable}`} data-phase="light">
       <noscript>
@@ -30,7 +27,7 @@ export function LandingPage() {
         <PathSection />
         <TrustLayerSection />
         <RoadmapSection />
-        <FactsSection contracts={contracts} />
+        <FactsSection />
       </main>
 
       <FinalReveal appName={appEnv.appName} />
