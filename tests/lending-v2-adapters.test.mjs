@@ -93,4 +93,5 @@ test("V2 protocol error mapping keeps oracle, eligibility, cap, and wallet failu
   expect(mapLendingV2Error(new Error("BorrowCapExceeded(1, 2)")).category).toBe("cap");
   expect(mapLendingV2Error(new Error("InsufficientLiquidity(1, 2)")).category).toBe("liquidity");
   expect(mapLendingV2Error(new Error("User rejected the request")).category).toBe("wallet");
+  expect(mapLendingV2Error(new Error("UnsupportedChain()")).message).toContain("46630");
 });

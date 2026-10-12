@@ -30,9 +30,11 @@ import { readLendingV2Market } from "../../src/lib/lending/v2-service.ts";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const artifactsRoot = path.resolve(root, "contracts/out");
 const crsPath = path.resolve(root, "circuits/cache/bb-crs");
+const chainId = Number(process.env.LENDING_V2_TEST_CHAIN_ID ?? "91342");
+assert.ok([91_342, 46_630].includes(chainId), `Unsupported Lending V2 test chain ${chainId}.`);
 const chain = defineChain({
-  id: 91_342,
-  name: "GIWA Lending V2 Local Anvil",
+  id: chainId,
+  name: chainId === 46_630 ? "Robinhood Testnet Lending V2 Local Anvil" : "GIWA Lending V2 Local Anvil",
   nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
   rpcUrls: { default: { http: ["http://127.0.0.1"] } },
 });
@@ -83,7 +85,7 @@ async function main() {
   const port = await freePort();
   const rpcUrl = `http://127.0.0.1:${port}`;
   const anvil = spawn("anvil", [
-    "--silent", "--host", "127.0.0.1", "--port", String(port), "--chain-id", "91342",
+    "--silent", "--host", "127.0.0.1", "--port", String(port), "--chain-id", String(chainId),
     "--accounts", "10", "--gas-limit", "100000000",
   ], { stdio: "ignore" });
 
@@ -94,7 +96,7 @@ async function main() {
     for (let attempt = 0; attempt < 80; attempt++) {
       if (anvil.exitCode !== null) throw new Error(`Anvil exited with status ${anvil.exitCode}.`);
       try {
-        if (await publicClient.getChainId() === 91_342) break;
+        if (await publicClient.getChainId() === chainId) break;
       } catch {}
       if (attempt === 79) throw new Error("Local Anvil did not become ready.");
       await new Promise((resolve) => setTimeout(resolve, 250));
@@ -147,14 +149,17 @@ async function main() {
       return `0x${object}`;
     }
 
-    const registry = await deploy("DemoCredentialRegistry.sol/DemoCredentialRegistry.json");
+    const registryArtifact = chainId === 46_630
+      ? "RobinhoodDemoCredentialRegistry.sol/RobinhoodDemoCredentialRegistry.json"
+      : "DemoCredentialRegistry.sol/DemoCredentialRegistry.json";
+    const registry = await deploy(registryArtifact);
     const generatedVerifier = await deploy("EligibilityHonkVerifier.sol/HonkVerifier.json");
     const verifierAdapter = await deploy("EligibilityVerifierAdapter.sol/EligibilityVerifierAdapter.json", [generatedVerifier]);
     const lendingAsset = await deploy("ControlledTestToken.sol/ControlledTestToken.json", [
-      "GIWA Demo Lending Dollar V2", "gUSD2", 6, 1_000_000n * loanUnit, admin,
+      `${chainId === 46_630 ? "Robinhood" : "GIWA"} Demo Lending Dollar V2`, "gUSD2", 6, 1_000_000n * loanUnit, admin,
     ]);
     const collateralAsset = await deploy("ControlledTestToken.sol/ControlledTestToken.json", [
-      "GIWA Demo Collateral V2", "gCOL2", 18, 1_000_000n * collateralUnit, admin,
+      `${chainId === 46_630 ? "Robinhood" : "GIWA"} Demo Collateral V2`, "gCOL2", 18, 1_000_000n * collateralUnit, admin,
     ]);
     const testOracle = await deploy("ControlledTestOracle.sol/ControlledTestOracle.json", [admin]);
     const lendingPool = await deploy("LendingPoolV2.sol/LendingPoolV2.json", [
@@ -166,7 +171,7 @@ async function main() {
       address: registry, abi: roleAbi, functionName: "ISSUER_ROLE",
     });
     receipts.issuerRole = receiptSummary(await transact(adminWallet, registry, roleAbi, "grantRole", [issuerRole, issuer], publicClient));
-    runFoundryDeploymentSimulation({ rpcUrl, admin, issuer, registry, verifierAdapter });
+    runFoundryDeploymentSimulation({ rpcUrl, admin, issuer, registry, verifierAdapter, generatedVerifier, chainId });
 
     // These prices exist only in this isolated Anvil fixture. They are not market observations.
     receipts.loanBounds = receiptSummary(await transact(adminWallet, testOracle, controlledTestOracleAbi,
@@ -214,7 +219,7 @@ async function main() {
     receipts.configureCollateral = receiptSummary(await transact(adminWallet, lendingPool, lendingPoolV2Abi,
       "configureReserve", [collateralAsset, collateralConfig], publicClient));
 
-    const initialMarket = await readLendingV2Market(publicClient, { pool: lendingPool, wallet: supplier, expectedRegistry: registry });
+    const initialMarket = await readLendingV2Market(publicClient, { pool: lendingPool, wallet: supplier, expectedRegistry: registry, expectedChainId: chainId });
     assert.equal(initialMarket.policyId, 3n, "Typed market adapter did not resolve policy 3.");
     assert.equal(initialMarket.riskPaused, false, "New local V2 pool is unexpectedly paused.");
     assert.equal(initialMarket.reserves.find((reserve) => reserve.asset.toLowerCase() === lendingAsset.toLowerCase())?.symbol, "gUSD2");
@@ -240,7 +245,7 @@ async function main() {
         ? 1n : previous.version + 1n;
       const commitment = await computeEligibilityCommitment({
         subject, privateValue, salt, policyId, policyVersion, threshold,
-        credentialVersion: version, expiresAt, chainId: 91_342n, vault: lendingPool,
+        credentialVersion: version, expiresAt, chainId: BigInt(chainId), vault: lendingPool,
       });
       const issue = await transact(issuerWallet, registry, credentialRegistryAbi, "recordCredential", [
         subject, policyId, commitment, expiresAt, version,
@@ -253,14 +258,14 @@ async function main() {
         threshold: threshold.toString(),
         credential_version: version.toString(),
         expires_at: expiresAt.toString(),
-        chain_id: "91342",
+        chain_id: String(chainId),
         vault_address: BigInt(lendingPool).toString(),
       };
       const { witness } = await noir.execute({ ...context, private_value: privateValue, salt: BigInt(salt).toString() });
       const generated = await backend.generateProof(witness, { verifierTarget: "evm" });
       assert.equal(await backend.verifyProof(generated, { verifierTarget: "evm" }), true, "Local Barretenberg proof verification failed.");
       const expected = [BigInt(subject), BigInt(commitment), policyId, policyVersion, threshold,
-        version, expiresAt, 91_342n, BigInt(lendingPool)];
+        version, expiresAt, BigInt(chainId), BigInt(lendingPool)];
       const publicInputs = generated.publicInputs.map(BigInt);
       assert.deepEqual(publicInputs, expected, "Proof public inputs are not bound to this V2 pool and policy.");
       const record = await publicClient.readContract({
@@ -290,7 +295,7 @@ async function main() {
       [lendingAsset, loanSupply, supplierProof.proof, supplierProof.publicInputs], publicClient);
     assertEvent(supplyTx.receipt, lendingPool, lendingPoolV2Abi, "LiquiditySupplied");
     receiptsForLifecycle.supply = receiptSummary(supplyTx);
-    const suppliedMarket = await readLendingV2Market(publicClient, { pool: lendingPool, wallet: supplier, expectedRegistry: registry });
+    const suppliedMarket = await readLendingV2Market(publicClient, { pool: lendingPool, wallet: supplier, expectedRegistry: registry, expectedChainId: chainId });
     assert.ok(suppliedMarket.position.byAsset[lendingAsset.toLowerCase()].supplied > 0n, "Typed adapter did not refresh the supplier position.");
     assert.ok(suppliedMarket.reserves.find((reserve) => reserve.asset.toLowerCase() === lendingAsset.toLowerCase())?.data.availableLiquidity > 0n);
 
@@ -339,7 +344,7 @@ async function main() {
       [lendingAsset, 500n * loanUnit, borrowerProof.proof, borrowerProof.publicInputs], publicClient);
     assertEvent(borrowTx.receipt, lendingPool, lendingPoolV2Abi, "Borrowed");
     receiptsForLifecycle.borrow = receiptSummary(borrowTx);
-    const borrowedMarket = await readLendingV2Market(publicClient, { pool: lendingPool, wallet: borrower, expectedRegistry: registry });
+    const borrowedMarket = await readLendingV2Market(publicClient, { pool: lendingPool, wallet: borrower, expectedRegistry: registry, expectedChainId: chainId });
     assert.ok(borrowedMarket.position.byAsset[lendingAsset.toLowerCase()].debt > 0n, "Typed adapter did not refresh borrower debt.");
     assert.ok(borrowedMarket.position.account?.healthFactorWad, "Typed adapter omitted fresh account health data.");
     assert.ok(borrowedMarket.reserves.find((reserve) => reserve.asset.toLowerCase() === lendingAsset.toLowerCase())?.maxBorrowable !== undefined, "Typed adapter omitted the price-gated borrow limit.");
@@ -361,7 +366,7 @@ async function main() {
       address: lendingPool, abi: lendingPoolV2Abi, functionName: "getReserveData", args: [lendingAsset],
     });
     assert.ok(rateData.currentBorrowRateBps >= 200n, "Borrow rate is below configured base rate.");
-    const staleMarket = await readLendingV2Market(publicClient, { pool: lendingPool, wallet: borrower, expectedRegistry: registry });
+    const staleMarket = await readLendingV2Market(publicClient, { pool: lendingPool, wallet: borrower, expectedRegistry: registry, expectedChainId: chainId });
     assert.ok(staleMarket.reserves.some((reserve) => reserve.oracle.state === "stale"), "Typed adapter did not report stale prices.");
     assert.equal(staleMarket.position.riskMetricsState, "blocked-by-oracle");
     assert.equal(staleMarket.position.account, undefined, "Stale prices must not produce health metrics.");
@@ -405,7 +410,7 @@ async function main() {
       "withdrawSupply", [lendingAsset, 1_000n * loanUnit], publicClient);
     assertEvent(withdrawSupplyTx.receipt, lendingPool, lendingPoolV2Abi, "LiquidityWithdrawn");
     receiptsForLifecycle.withdrawSupply = receiptSummary(withdrawSupplyTx);
-    const repaidMarket = await readLendingV2Market(publicClient, { pool: lendingPool, wallet: borrower, expectedRegistry: registry });
+    const repaidMarket = await readLendingV2Market(publicClient, { pool: lendingPool, wallet: borrower, expectedRegistry: registry, expectedChainId: chainId });
     assert.equal(repaidMarket.position.byAsset[lendingAsset.toLowerCase()].debt, 0n, "Typed adapter did not refresh full repayment.");
     assert.equal(repaidMarket.position.byAsset[collateralAsset.toLowerCase()].collateral, 0n, "Typed adapter did not refresh the safe collateral exit.");
 
@@ -432,7 +437,7 @@ async function main() {
       address: lendingPool, abi: lendingPoolV2Abi, functionName: "getAccountData", args: [liquidationBorrower],
     });
     assert.ok(unhealthy.healthFactorWad < 10n ** 27n, "Controlled local price move did not make the position unhealthy.");
-    const unhealthyMarket = await readLendingV2Market(publicClient, { pool: lendingPool, wallet: liquidationBorrower, expectedRegistry: registry });
+    const unhealthyMarket = await readLendingV2Market(publicClient, { pool: lendingPool, wallet: liquidationBorrower, expectedRegistry: registry, expectedChainId: chainId });
     assert.equal(unhealthyMarket.position.liquidationEligible, true, "Typed adapter did not detect liquidation eligibility.");
     receipts.liquidatorApprove = receiptSummary(await transact(liquidatorWallet, lendingAsset,
       controlledTokenAbi, "approve", [lendingPool, 450n * loanUnit], publicClient));
@@ -448,13 +453,13 @@ async function main() {
     });
     assert.ok(liquidationDebtAfter < 900n * loanUnit, "Liquidation did not reduce borrower debt.");
     assert.ok(seizedCollateral > 0n, "Liquidator did not receive collateral.");
-    const liquidatedMarket = await readLendingV2Market(publicClient, { pool: lendingPool, wallet: liquidationBorrower, expectedRegistry: registry });
+    const liquidatedMarket = await readLendingV2Market(publicClient, { pool: lendingPool, wallet: liquidationBorrower, expectedRegistry: registry, expectedChainId: chainId });
     assert.ok(liquidatedMarket.position.byAsset[lendingAsset.toLowerCase()].debt < 900n * loanUnit, "Typed adapter did not refresh liquidation debt.");
 
     process.stdout.write(JSON.stringify({
       result: "LendingPoolV2 local Anvil lifecycle passed with real generated proof and on-chain verifier acceptance",
-      chainId: 91_342,
-      environment: "isolated local Anvil; synthetic test prices; no GIWA Sepolia deployment or transactions",
+      chainId,
+      environment: `isolated local Anvil chain ${chainId}; synthetic test prices; no Robinhood Testnet or GIWA Sepolia transactions`,
       addresses: { registry, generatedVerifier, verifierAdapter, testOracle, lendingAsset, collateralAsset, lendingPool },
       policy: { id: policyId.toString(), version: policyVersion.toString(), threshold: threshold.toString() },
       proof: {
@@ -565,10 +570,15 @@ function describeError(error, depth = 0) {
   return `${detail} ${decodedNames.join(" ")}`;
 }
 
-function runFoundryDeploymentSimulation({ rpcUrl, admin, issuer, registry, verifierAdapter }) {
+function runFoundryDeploymentSimulation({ rpcUrl, admin, issuer, registry, verifierAdapter, generatedVerifier, chainId }) {
+  const robinhood = chainId === 46_630;
+  const script = robinhood
+    ? "script/DeployLendingV2RobinhoodTestnet.s.sol:DeployLendingV2RobinhoodTestnet"
+    : "script/DeployLendingV2GIWASepolia.s.sol:DeployLendingV2GIWASepolia";
   const result = spawnSync("bash", [
     "scripts/forge-simulate.sh",
-    "script/DeployLendingV2GIWASepolia.s.sol:DeployLendingV2GIWASepolia",
+    script,
+    ...(robinhood ? ["--profile", "robinhood-testnet"] : []),
     "--rpc-url",
     rpcUrl,
   ], {
@@ -577,10 +587,16 @@ function runFoundryDeploymentSimulation({ rpcUrl, admin, issuer, registry, verif
     maxBuffer: 16 * 1024 * 1024,
     env: {
       ...process.env,
-      GIWA_ADMIN_ADDRESS: admin,
-      GIWA_ISSUER_ADDRESS: issuer,
-      GIWA_CREDENTIAL_REGISTRY_ADDRESS: registry,
-      GIWA_VERIFIER_ADAPTER_ADDRESS: verifierAdapter,
+      ...(robinhood ? {
+        RH_TESTNET_ADMIN_ADDRESS: admin,
+        RH_TESTNET_ISSUER_ADDRESS: issuer,
+        RH_TESTNET_HONK_VERIFIER_ADDRESS: generatedVerifier,
+      } : {
+        GIWA_ADMIN_ADDRESS: admin,
+        GIWA_ISSUER_ADDRESS: issuer,
+        GIWA_CREDENTIAL_REGISTRY_ADDRESS: registry,
+        GIWA_VERIFIER_ADAPTER_ADDRESS: verifierAdapter,
+      }),
     },
   });
   if (result.error) throw result.error;

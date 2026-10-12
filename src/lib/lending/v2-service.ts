@@ -1,6 +1,7 @@
 import { zeroAddress, type Address, type PublicClient } from "viem";
 import { controlledTestOracleAbi, controlledTokenAbi, credentialIssuerRoleAbi, credentialRegistryAbi, lendingPoolV2Abi } from "../contracts/abis";
 import { LENDING_V2_ELIGIBILITY_THRESHOLD, LENDING_V2_POLICY_ID, LENDING_V2_POLICY_VERSION, LENDING_V2_RAY } from "./v2-config";
+import { GIWA_SEPOLIA_CHAIN_ID, type LendingV2ChainId } from "./v2-network";
 import type { DemoCredentialRecord } from "../protocol/types";
 
 export type LendingV2OracleState = "fresh" | "missing" | "stale" | "future" | "unavailable";
@@ -158,6 +159,7 @@ export async function readLendingV2Deployment(
   pool: Address,
   expectedRegistry?: Address,
   readAtBlock?: bigint,
+  expectedChainId: LendingV2ChainId = GIWA_SEPOLIA_CHAIN_ID,
 ): Promise<{
   pool: Address;
   credentialRegistry: Address;
@@ -170,8 +172,10 @@ export async function readLendingV2Deployment(
   const block = readAtBlock === undefined ? await client.getBlock({ blockTag: "latest" }) : undefined;
   const blockNumber = readAtBlock ?? block!.number;
   const actualChainId = await client.getChainId();
-  if (actualChainId !== 91_342) {
-    throw new LendingV2WrongNetworkError(`The configured RPC reports chain ${actualChainId}; GIWA Sepolia is 91342.`);
+  if (actualChainId !== expectedChainId) {
+    throw new LendingV2WrongNetworkError(
+      `The configured RPC reports chain ${actualChainId}; expected chain ${expectedChainId}.`,
+    );
   }
   if (!codeExists(await client.getCode({ address: pool, blockNumber }))) {
     throw new LendingV2UnavailableError("No contract bytecode is deployed at the configured V2 pool address.");
@@ -248,10 +252,16 @@ export async function readLendingV2Credential(
 
 export async function readLendingV2Market(
   client: PublicClient,
-  input: { pool: Address; wallet?: Address; expectedRegistry?: Address },
+  input: { pool: Address; wallet?: Address; expectedRegistry?: Address; expectedChainId?: LendingV2ChainId },
 ): Promise<LendingV2MarketSnapshot> {
   const block = await client.getBlock({ blockTag: "latest" });
-  const deployment = await readLendingV2Deployment(client, input.pool, input.expectedRegistry, block.number);
+  const deployment = await readLendingV2Deployment(
+    client,
+    input.pool,
+    input.expectedRegistry,
+    block.number,
+    input.expectedChainId,
+  );
   const [assets, riskPaused] = await Promise.all([
     client.readContract({ address: input.pool, abi: lendingPoolV2Abi, functionName: "getReserveAssets", blockNumber: block.number }),
     client.readContract({ address: input.pool, abi: lendingPoolV2Abi, functionName: "paused", blockNumber: block.number }),

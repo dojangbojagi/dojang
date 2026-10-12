@@ -63,7 +63,7 @@ const exactFailures: Array<[string[], LendingV2ErrorCategory, string]> = [
   [["wrongthreshold"], "eligibility", "The proof threshold does not match the V2 policy."],
   [["wrongcredentialversion"], "eligibility", "The credential changed after the proof was generated."],
   [["wrongexpiry"], "eligibility", "The proof expiry does not match the credential record."],
-  [["wrongchain"], "eligibility", "This V2 action is restricted to GIWA Sepolia (chain 91342)."],
+  [["wrongchain"], "eligibility", "This proof is bound to a different chain than the connected demo testnet."],
   [["wronglendingpool"], "eligibility", "The proof is bound to a different Lending V2 pool."],
   [["invalidproof"], "eligibility", "The on-chain verifier rejected this proof."],
   [["liquidationclosefactorexceeded"], "liquidation", "The requested liquidation exceeds the reserve close-factor limit."],
@@ -75,7 +75,7 @@ const exactFailures: Array<[string[], LendingV2ErrorCategory, string]> = [
   [["insufficientallowance"], "allowance", "Approve the V2 pool to spend the required token amount first."],
   [["insufficientfunds"], "balance", "The wallet does not have enough token balance or network gas for this action."],
   [["enforcedpause"], "paused", "Risk-increasing Lending V2 operations are paused."],
-  [["unsupportedchain"], "configuration", "The V2 pool is restricted to GIWA Sepolia (chain 91342)."],
+  [["unsupportedchain"], "configuration", "The V2 pool supports only GIWA Sepolia (91342) and Robinhood Chain Testnet (46630)."],
   [["accesscontrolunauthorizedaccount"], "configuration", "This wallet is not authorized for the requested administrative operation."],
   [["user rejected", "user denied"], "wallet", "The wallet request was rejected; no transaction was submitted."],
 ];
@@ -98,7 +98,7 @@ export function mapLendingV2Error(error: unknown): LendingV2Failure {
     return { category: "unknown", code: "simulation-revert", message: "The contract simulation reverted. No transaction was submitted." };
   }
   if (normalized.includes("network") || normalized.includes("timeout") || normalized.includes("rpc")) {
-    return { category: "rpc", code: "rpc-error", message: "The GIWA RPC request failed. No successful state change was confirmed." };
+    return { category: "rpc", code: "rpc-error", message: "The configured testnet RPC request failed. No successful state change was confirmed." };
   }
   return { category: "unknown", code: "unknown", message: text || "The Lending V2 action failed." };
 }

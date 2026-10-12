@@ -5,6 +5,11 @@ import { AmountField } from "@/components/lending/amount-field";
 import { formatAmount, parseAmount, toInputText } from "@/components/lending/format";
 import type { ActionRunner } from "@/components/lending/types";
 
+/** What the person did to the field, beyond the number: pressed Max (and Max means "everything" for this action). */
+export interface ActionFlags {
+  max: boolean;
+}
+
 interface ReviewedActionProps {
   title: string;
   fieldLabel: string;
@@ -14,7 +19,7 @@ interface ReviewedActionProps {
   /** The final button, for example "Confirm supply". */
   submitLabel: string;
   successMessage: string;
-  onSubmit: (amount: bigint) => Promise<void>;
+  onSubmit: (amount: bigint, flags: ActionFlags) => Promise<void>;
   /** Fills the field. Leave undefined when no amount is safe to offer. */
   max?: bigint;
   hint?: string;
@@ -27,18 +32,23 @@ interface ReviewedActionProps {
    * The allowance a typed amount needs, and therefore the exact amount to approve. Defaults to the typed amount.
    * Never unlimited. Used where the pool may take slightly more than was displayed (repaying a debt in full).
    */
-  requiredAllowance?: (amount: bigint) => bigint;
+  requiredAllowance?: (amount: bigint, flags: ActionFlags) => bigint;
+  /**
+   * True when pressing Max means "the whole thing" for this action (repaying every unit of debt, which keeps
+   * growing while the transaction waits). Then onSubmit receives flags.max and must not rely on the typed number.
+   */
+  maxMeansFull?: boolean;
   approveSuccessMessage?: string;
   /** An extra reason the amount cannot be used, decided from contract-provided limits. */
   checkAmount?: (amount: bigint) => string | null;
   /** A reason the action cannot start at all yet. */
   precondition?: string | null;
   /** The review shown once the amount is valid, before anything is sent to the wallet. */
-  review?: (amount: bigint) => ReactNode;
+  review?: (amount: bigint, flags: ActionFlags) => ReactNode;
   runner: ActionRunner;
   tone?: "primary" | "secondary";
-  /** Passed to the activity log wording when the amount equals this value (for example "Repay in full"). */
-  fullLabel?: { amount: bigint; verb: string };
+  /** Activity-log wording when Max was used and means everything, for example "Repay in full". */
+  fullVerb?: string;
 }
 
 /**
@@ -48,14 +58,16 @@ interface ReviewedActionProps {
 export function ReviewedAction(props: ReviewedActionProps) {
   const {
     title, fieldLabel, asset, verb, submitLabel, successMessage, onSubmit, max, hint, balance, allowance, onApprove,
-    requiredAllowance, approveSuccessMessage, checkAmount, precondition, review, runner, tone = "primary", fullLabel,
+    requiredAllowance, maxMeansFull, approveSuccessMessage, checkAmount, precondition, review, runner, tone = "primary", fullVerb,
   } = props;
   const [text, setText] = useState("");
+  const [usedMax, setUsedMax] = useState(false);
   const parsed = parseAmount(text, asset.decimals);
   const amount = parsed.value;
   const shown = amount === null ? "" : `${formatAmount(amount, asset.decimals)} ${asset.symbol}`;
 
-  const allowanceNeeded = amount === null ? null : requiredAllowance ? requiredAllowance(amount) : amount;
+  const flags: ActionFlags = { max: usedMax && Boolean(maxMeansFull) };
+  const allowanceNeeded = amount === null ? null : requiredAllowance ? requiredAllowance(amount, flags) : amount;
   const needsApproval = allowance !== undefined && allowanceNeeded !== null && allowanceNeeded > allowance;
   const reason =
     runner.block ??
@@ -79,9 +91,12 @@ export function ReviewedAction(props: ReviewedActionProps) {
       );
       return;
     }
-    const label = fullLabel && amount >= fullLabel.amount ? `${fullLabel.verb} ${shown}` : `${verb} ${shown}`;
-    const ok = await runner.run(label, () => onSubmit(amount), successMessage);
-    if (ok) setText("");
+    const label = flags.max && fullVerb ? `${fullVerb} ${shown}` : `${verb} ${shown}`;
+    const ok = await runner.run(label, () => onSubmit(amount, flags), successMessage);
+    if (ok) {
+      setText("");
+      setUsedMax(false);
+    }
   }
 
   return (
@@ -90,17 +105,20 @@ export function ReviewedAction(props: ReviewedActionProps) {
       <AmountField
         label={fieldLabel}
         value={text}
-        onChange={setText}
+        onChange={(value) => {
+          setText(value);
+          setUsedMax(false);
+        }}
         symbol={asset.symbol}
         error={parsed.error}
         hint={hint}
-        onMax={max !== undefined && max > 0n ? () => setText(toInputText(max, asset.decimals)) : undefined}
+        onMax={max !== undefined && max > 0n ? () => { setText(toInputText(max, asset.decimals)); setUsedMax(true); } : undefined}
         disabled={runner.busy}
       />
       {amount !== null && !parsed.error && review && (
         <div className="lendv2-review" aria-live="polite">
           <p className="lendv2-review__title">Review before the wallet</p>
-          {review(amount)}
+          {review(amount, flags)}
         </div>
       )}
       <ol className="lend-flow" aria-label={`${title} steps`}>
@@ -112,7 +130,11 @@ export function ReviewedAction(props: ReviewedActionProps) {
       </ol>
       <div className="protocol-actions lend-action__buttons">
         <button className={`btn btn--${tone}`} type="button" onClick={() => void click()} disabled={disabled}>
-          {runner.busy ? "Transaction in progress…" : needsApproval ? `Approve ${shown}` : submitLabel}
+          {runner.busy
+            ? "Transaction in progress…"
+            : needsApproval && allowanceNeeded !== null
+              ? `Approve ${formatAmount(allowanceNeeded, asset.decimals)} ${asset.symbol}`
+              : submitLabel}
         </button>
       </div>
       {reason && !parsed.error && <p className="lend-reason" role="status">{reason}</p>}

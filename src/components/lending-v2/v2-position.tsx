@@ -125,32 +125,33 @@ export function PositionView({ market, runner, asset, onAsset }: {
               fieldLabel="Amount to repay"
               asset={{ symbol: reserve.symbol, decimals: reserve.decimals }}
               verb="Repay"
-              fullLabel={position ? { amount: position.debt, verb: "Repay in full" } : undefined}
+              fullVerb="Repay in full"
               submitLabel="Confirm repayment"
               successMessage="Repayment confirmed by the receipt, the pool event and the contract readback."
               approveSuccessMessage="Approval confirmed. You can confirm the repayment now."
               balance={position?.walletBalance}
               allowance={position?.allowance}
               max={position ? minBigint(position.debt, position.walletBalance) : undefined}
-              hint={position ? `You owe ${formatAmount(position.debt, reserve.decimals)} ${reserve.symbol}, including interest accrued to the block read. Entering the full debt repays it in full.` : undefined}
+              maxMeansFull={Boolean(position && position.walletBalance >= position.debt)}
+              hint={position ? `You owe ${formatAmount(position.debt, reserve.decimals)} ${reserve.symbol}, including interest accrued to the block read. Max repays the whole debt, including interest that accrues while the transaction confirms.` : undefined}
               precondition={!position ? "Connect a wallet on GIWA Sepolia to repay." : position.debt === 0n ? `You have no ${reserve.symbol} debt.` : null}
               checkAmount={(amount) => position && amount > position.debt ? `This is more than your debt (${formatAmount(position.debt, reserve.decimals)} ${reserve.symbol}).` : null}
-              requiredAllowance={(amount) => position && amount >= position.debt ? position.debt + repayAllowanceHeadroom(position.debt, reserve.data.currentBorrowRateBps) : amount}
+              requiredAllowance={(amount, flags) => position && flags.max ? position.debt + repayAllowanceHeadroom(position.debt, reserve.data.currentBorrowRateBps) : amount}
               onApprove={(amount) => market.approveToken(reserve.asset, amount)}
-              onSubmit={(amount) => market.repay(reserve.asset, position && amount >= position.debt ? maxUint256 : amount)}
-              review={(amount) => {
-                const full = Boolean(position && amount >= position.debt);
-                return (
-                  <dl className="kv protocol-kv">
-                    <div className="kv__row"><dt>{full ? "You repay in full" : "You repay"}</dt><dd>{formatAmount(amount, reserve.decimals)} {reserve.symbol}</dd></div>
-                    <div className="kv__row"><dt>Debt after</dt><dd>{position ? (full ? `0 ${reserve.symbol}` : `${formatAmount(position.debt - amount, reserve.decimals)} ${reserve.symbol}`) : "—"}</dd></div>
-                    {full && position && (
-                      <div className="kv__row"><dt>Approval requested</dt><dd>{formatAmount(position.debt + repayAllowanceHeadroom(position.debt, reserve.data.currentBorrowRateBps), reserve.decimals)} {reserve.symbol} <span className="muted">(covers interest while it confirms; the pool takes only the real debt)</span></dd></div>
-                    )}
-                    <div className="kv__row"><dt>Needs a proof or credential</dt><dd>No. Repaying is always open.</dd></div>
-                  </dl>
-                );
-              }}
+              onSubmit={(amount, flags) => market.repay(reserve.asset, flags.max ? maxUint256 : amount)}
+              review={(amount, flags) => (
+                <dl className="kv protocol-kv">
+                  <div className="kv__row"><dt>{flags.max ? "You repay in full" : "You repay"}</dt><dd>{formatAmount(amount, reserve.decimals)} {reserve.symbol}{flags.max ? " and any interest accrued until it confirms" : ""}</dd></div>
+                  <div className="kv__row"><dt>Debt after</dt><dd>{position ? (flags.max ? `0 ${reserve.symbol}` : `${formatAmount(position.debt > amount ? position.debt - amount : 0n, reserve.decimals)} ${reserve.symbol}`) : "—"}</dd></div>
+                  {flags.max && position && (
+                    <div className="kv__row"><dt>Approval requested</dt><dd>{formatAmount(position.debt + repayAllowanceHeadroom(position.debt, reserve.data.currentBorrowRateBps), reserve.decimals)} {reserve.symbol} <span className="muted">(covers interest while it confirms; the pool takes only the real debt)</span></dd></div>
+                  )}
+                  {flags.max && position && position.walletBalance < position.debt + repayAllowanceHeadroom(position.debt, reserve.data.currentBorrowRateBps) && (
+                    <div className="kv__row"><dt>Wallet margin</dt><dd>Your balance is close to the debt. If interest accrues past it before confirmation, the transfer will be refused and nothing changes.</dd></div>
+                  )}
+                  <div className="kv__row"><dt>Needs a proof or credential</dt><dd>No. Repaying is always open.</dd></div>
+                </dl>
+              )}
               runner={runner}
             />
             <ReviewedAction

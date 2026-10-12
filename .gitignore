@@ -41,6 +41,7 @@ contracts/lib/
 !/docs/DOJANG_BOJAGI_LENDING_UPGRADE_DEV_BRIEF.md
 !/docs/LENDING_V2_IMPLEMENTATION.md
 !/docs/LENDING_V2_FRONTEND_HANDOFF.md
+!/docs/ROBINHOOD_TESTNET_DEMO.md
 
 # Playwright output
 playwright-report/

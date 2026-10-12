@@ -15,11 +15,13 @@ import {IEligibilityVerifier} from "./interfaces/IEligibilityVerifier.sol";
 import {IPriceOracle} from "./interfaces/IPriceOracle.sol";
 import {UtilizationRateModel} from "./UtilizationRateModel.sol";
 
-/// @notice Multi-reserve, overcollateralized lending engine for GIWA Sepolia test-token demos.
+/// @notice Multi-reserve, overcollateralized lending engine for supported testnet demo tokens.
 /// @dev Eligibility credentials are project-issued. This contract is not an official Dojang integration.
 contract LendingPoolV2 is AccessControl, Pausable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
+    uint256 public constant GIWA_SEPOLIA_CHAIN_ID = 91_342;
+    uint256 public constant ROBINHOOD_TESTNET_CHAIN_ID = 46_630;
     uint256 public constant POLICY_ID = 3;
     uint256 public constant POLICY_VERSION = 1;
     uint256 public constant ELIGIBILITY_THRESHOLD = 1_000;
@@ -196,7 +198,9 @@ contract LendingPoolV2 is AccessControl, Pausable, ReentrancyGuard {
         IPriceOracle priceOracle_,
         address admin_
     ) {
-        if (block.chainid != 91_342) revert UnsupportedChain();
+        if (
+            block.chainid != GIWA_SEPOLIA_CHAIN_ID && block.chainid != ROBINHOOD_TESTNET_CHAIN_ID
+        ) revert UnsupportedChain();
         if (
             address(credentialRegistry_) == address(0) || address(eligibilityVerifier_) == address(0)
                 || address(priceOracle_) == address(0) || admin_ == address(0)
