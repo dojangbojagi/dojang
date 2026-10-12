@@ -46,7 +46,7 @@ const STEPS = [
     name: "Verified execution",
     lane: "public",
     where: "On-chain",
-    text: "A contract checks the sender, the commitment, the policy and the proof in one transaction, then unlocks the action: access in the restricted vault, or a loan in the lending demo.",
+    text: "A contract checks the sender, the commitment, the policy and the proof in one transaction, then unlocks the action: a governance vote, or a loan in the Lending V2 market.",
     pub: ["The proof and public inputs", "Your wallet address", "The access result and transaction"],
     priv: ["The value stays unpublished"],
   },
@@ -94,94 +94,106 @@ export function PathSection() {
 }
 
 /* ----------------------------------------------------------------- 03 */
-/* The two ways through the product, each two pages long. A starts from what GIWA already trusts (public,
-   white) and ends in a decision; B starts from a private fact (burgundy) and ends in an action. The vault is a
-   technical primitive, so it sits in the secondary row, not in either journey. */
-const JOURNEYS = [
-  {
-    key: "a",
-    tone: "public",
-    letter: "A",
-    name: "Verified governance",
-    chip: "Public · verified",
-    text: "Check official GIWA Dojang separately; Robinhood DAO membership uses a BOJOGAY project-issued policy-4 credential.",
-    steps: [
-      ["Dojang", "Inspect official GIWA Verified Address attestations and the separate BOJOGAY-issued Robinhood project credentials.", "/dojang"],
-      ["DAO governance", "Use an active policy-4 project credential to propose and vote on Robinhood Testnet. Official Dojang is not used for Robinhood authorization.", "/dao"],
-    ],
-  },
-  {
-    key: "b",
-    tone: "private",
-    letter: "B",
-    name: "Private utility",
-    chip: "Private · proven",
-    text: "Use an issuer-delivered policy-3 witness to prove eligibility privately, then act on Robinhood Testnet.",
-    steps: [
-      ["Bojagi-inspired proof", "Import the private witness for your Robinhood project credential and generate a genuine browser proof.", "/bojagi"],
-      ["Lending", "Use policy 3 to supply or borrow in a controlled test market with test tokens and a synthetic oracle.", "/lending"],
-    ],
-  },
-] as const;
-
-const TECHNICAL = [
-  ["Contracts", "Robinhood Testnet project deployments and separate official GIWA references.", "/contracts"],
-  ["Docs", "The trust model, data boundaries and current limitations.", "/docs"],
-  ["Vault", "The proof-gated access contract, for anyone who wants to inspect it.", "/vault"],
-] as const;
-
-export function JourneysSection() {
+/* The trust layer: what DOJANG and BOJAGI are, and how they relate. One composition, not two cards: the
+   credential (public, white) and the proof (private, burgundy) are two panes, one in front of the other, and
+   below them the two access paths that both start from the same project credential registry.
+   Facts only, from the deployed Robinhood Testnet protocol: policy 4 gates DAO governance; policy 3 and a
+   real zero-knowledge proof gate Lending V2. These are project-issued credentials, not official GIWA,
+   Dojang or Upbit credentials, and the section says so. */
+export function TrustLayerSection() {
   return (
-    <section className="lp-sec" id="journeys" aria-labelledby="journeys-title">
+    <section className="lp-sec lp-trust" id="trust" aria-labelledby="trust-title">
       <div className="lp-wrap">
-        <Eyebrow n="03" ac="blue">Two journeys</Eyebrow>
-        <h2 className="lp-h2" id="journeys-title" data-lp-reveal style={{ ["--i" as string]: 1 }}>
-          Two ways in. Both end <em>on-chain.</em>
+        <Eyebrow n="03" ac="blue">The trust layer</Eyebrow>
+        <h2 className="lp-h2" id="trust-title" data-lp-reveal style={{ ["--i" as string]: 1 }}>
+          Trust is <em>verified.</em> Privacy is <em className="o">preserved.</em>
         </h2>
         <p className="lp-lead" data-lp-reveal style={{ ["--i" as string]: 2 }}>
-          Verify first, then govern. Or prove privately, then borrow. Each journey is two pages, in order.
+          DOJANG establishes project-defined eligibility. BOJAGI proves that eligibility without exposing the private value.
         </p>
 
-        <div className="lp-jn">
-          {JOURNEYS.map((j, ji) => (
-            <article className="lp-jn__lane" data-tone={j.tone} key={j.key} data-lp-reveal={ji ? "right" : "left"} style={{ ["--i" as string]: 1 }}>
-              <header className="lp-jn__head">
-                <span className="lp-jn__letter" aria-hidden="true">{j.letter}</span>
-                <div>
-                  <p className="lp-jn__chip">{j.chip}</p>
-                  <h3>{j.name}</h3>
-                </div>
-              </header>
-              <p className="lp-jn__text">{j.text}</p>
-              <ol className="lp-jn__steps">
-                {j.steps.map(([title, desc, href], si) => (
-                  <li key={href} data-spot>
-                    <Link href={href}>
-                      <span className="lp-jn__idx">{`${j.letter}${si + 1}`}</span>
-                      <span className="lp-jn__title">{title}</span>
-                      <span className="lp-jn__desc">{desc}</span>
-                      <span className="lp-jn__arrow"><Arrow /></span>
-                    </Link>
-                  </li>
-                ))}
-              </ol>
-            </article>
-          ))}
+        <div className="lp-trust__stage">
+          <article className="lp-layer lp-layer--public" data-lp-reveal="left" data-spot style={{ ["--i" as string]: 1 }}>
+            <div className="lp-cred" aria-hidden="true">
+              <div className="lp-cred__top"><i /><span>Credential</span><b>Policy 4</b></div>
+              <div className="lp-cred__row"><span>Wallet</span><u /></div>
+              <div className="lp-cred__row"><span>Commitment</span><u /></div>
+              <div className="lp-cred__row"><span>Status</span><em>Active</em></div>
+              <span className="lp-cred__seal">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12.5 4.2 4.2L19 7" /></svg>
+              </span>
+            </div>
+            <p className="lp-layer__tag">Credential layer · public</p>
+            <h3>DOJANG</h3>
+            <p className="lp-layer__text">A project credential layer that establishes eligibility for on-chain participation.</p>
+            <ul className="lp-layer__facts">
+              <li>Issued by the project and bound to one wallet</li>
+              <li>Policy, expiry and revocation are recorded on-chain</li>
+            </ul>
+            <Link className="lp-layer__link" href="/dojang">Explore DOJANG <Arrow /></Link>
+          </article>
+
+          <article className="lp-layer lp-layer--private" data-lp-reveal="right" data-spot style={{ ["--i" as string]: 2 }}>
+            <div className="lp-proof" aria-hidden="true">
+              <div className="lp-proof__top"><span>Private proof</span><b>Policy 3</b></div>
+              <div className="lp-proof__row"><span>Value</span><i className="lp-veil" /></div>
+              <div className="lp-proof__row"><span>Salt</span><i className="lp-veil" /></div>
+              <div className="lp-proof__row"><span>Proof</span><em>Valid</em></div>
+            </div>
+            <p className="lp-layer__tag">Proof layer · private</p>
+            <h3>BOJAGI</h3>
+            <p className="lp-layer__text">A zero-knowledge proof layer that confirms eligibility without exposing the underlying private value.</p>
+            <ul className="lp-layer__facts">
+              <li>The proof is generated in your browser</li>
+              <li>The value and its salt never leave your device</li>
+            </ul>
+            <Link className="lp-layer__link" href="/bojagi">Explore BOJAGI <Arrow /></Link>
+          </article>
         </div>
 
-        <div className="lp-tech" data-lp-reveal style={{ ["--i" as string]: 2 }}>
-          <p className="lp-tech__label">Behind both journeys</p>
-          <ul>
-            {TECHNICAL.map(([title, desc, href]) => (
-              <li key={href}>
-                <Link href={href}>
-                  <span className="lp-tech__title">{title}<Arrow /></span>
-                  <span className="lp-tech__desc">{desc}</span>
-                </Link>
+        <div className="lp-flow" data-lp-rail>
+          <p className="lp-flow__cap" data-lp-reveal>
+            <span>Two access paths</span>
+            <span>One project credential registry · Robinhood Testnet · chain {ROBINHOOD_TESTNET_CHAIN_ID}</span>
+          </p>
+          <div className="lp-flow__body">
+            <div className="lp-flow__root" data-lp-reveal style={{ ["--i" as string]: 1 }}>
+              <span className="lp-flow__k">Origin</span>
+              <strong>DOJANG credential</strong>
+              <small>Project-issued, bound to your wallet</small>
+            </div>
+            <ol className="lp-flow__routes">
+              <li className="lp-route" data-kind="public" style={{ ["--r" as string]: 0 }}>
+                <span className="lp-route__policy">Policy 4</span>
+                <span className="lp-route__wire" aria-hidden="true" />
+                <span className="lp-route__node" data-lp-reveal style={{ ["--i" as string]: 2 }}>
+                  <b>DAO governance</b>
+                  <small>The credential is checked on-chain. Votes are public.</small>
+                  <code>RobinhoodGovernancePhase1</code>
+                </span>
               </li>
-            ))}
-          </ul>
+              <li className="lp-route" data-kind="private" style={{ ["--r" as string]: 1 }}>
+                <span className="lp-route__policy">Policy 3</span>
+                <span className="lp-route__wire" aria-hidden="true" />
+                <span className="lp-route__node lp-route__node--proof" data-lp-reveal style={{ ["--i" as string]: 3 }}>
+                  <b>BOJAGI private proof</b>
+                  <small>Zero-knowledge, built in your browser. The value stays private.</small>
+                </span>
+                <span className="lp-route__wire lp-route__wire--b" aria-hidden="true" />
+                <span className="lp-route__node" data-lp-reveal style={{ ["--i" as string]: 4 }}>
+                  <b>Lending V2</b>
+                  <small>The pool verifies the proof inside the transaction.</small>
+                  <code>LendingPoolV2 · HonkVerifier</code>
+                </span>
+              </li>
+            </ol>
+          </div>
         </div>
+
+        <p className="lp-trust__note" data-lp-reveal style={{ ["--i" as string]: 1 }}>
+          GYEVO credentials are issued by this project, not by GIWA, Dojang or Upbit. They are a separate,
+          project-owned credential layer on Robinhood Testnet: a test environment with test tokens.
+        </p>
       </div>
     </section>
   );
@@ -202,7 +214,6 @@ const PHASES = [
       "Verified DAO governance: official Dojang membership and public votes, tested locally",
       "A demo credential registry holding issuer-signed commitments",
       "A Noir circuit, proofs made in the browser and a generated Solidity verifier",
-      "A restricted vault, the technical primitive that records access only after a verified proof",
     ],
   },
   {
@@ -223,7 +234,7 @@ const PHASES = [
     status: "next",
     chip: "Next · not deployed",
     items: [
-      "Deploy and verify the registry, verifier, vault, tokens and pool",
+      "Deploy and verify the registry, verifier, tokens and pool",
       "Grant the issuer role and run every flow on the public testnet",
       "Publish the real addresses and transaction receipts on the Contracts page",
     ],

@@ -45,8 +45,8 @@ export function GovernanceNotice({ chainId = GIWA_CHAIN_ID }: { chainId?: Protoc
         <li><strong>Plain rules.</strong> Voting opens one minute after a proposal is created. Quorum counts For, Against and Abstain together; approval needs more For than Against. Anyone may finalize and execute.</li>
       </ul>
       <p className="small muted">
-        Using Lending or the Vault does not require any governance step, and governance does not require a ZK proof.{" "}
-        <Link href="/lending">Lending</Link> · <Link href="/vault">Vault</Link> · <Link href="/dojang">{isRobinhood ? "Credential tools" : "Check your Dojang credential"}</Link>
+        Using Lending does not require any governance step, and governance does not require a ZK proof.{" "}
+        <Link href="/lending">Lending</Link> · <Link href="/dojang">{isRobinhood ? "Credential tools" : "Check your Dojang credential"}</Link>
       </p>
     </section>
   );

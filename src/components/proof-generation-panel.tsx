@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { useEligibilityProof } from "@/hooks/use-eligibility-proof";
 import { DEMO_POLICY_ID, DEMO_POLICY_THRESHOLD, useDemoCredential } from "@/hooks/use-demo-credential";
@@ -57,7 +56,6 @@ export function ProofGenerationPanel() {
         <button className="btn btn--primary" type="button" onClick={() => void generate()} disabled={!canGenerate}>
           {proof.state === "generating" ? "Generating proof…" : proof.state === "ready-to-submit" ? "Generate a new proof" : "Generate proof"}
         </button>
-        <Link className="protocol-inline-link" href="/vault">Review vault action ↗</Link>
       </div>
     </section>
   );

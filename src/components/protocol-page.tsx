@@ -10,7 +10,6 @@ const PAGES = [
   { key: "lending", label: "Lending", href: "/lending" },
   { key: "contracts", label: "Contracts", href: "/contracts" },
   { key: "docs", label: "Docs", href: "/docs" },
-  { key: "vault", label: "Vault", href: "/vault" },
 ] as const;
 
 /** The page being shown. The pager at the foot follows the order of PAGES. */
@@ -37,7 +36,7 @@ export function ProtocolPage({
 }) {
   const pageIndex = PAGES.findIndex((entry) => entry.key === page);
   const previous = PAGES[pageIndex - 1];
-  const next = PAGES[pageIndex + 1];
+  const next = PAGES[pageIndex + 1] ?? { label: "App", href: "/app" }; /* the last page leads back into the app */
   const style = { "--accent": `var(--${accent})` } as CSSProperties;
 
   return (
