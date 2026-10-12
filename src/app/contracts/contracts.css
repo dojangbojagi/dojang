@@ -64,7 +64,7 @@
 .cdir__net-opt:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 
 .cdir__stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4, 1.2rem); margin: 0; }
-.cdir__stats > div { display: grid; gap: 0.2rem; padding: 0.9rem 1.1rem; border-radius: 16px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.025); }
+.cdir__stats > div { display: grid; gap: 0.2rem; align-content: start; min-height: 5.4rem; padding: 0.9rem 1.1rem; border-radius: 16px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.025); }
 .cdir__stats dt { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-dim); }
 .cdir__stats dd { margin: 0; font-family: var(--font-display); font-size: 1.8rem; font-weight: 700; line-height: 1.1; color: var(--text); }
 .cdir__stats small { color: var(--text-dim); font-size: 0.78rem; }

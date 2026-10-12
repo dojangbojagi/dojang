@@ -92,7 +92,7 @@ export function ContractDirectory({ rows }: { rows: DirectoryRow[] }) {
       </div>
 
       <dl className="cdir__stats" aria-live="polite">
-        <div><dt>Contracts</dt><dd>{rows.length}</dd></div>
+        <div><dt>Contracts</dt><dd>{rows.length}</dd><small>Robinhood Testnet</small></div>
         <div><dt>Deployed</dt><dd>{state === "ready" ? deployed : "…"}</dd><small>{state === "checking" ? "Checking the network" : state === "unavailable" ? "Network status unavailable" : "Code found at the address"}</small></div>
         <div><dt>Source verified</dt><dd>{state === "ready" ? verified : "…"}</dd><small>{state === "ready" && verified === 0 ? "Not yet published on the explorer" : "Published on the explorer"}</small></div>
       </dl>
