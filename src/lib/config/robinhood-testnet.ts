@@ -1,8 +1,9 @@
 import { defineChain } from "viem";
+import { appEnv } from "@/lib/config/env";
 
 export const ROBINHOOD_TESTNET_CHAIN_ID = 46_630;
 export const ROBINHOOD_TESTNET_RPC_URL =
-  process.env.NEXT_PUBLIC_ROBINHOOD_TESTNET_RPC_URL ?? "https://rpc.testnet.chain.robinhood.com";
+  appEnv.robinhoodRpcUrl;
 export const ROBINHOOD_TESTNET_EXPLORER_URL = "https://explorer.testnet.chain.robinhood.com";
 
 export const robinhoodTestnet = defineChain({

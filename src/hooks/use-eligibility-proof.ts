@@ -24,6 +24,7 @@ export function useEligibilityProof(): {
 
   const witnessMatchesRecord = Boolean(
     witness &&
+      witness.format === "giwa-demo-credential-v1" &&
       credential.record &&
       account.address &&
       isAddressEqual(witness.wallet, account.address) &&

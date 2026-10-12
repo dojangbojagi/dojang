@@ -125,7 +125,7 @@ export function LiquidationPanel({ market, runner }: { market: V2Market; runner:
                   balance={mine?.walletBalance}
                   allowance={mine?.allowance}
                   max={mine ? minBigint(closeLimit, mine.walletBalance) : undefined}
-                  precondition={own ? "Liquidating your own position is not offered here." : !mine ? "Connect a wallet on GIWA Sepolia to liquidate." : null}
+                  precondition={own ? "Liquidating your own position is not offered here." : !mine ? "Connect a wallet on Robinhood Chain Testnet to liquidate." : null}
                   checkAmount={(amount) => amount > closeLimit ? `The close factor limits one liquidation to ${formatAmount(closeLimit, debtReserve.decimals)} ${debtReserve.symbol}.` : null}
                   onApprove={(amount) => market.approveToken(debtReserve.asset, amount)}
                   onSubmit={async (amount) => {

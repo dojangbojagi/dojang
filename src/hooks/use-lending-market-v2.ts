@@ -5,13 +5,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { maxUint256, parseEventLogs, type Address, type Hex, type TransactionReceipt } from "viem";
 import { usePublicClient, useWriteContract } from "wagmi";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
-import { projectContracts, invalidContractConfig } from "@/lib/config/contracts";
+import { getLendingV2ContractSet } from "@/lib/config/network-registry";
 import { appEnv } from "@/lib/config/env";
-import { GIWA_CHAIN_ID, GIWA_EXPLORER_URL } from "@/lib/config/chain";
+import { ROBINHOOD_TESTNET_CHAIN_ID, ROBINHOOD_TESTNET_EXPLORER_URL } from "@/lib/config/robinhood-testnet";
 import { controlledTokenAbi, lendingPoolV2Abi } from "@/lib/contracts/abis";
-import { isLendingV2ProofForContext, lendingV2MarketQueryKey, lendingV2ProofContextForCredential } from "@/lib/lending/v2-config";
+import { isRobinhoodLendingV2ProofForContext, robinhoodLendingV2ProofContextForCredential, robinhoodLendingV2QueryKey } from "@/lib/lending/v2-network";
 import { LendingV2UnavailableError, LendingV2WrongNetworkError, readLendingV2Credential, readLendingV2Deployment, readLendingV2Market, type LendingV2MarketSnapshot, type LendingV2MarketState } from "@/lib/lending/v2-service";
 import { mapLendingV2Error, type LendingV2Failure } from "@/lib/lending/v2-errors";
+import { repayAllowanceHeadroom, requiredNativeGasBalance } from "@/lib/lending/v2-transaction-safety";
 import { ProtocolError, type EligibilityProof, type TransactionLifecycle } from "@/lib/protocol/types";
 
 type WriteRequest = Parameters<ReturnType<typeof useWriteContract>["writeContractAsync"]>[0];
@@ -80,28 +81,32 @@ export function useLendingMarketV2(): {
   repay: (asset: Address, amount: bigint) => Promise<void>;
   liquidate: (borrower: Address, debtAsset: Address, collateralAsset: Address, requestedRepay: bigint) => Promise<void>;
 } {
-  const account = useWalletNetwork();
-  const client = usePublicClient({ chainId: GIWA_CHAIN_ID });
+  const account = useWalletNetwork(ROBINHOOD_TESTNET_CHAIN_ID);
+  const client = usePublicClient({ chainId: ROBINHOOD_TESTNET_CHAIN_ID });
   const writer = useWriteContract();
   const queryClient = useQueryClient();
-  const pool = projectContracts.lendingPoolV2;
-  const poolValue = appEnv.contracts.lendingPoolV2;
-  const invalidPoolConfig = invalidContractConfig.includes("lendingPoolV2");
+  const robinhood = getLendingV2ContractSet(ROBINHOOD_TESTNET_CHAIN_ID)!;
+  const pool = robinhood.pool;
+  const poolValue = appEnv.robinhoodContracts.lendingV2Pool;
+  const registry = robinhood.credentialRegistry;
+  const verifier = robinhood.verifierAdapter;
+  const oracle = robinhood.oracle;
+  const invalidPoolConfig = robinhood.invalidConfigNames.length > 0;
   const [transaction, setTransaction] = useState<TransactionLifecycle>({ state: "idle" });
   const [failure, setFailure] = useState<LendingV2Failure>();
 
   const deploymentQuery = useQuery({
-    queryKey: ["lending-v2-deployment", String(GIWA_CHAIN_ID), pool?.toLowerCase() ?? "unconfigured"],
+    queryKey: ["lending-v2-deployment", String(ROBINHOOD_TESTNET_CHAIN_ID), pool?.toLowerCase() ?? "unconfigured"],
     queryFn: async () => {
       if (!client || !pool) throw new LendingV2UnavailableError("The Lending V2 pool is not configured.");
-      return readLendingV2Deployment(client, pool, projectContracts.credentialRegistry);
+      return readLendingV2Deployment(client, pool, registry, undefined, ROBINHOOD_TESTNET_CHAIN_ID, verifier, oracle);
     },
     enabled: Boolean(pool && client),
     retry: 1,
     staleTime: 15_000,
   });
 
-  const marketKey = lendingV2MarketQueryKey(pool, account.address);
+  const marketKey = robinhoodLendingV2QueryKey(pool, account.address);
   const marketQuery = useQuery({
     queryKey: marketKey,
     queryFn: async () => {
@@ -109,7 +114,10 @@ export function useLendingMarketV2(): {
       return readLendingV2Market(client, {
         pool,
         wallet: account.address,
-        expectedRegistry: projectContracts.credentialRegistry,
+        expectedRegistry: registry,
+        expectedChainId: ROBINHOOD_TESTNET_CHAIN_ID,
+        expectedVerifier: verifier,
+        expectedOracle: oracle,
       });
     },
     enabled: Boolean(pool && client),
@@ -122,7 +130,7 @@ export function useLendingMarketV2(): {
   if (!poolValue) state = "unconfigured";
   else if (invalidPoolConfig) state = "unavailable";
   else if (!account.address) state = "disconnected";
-  else if (!account.isGiwaSepolia) state = "wrong-network";
+  else if (!account.isRobinhoodTestnet) state = "wrong-network";
   else if (deploymentQuery.isPending || marketQuery.isPending) state = "checking";
   else if (deploymentQuery.error instanceof LendingV2UnavailableError || marketQuery.error instanceof LendingV2UnavailableError) state = "unavailable";
   else if (deploymentQuery.error instanceof LendingV2WrongNetworkError) state = "wrong-network";
@@ -131,12 +139,12 @@ export function useLendingMarketV2(): {
 
   const assertBase = useCallback(async () => {
     if (!account.address) throw new ProtocolError("WALLET_REQUIRED", "Connect a wallet before using Lending V2.");
-    if (!account.isGiwaSepolia) throw new ProtocolError("WRONG_NETWORK", "Switch to GIWA Sepolia before submitting a Lending V2 transaction.");
+    if (!account.isRobinhoodTestnet) throw new ProtocolError("WRONG_NETWORK", "Switch to Robinhood Chain Testnet before submitting a Lending V2 transaction.");
     if (!pool || !client || !poolValue || invalidPoolConfig) {
       throw new ProtocolError("LENDING_NOT_CONFIGURED", "A valid Lending V2 pool address is not configured.");
     }
-    await readLendingV2Deployment(client, pool, projectContracts.credentialRegistry);
-  }, [account.address, account.isGiwaSepolia, client, invalidPoolConfig, pool, poolValue]);
+    await readLendingV2Deployment(client, pool, registry, undefined, ROBINHOOD_TESTNET_CHAIN_ID, verifier, oracle);
+  }, [account.address, account.isRobinhoodTestnet, client, invalidPoolConfig, oracle, pool, poolValue, registry, verifier]);
 
   const assertSupportedAsset = useCallback(async (asset: Address) => {
     if (!client || !pool) throw new ProtocolError("LENDING_NOT_CONFIGURED", "The V2 pool is not configured.");
@@ -147,7 +155,7 @@ export function useLendingMarketV2(): {
   }, [client, pool]);
 
   const readTokenBalance = useCallback(async (asset: Address, wallet: Address) => {
-    if (!client) throw new ProtocolError("LENDING_NOT_CONFIGURED", "The GIWA RPC client is unavailable.");
+    if (!client) throw new ProtocolError("LENDING_NOT_CONFIGURED", "The Robinhood RPC client is unavailable.");
     return client.readContract({ address: asset, abi: controlledTokenAbi, functionName: "balanceOf", args: [wallet] });
   }, [client]);
 
@@ -165,16 +173,16 @@ export function useLendingMarketV2(): {
 
   const assertV2Proof = useCallback(async (proof: EligibilityProof) => {
     if (!client || !pool || !account.address) throw new ProtocolError("LENDING_NOT_CONFIGURED", "The V2 proof context is not available.");
-    const deployment = await readLendingV2Deployment(client, pool, projectContracts.credentialRegistry);
+    const deployment = await readLendingV2Deployment(client, pool, registry, undefined, ROBINHOOD_TESTNET_CHAIN_ID, verifier, oracle);
     const credential = await readLendingV2Credential(client, deployment.credentialRegistry, account.address);
     if (credential.state !== "active" || !credential.record) {
       throw new ProtocolError("CREDENTIAL_REQUIRED", "An active policy-3 Project Test Credential from a current authorized issuer is required.");
     }
-    const context = lendingV2ProofContextForCredential({ subject: account.address, record: credential.record, lendingPool: pool });
-    if (!isLendingV2ProofForContext(proof, context)) {
+    const context = robinhoodLendingV2ProofContextForCredential({ subject: account.address, record: credential.record, lendingPool: pool });
+    if (!isRobinhoodLendingV2ProofForContext(proof, context)) {
       throw new ProtocolError("INVALID_PROOF", "A locally verified proof for this wallet, policy 3, credential, chain, and V2 pool is required.");
     }
-  }, [account.address, client, pool]);
+  }, [account.address, client, oracle, pool, registry, verifier]);
 
   const refetch = useCallback(async () => {
     await marketQuery.refetch();
@@ -184,12 +192,19 @@ export function useLendingMarketV2(): {
   const inspectPosition = useCallback(async (wallet: Address) => {
     if (!pool || !client) throw new ProtocolError("LENDING_NOT_CONFIGURED", "The V2 public read client is unavailable.");
     const snapshot = await queryClient.fetchQuery({
-      queryKey: lendingV2MarketQueryKey(pool, wallet),
-      queryFn: () => readLendingV2Market(client, { pool, wallet, expectedRegistry: projectContracts.credentialRegistry }),
+      queryKey: robinhoodLendingV2QueryKey(pool, wallet),
+      queryFn: () => readLendingV2Market(client, {
+        pool,
+        wallet,
+        expectedRegistry: registry,
+        expectedChainId: ROBINHOOD_TESTNET_CHAIN_ID,
+        expectedVerifier: verifier,
+        expectedOracle: oracle,
+      }),
       staleTime: 8_000,
     });
     return snapshot.position;
-  }, [client, pool, queryClient]);
+  }, [client, oracle, pool, queryClient, registry, verifier]);
 
   const run = useCallback(async (input: {
     simulate: () => Promise<{ request: WriteRequest }>;
@@ -202,14 +217,27 @@ export function useLendingMarketV2(): {
     try {
       setTransaction({ state: "simulating" });
       await assertBase();
-      if (!client || !account.address) throw new ProtocolError("LENDING_NOT_CONFIGURED", "The wallet or GIWA RPC client is unavailable.");
+      if (!client || !account.address) throw new ProtocolError("LENDING_NOT_CONFIGURED", "The wallet or Robinhood RPC client is unavailable.");
       phase = "simulating";
       setTransaction({ state: "simulating" });
       const simulation = await input.simulate();
+      const [estimatedGas, fees, nativeBalance] = await Promise.all([
+        client.estimateContractGas(simulation.request as never),
+        client.estimateFeesPerGas(),
+        client.getBalance({ address: account.address }),
+      ]);
+      const maxFeePerGas = fees.maxFeePerGas ?? fees.gasPrice ?? await client.getGasPrice();
+      const requiredGasBalance = requiredNativeGasBalance(estimatedGas, maxFeePerGas);
+      if (nativeBalance < requiredGasBalance) {
+        throw new ProtocolError(
+          "INSUFFICIENT_FUNDS",
+          `The wallet needs a native balance covering the estimated transaction fee plus 20% headroom (at least ${requiredGasBalance} wei).`,
+        );
+      }
       phase = "signature";
       setTransaction({ state: "awaiting-signature" });
       hash = await writer.writeContractAsync(simulation.request);
-      explorerUrl = `${GIWA_EXPLORER_URL}/tx/${hash}`;
+      explorerUrl = `${ROBINHOOD_TESTNET_EXPLORER_URL}/tx/${hash}`;
       phase = "submitted";
       setTransaction({ state: "submitted", hash, explorerUrl });
       phase = "confirming";
@@ -222,7 +250,7 @@ export function useLendingMarketV2(): {
         throw reverted;
       }
       phase = "readback";
-      await queryClient.invalidateQueries({ queryKey: ["lending-v2-market", String(GIWA_CHAIN_ID), pool?.toLowerCase()] });
+      await queryClient.invalidateQueries({ queryKey: ["lending-v2-market", String(ROBINHOOD_TESTNET_CHAIN_ID), pool?.toLowerCase()] });
       await marketQuery.refetch();
       if (!await input.readback(receipt)) {
         const unconfirmed = new ProtocolError("TRANSACTION_STATE_UNCONFIRMED", "The receipt succeeded, but post-transaction state could not be confirmed by readback.");
@@ -482,16 +510,20 @@ export function useLendingMarketV2(): {
       simulate: async () => {
         await assertSupportedAsset(asset);
         if (!client || !pool || !account.address) throw new ProtocolError("LENDING_NOT_CONFIGURED", "The V2 repayment context is unavailable.");
-        const [debt, balance] = await Promise.all([
+        const [debt, balance, reserveData] = await Promise.all([
           client.readContract({ address: pool, abi: lendingPoolV2Abi, functionName: "getDebtBalance", args: [account.address, asset] }),
           readTokenBalance(asset, account.address),
+          client.readContract({ address: pool, abi: lendingPoolV2Abi, functionName: "getReserveData", args: [asset] }),
         ]);
         debtBefore = debt;
         balanceBefore = balance;
         const amountNeeded = amount === maxUint256 || amount > debt ? debt : amount;
         if (debt === 0n) throw new ProtocolError("INVALID_AMOUNT", "This wallet has no debt in the selected reserve.");
         if (balance < amountNeeded) throw new ProtocolError("INSUFFICIENT_FUNDS", "The wallet balance is not enough to repay the requested debt amount.");
-        await assertAllowance(asset, amountNeeded);
+        const allowanceNeeded = amount === maxUint256
+          ? debt + repayAllowanceHeadroom(debt, reserveData.currentBorrowRateBps)
+          : amountNeeded;
+        await assertAllowance(asset, allowanceNeeded);
         return simulatePool("repay", [asset, amount]);
       },
       readback: async (receipt) => {
@@ -548,7 +580,7 @@ export function useLendingMarketV2(): {
     failure,
     isSubmitting: transactionPending(transaction.state),
     readAvailable: Boolean(poolValue && deploymentQuery.data && marketQuery.data),
-    writesAvailable: Boolean(poolValue && deploymentQuery.data && account.address && account.isGiwaSepolia && !transactionPending(transaction.state)),
+    writesAvailable: Boolean(poolValue && deploymentQuery.data && marketQuery.data && account.address && account.isRobinhoodTestnet && !transactionPending(transaction.state)),
     refetch,
     inspectPosition,
     approveToken,

@@ -5,10 +5,11 @@ import { useQuery } from "@tanstack/react-query";
 import { usePublicClient } from "wagmi";
 import type { Address } from "viem";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
-import { projectContracts } from "@/lib/config/contracts";
+import { getLendingV2ContractSet } from "@/lib/config/network-registry";
 import { appEnv } from "@/lib/config/env";
-import { GIWA_CHAIN_ID } from "@/lib/config/chain";
-import { lendingV2CredentialQueryKey, lendingV2DeploymentQueryKey, lendingV2ProofContextForCredential, isLendingV2ProofForContext } from "@/lib/lending/v2-config";
+import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
+import { LENDING_V2_POLICY_ID } from "@/lib/lending/v2-config";
+import { isRobinhoodLendingV2ProofForContext, robinhoodLendingV2CredentialQueryKey, robinhoodLendingV2DeploymentQueryKey, robinhoodLendingV2ProofContextForCredential } from "@/lib/lending/v2-network";
 import { LendingV2UnavailableError, readLendingV2Credential, readLendingV2Deployment } from "@/lib/lending/v2-service";
 import { generateEligibilityProof } from "@/lib/zk/eligibility-prover";
 import { ProtocolError, type EligibilityProof, type DemoCredentialRecord } from "@/lib/protocol/types";
@@ -36,7 +37,7 @@ export type LendingV2EligibilityState =
 function matchesV2Witness(witness: DemoCredentialWitness | undefined, wallet: Address, record: DemoCredentialRecord): boolean {
   return Boolean(
     witness &&
-    witness.format === "giwa-demo-credential-v1" &&
+    witness.format === "robinhood-demo-credential-v1" &&
     witness.policyId === 3 &&
     witness.wallet.toLowerCase() === wallet.toLowerCase() &&
     witness.commitment.toLowerCase() === record.commitment.toLowerCase() &&
@@ -54,16 +55,19 @@ export function useLendingV2EligibilityProof(witness?: DemoCredentialWitness): {
   generateProof: (witnessOverride?: DemoCredentialWitness) => Promise<EligibilityProof>;
   refetchCredential: () => Promise<void>;
 } {
-  const account = useWalletNetwork();
-  const client = usePublicClient({ chainId: GIWA_CHAIN_ID });
-  const pool = projectContracts.lendingPoolV2;
-  const configuredPoolValue = appEnv.contracts.lendingPoolV2;
-  const invalidPoolConfig = Boolean(configuredPoolValue && !pool);
+  const account = useWalletNetwork(ROBINHOOD_TESTNET_CHAIN_ID);
+  const client = usePublicClient({ chainId: ROBINHOOD_TESTNET_CHAIN_ID });
+  const robinhood = getLendingV2ContractSet(ROBINHOOD_TESTNET_CHAIN_ID)!;
+  const pool = robinhood.pool;
+  const verifier = robinhood.verifierAdapter;
+  const oracle = robinhood.oracle;
+  const configuredPoolValue = appEnv.robinhoodContracts.lendingV2Pool;
+  const invalidPoolConfig = robinhood.invalidConfigNames.length > 0;
   const deploymentQuery = useQuery({
-    queryKey: lendingV2DeploymentQueryKey(pool),
+    queryKey: robinhoodLendingV2DeploymentQueryKey(pool),
     queryFn: () => {
       if (!client || !pool) throw new LendingV2UnavailableError("Lending V2 is not configured.");
-      return readLendingV2Deployment(client, pool, projectContracts.credentialRegistry);
+      return readLendingV2Deployment(client, pool, robinhood.credentialRegistry, undefined, ROBINHOOD_TESTNET_CHAIN_ID, verifier, oracle);
     },
     enabled: Boolean(pool && client),
     retry: 1,
@@ -71,12 +75,12 @@ export function useLendingV2EligibilityProof(witness?: DemoCredentialWitness): {
   });
   const registry = deploymentQuery.data?.credentialRegistry;
   const credentialQuery = useQuery({
-    queryKey: lendingV2CredentialQueryKey(registry, account.address),
+    queryKey: robinhoodLendingV2CredentialQueryKey(registry, account.address),
     queryFn: () => {
       if (!client || !registry || !account.address) throw new Error("The V2 credential read is not configured.");
       return readLendingV2Credential(client, registry, account.address);
     },
-    enabled: Boolean(client && registry && account.address && account.isGiwaSepolia),
+    enabled: Boolean(client && registry && account.address && account.isRobinhoodTestnet),
     retry: 1,
     staleTime: 5_000,
   });
@@ -89,16 +93,16 @@ export function useLendingV2EligibilityProof(witness?: DemoCredentialWitness): {
   const witnessMatches = Boolean(account.address && credential && matchesV2Witness(currentWitness, account.address, credential));
   const context = useMemo(() => {
     if (!pool || !account.address || !credential) return undefined;
-    return lendingV2ProofContextForCredential({ subject: account.address, record: credential, lendingPool: pool });
+    return robinhoodLendingV2ProofContextForCredential({ subject: account.address, record: credential, lendingPool: pool });
   }, [account.address, credential, pool]);
   const proof = context && credentialQuery.data?.state === "active" && witnessMatches &&
-    isLendingV2ProofForContext(storedProof, context) ? storedProof : undefined;
+    isRobinhoodLendingV2ProofForContext(storedProof, context) ? storedProof : undefined;
 
   let state: LendingV2EligibilityState;
   if (!configuredPoolValue) state = "unconfigured";
   else if (invalidPoolConfig) state = "unavailable";
   else if (!account.address) state = "disconnected";
-  else if (!account.isGiwaSepolia) state = "wrong-network";
+  else if (!account.isRobinhoodTestnet) state = "wrong-network";
   else if (deploymentQuery.isPending || credentialQuery.isPending) state = "checking";
   else if (deploymentQuery.error instanceof LendingV2UnavailableError) state = "unavailable";
   else if (deploymentQuery.isError || credentialQuery.isError) state = "read-error";
@@ -118,7 +122,7 @@ export function useLendingV2EligibilityProof(witness?: DemoCredentialWitness): {
   const generateProof = useCallback(async (witnessOverride?: DemoCredentialWitness): Promise<EligibilityProof> => {
     const selectedWitness = witnessOverride ?? witness;
     if (!account.address) throw new ProtocolError("WALLET_REQUIRED", "Connect the wallet that owns the V2 project test credential.");
-    if (!account.isGiwaSepolia) throw new ProtocolError("WRONG_NETWORK", "Switch to GIWA Sepolia before generating a Lending V2 proof.");
+    if (!account.isRobinhoodTestnet) throw new ProtocolError("WRONG_NETWORK", "Switch to Robinhood Chain Testnet before generating a Lending V2 proof.");
     if (!client || !pool || !deploymentQuery.data) {
       throw new ProtocolError("LENDING_NOT_CONFIGURED", "A compatible Lending V2 deployment is not available.");
     }
@@ -131,7 +135,7 @@ export function useLendingV2EligibilityProof(witness?: DemoCredentialWitness): {
       throw new ProtocolError("CREDENTIAL_MISMATCH", "The witness does not match this wallet's active policy-3 credential.");
     }
 
-    const publicContext = lendingV2ProofContextForCredential({
+    const publicContext = robinhoodLendingV2ProofContextForCredential({
       subject: account.address,
       record: refreshedCredential.record,
       lendingPool: pool,
@@ -141,7 +145,7 @@ export function useLendingV2EligibilityProof(witness?: DemoCredentialWitness): {
     setStoredProof(undefined);
     try {
       const generated = await generateEligibilityProof(selectedWitness, publicContext);
-      if (!isLendingV2ProofForContext(generated, publicContext)) {
+      if (!isRobinhoodLendingV2ProofForContext(generated, publicContext)) {
         throw new ProtocolError("INVALID_PROOF", "The locally generated proof is not bound to the V2 policy and pool address.");
       }
       setProofWitness(selectedWitness);
@@ -156,7 +160,7 @@ export function useLendingV2EligibilityProof(witness?: DemoCredentialWitness): {
     } finally {
       setIsGenerating(false);
     }
-  }, [account.address, account.isGiwaSepolia, client, deploymentQuery.data, pool, witness]);
+  }, [account.address, account.isRobinhoodTestnet, client, deploymentQuery.data, pool, witness]);
 
   const refetchCredential = useCallback(async () => {
     if (deploymentQuery.data && account.address) {
@@ -169,7 +173,7 @@ export function useLendingV2EligibilityProof(witness?: DemoCredentialWitness): {
     : state === "unavailable"
       ? deploymentQuery.error instanceof Error ? deploymentQuery.error.message : "The configured address is not a compatible deployed V2 pool."
       : state === "read-error"
-        ? "The V2 pool or policy-3 credential could not be read from GIWA Sepolia."
+        ? "The V2 pool or policy-3 credential could not be read from Robinhood Chain Testnet."
         : state === "credential-required"
           ? "No policy-3 Project Test Credential is registered for this wallet."
           : state === "credential-expired"

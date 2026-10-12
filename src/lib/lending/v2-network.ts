@@ -73,3 +73,17 @@ export function robinhoodLendingV2QueryKey(pool?: Address, wallet?: Address) {
     wallet?.toLowerCase() ?? "no-wallet",
   ] as const;
 }
+
+export function robinhoodLendingV2DeploymentQueryKey(pool?: Address) {
+  return ["lending-v2-deployment", String(ROBINHOOD_TESTNET_CHAIN_ID), pool?.toLowerCase() ?? "unconfigured"] as const;
+}
+
+export function robinhoodLendingV2CredentialQueryKey(registry?: Address, wallet?: Address) {
+  return [
+    "lending-v2-credential",
+    String(ROBINHOOD_TESTNET_CHAIN_ID),
+    registry?.toLowerCase() ?? "unconfigured",
+    wallet?.toLowerCase() ?? "no-wallet",
+    "policy-3",
+  ] as const;
+}

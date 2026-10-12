@@ -7,7 +7,7 @@ import {
   ageText, formatBps, formatWad, oracleLabel, oracleTone, reserveBlockReason, reserveStatus, usageBps,
 } from "@/components/lending-v2/v2-format";
 import type { V2Market, V2Reserve, V2Snapshot } from "@/components/lending-v2/v2-types";
-import { GIWA_EXPLORER_URL } from "@/lib/config/chain";
+import { ROBINHOOD_TESTNET_EXPLORER_URL } from "@/lib/config/robinhood-testnet";
 
 function ReserveCard({ reserve, snapshot, onOpen }: {
   reserve: V2Reserve;
@@ -30,7 +30,7 @@ function ReserveCard({ reserve, snapshot, onOpen }: {
       <header className="lendv2-reserve__head">
         <div>
           <h3 id={`lendv2-res-${reserve.asset}`}>{symbol}</h3>
-          <a className="addr muted" href={`${GIWA_EXPLORER_URL}/address/${reserve.asset}`} target="_blank" rel="noopener noreferrer">
+          <a className="addr muted" href={`${ROBINHOOD_TESTNET_EXPLORER_URL}/address/${reserve.asset}`} target="_blank" rel="noopener noreferrer">
             {shortAddress(reserve.asset)}<span className="visually-hidden"> (token on the explorer, opens in a new tab)</span>
           </a>
         </div>

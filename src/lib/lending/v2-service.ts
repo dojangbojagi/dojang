@@ -160,6 +160,8 @@ export async function readLendingV2Deployment(
   expectedRegistry?: Address,
   readAtBlock?: bigint,
   expectedChainId: LendingV2ChainId = GIWA_SEPOLIA_CHAIN_ID,
+  expectedVerifier?: Address,
+  expectedOracle?: Address,
 ): Promise<{
   pool: Address;
   credentialRegistry: Address;
@@ -197,6 +199,12 @@ export async function readLendingV2Deployment(
   }
   if (expectedRegistry && expectedRegistry.toLowerCase() !== credentialRegistry.toLowerCase()) {
     throw new LendingV2UnavailableError("The V2 pool credential registry does not match the configured project registry.");
+  }
+  if (expectedVerifier && expectedVerifier.toLowerCase() !== eligibilityVerifier.toLowerCase()) {
+    throw new LendingV2UnavailableError("The V2 pool verifier adapter does not match the configured project verifier adapter.");
+  }
+  if (expectedOracle && expectedOracle.toLowerCase() !== oracle.toLowerCase()) {
+    throw new LendingV2UnavailableError("The V2 pool oracle does not match the configured project oracle.");
   }
   const [registryCode, verifierCode, oracleCode] = await Promise.all([
     client.getCode({ address: credentialRegistry, blockNumber }),
@@ -252,7 +260,14 @@ export async function readLendingV2Credential(
 
 export async function readLendingV2Market(
   client: PublicClient,
-  input: { pool: Address; wallet?: Address; expectedRegistry?: Address; expectedChainId?: LendingV2ChainId },
+  input: {
+    pool: Address;
+    wallet?: Address;
+    expectedRegistry?: Address;
+    expectedChainId?: LendingV2ChainId;
+    expectedVerifier?: Address;
+    expectedOracle?: Address;
+  },
 ): Promise<LendingV2MarketSnapshot> {
   const block = await client.getBlock({ blockTag: "latest" });
   const deployment = await readLendingV2Deployment(
@@ -261,6 +276,8 @@ export async function readLendingV2Market(
     input.expectedRegistry,
     block.number,
     input.expectedChainId,
+    input.expectedVerifier,
+    input.expectedOracle,
   );
   const [assets, riskPaused] = await Promise.all([
     client.readContract({ address: input.pool, abi: lendingPoolV2Abi, functionName: "getReserveAssets", blockNumber: block.number }),

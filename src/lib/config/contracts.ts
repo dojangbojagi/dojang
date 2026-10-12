@@ -28,6 +28,23 @@ export const projectContracts = {
   daoGovernance: checkedAddress(appEnv.contracts.daoGovernance),
 } as const;
 
+/** Robinhood Chain Testnet deployment outputs are isolated from the historical GIWA registry. */
+export const robinhoodContracts = {
+  zkTranscriptLib: checkedAddress(appEnv.robinhoodContracts.zkTranscriptLib),
+  relationsLib: checkedAddress(appEnv.robinhoodContracts.relationsLib),
+  honkVerifier: checkedAddress(appEnv.robinhoodContracts.honkVerifier),
+  credentialRegistry: checkedAddress(appEnv.robinhoodContracts.credentialRegistry),
+  verifierAdapter: checkedAddress(appEnv.robinhoodContracts.verifierAdapter),
+  lendingV2Oracle: checkedAddress(appEnv.robinhoodContracts.lendingV2Oracle),
+  lendingV2Asset: checkedAddress(appEnv.robinhoodContracts.lendingV2Asset),
+  lendingV2Collateral: checkedAddress(appEnv.robinhoodContracts.lendingV2Collateral),
+  lendingV2Pool: checkedAddress(appEnv.robinhoodContracts.lendingV2Pool),
+} as const;
+
 export const invalidContractConfig = Object.entries(appEnv.contracts)
+  .filter(([, value]) => value && !isAddress(value))
+  .map(([key]) => key);
+
+export const invalidRobinhoodContractConfig = Object.entries(appEnv.robinhoodContracts)
   .filter(([, value]) => value && !isAddress(value))
   .map(([key]) => key);

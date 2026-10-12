@@ -5,10 +5,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { usePublicClient, useWriteContract } from "wagmi";
 import { zeroAddress, type Address } from "viem";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
-import { projectContracts } from "@/lib/config/contracts";
-import { GIWA_CHAIN_ID, GIWA_EXPLORER_URL } from "@/lib/config/chain";
+import { getLendingV2ContractSet } from "@/lib/config/network-registry";
+import { ROBINHOOD_TESTNET_CHAIN_ID, ROBINHOOD_TESTNET_EXPLORER_URL } from "@/lib/config/robinhood-testnet";
 import { credentialIssuerRoleAbi, credentialRegistryAbi } from "@/lib/contracts/abis";
-import { LENDING_V2_ELIGIBILITY_THRESHOLD, LENDING_V2_POLICY_ID, LENDING_V2_POLICY_VERSION, lendingV2CredentialQueryKey } from "@/lib/lending/v2-config";
+import { LENDING_V2_ELIGIBILITY_THRESHOLD, LENDING_V2_POLICY_ID, LENDING_V2_POLICY_VERSION } from "@/lib/lending/v2-config";
+import { robinhoodLendingV2CredentialQueryKey } from "@/lib/lending/v2-network";
 import { readLendingV2Deployment } from "@/lib/lending/v2-service";
 import { mapLendingV2Error } from "@/lib/lending/v2-errors";
 import { computeEligibilityCommitment, generateFieldSalt } from "@/lib/zk/commitment";
@@ -21,12 +22,15 @@ export function useLendingV2CredentialIssuance(): {
   isSubmitting: boolean;
   issueCredential: (input: { wallet: Address; privateValue: string; expiresAt: bigint }) => Promise<DemoCredentialWitness>;
 } {
-  const account = useWalletNetwork();
-  const client = usePublicClient({ chainId: GIWA_CHAIN_ID });
+  const account = useWalletNetwork(ROBINHOOD_TESTNET_CHAIN_ID);
+  const client = usePublicClient({ chainId: ROBINHOOD_TESTNET_CHAIN_ID });
   const writer = useWriteContract();
   const queryClient = useQueryClient();
-  const pool = projectContracts.lendingPoolV2;
-  const configuredRegistry = projectContracts.credentialRegistry;
+  const robinhood = getLendingV2ContractSet(ROBINHOOD_TESTNET_CHAIN_ID)!;
+  const pool = robinhood.pool;
+  const configuredRegistry = robinhood.credentialRegistry;
+  const verifier = robinhood.verifierAdapter;
+  const oracle = robinhood.oracle;
   const [transaction, setTransaction] = useState<TransactionLifecycle>({ state: "idle" });
 
   const issueCredential = useCallback(async (input: {
@@ -39,7 +43,7 @@ export function useLendingV2CredentialIssuance(): {
     try {
       setTransaction({ state: "simulating" });
       if (!account.address) throw new ProtocolError("WALLET_REQUIRED", "Connect the authorized project issuer wallet first.");
-      if (!account.isGiwaSepolia) throw new ProtocolError("WRONG_NETWORK", "Switch the issuer wallet to GIWA Sepolia.");
+      if (!account.isRobinhoodTestnet) throw new ProtocolError("WRONG_NETWORK", "Switch the issuer wallet to Robinhood Chain Testnet.");
       if (!client || !pool || !configuredRegistry) {
         throw new ProtocolError("LENDING_NOT_CONFIGURED", "Configure a compatible V2 pool and its project credential registry first.");
       }
@@ -53,7 +57,7 @@ export function useLendingV2CredentialIssuance(): {
       if (input.expiresAt <= now || input.expiresAt > (1n << 64n) - 1n || !Number.isSafeInteger(Number(input.expiresAt))) {
         throw new ProtocolError("INVALID_CREDENTIAL", "Expiry must be a future uint64 timestamp representable by the witness format.");
       }
-      const deployment = await readLendingV2Deployment(client, pool, configuredRegistry);
+      const deployment = await readLendingV2Deployment(client, pool, configuredRegistry, undefined, ROBINHOOD_TESTNET_CHAIN_ID, verifier, oracle);
       const [role, current] = await Promise.all([
         client.readContract({ address: deployment.credentialRegistry, abi: credentialIssuerRoleAbi, functionName: "ISSUER_ROLE" }),
         client.readContract({ address: deployment.credentialRegistry, abi: credentialRegistryAbi, functionName: "getCredential", args: [input.wallet, LENDING_V2_POLICY_ID] }),
@@ -79,7 +83,7 @@ export function useLendingV2CredentialIssuance(): {
         threshold: LENDING_V2_ELIGIBILITY_THRESHOLD,
         credentialVersion: version,
         expiresAt: input.expiresAt,
-        chainId: BigInt(GIWA_CHAIN_ID),
+        chainId: BigInt(ROBINHOOD_TESTNET_CHAIN_ID),
         vault: pool,
       });
       const simulation = await client.simulateContract({
@@ -91,7 +95,7 @@ export function useLendingV2CredentialIssuance(): {
       });
       setTransaction({ state: "awaiting-signature" });
       hash = await writer.writeContractAsync(simulation.request as Parameters<typeof writer.writeContractAsync>[0]);
-      explorerUrl = `${GIWA_EXPLORER_URL}/tx/${hash}`;
+      explorerUrl = `${ROBINHOOD_TESTNET_EXPLORER_URL}/tx/${hash}`;
       setTransaction({ state: "submitted", hash, explorerUrl });
       setTransaction({ state: "confirming", hash, explorerUrl });
       const receipt = await client.waitForTransactionReceipt({ hash });
@@ -113,9 +117,9 @@ export function useLendingV2CredentialIssuance(): {
       ) {
         throw new ProtocolError("TRANSACTION_STATE_UNCONFIRMED", "The transaction receipt succeeded, but the policy-3 credential readback did not match.");
       }
-      await queryClient.invalidateQueries({ queryKey: lendingV2CredentialQueryKey(deployment.credentialRegistry, input.wallet) });
+      await queryClient.invalidateQueries({ queryKey: robinhoodLendingV2CredentialQueryKey(deployment.credentialRegistry, input.wallet) });
       const witness: DemoCredentialWitness = {
-        format: "giwa-demo-credential-v1",
+        format: "robinhood-demo-credential-v1",
         wallet: input.wallet,
         policyId: Number(LENDING_V2_POLICY_ID),
         commitment,
@@ -136,7 +140,7 @@ export function useLendingV2CredentialIssuance(): {
       setTransaction({ state: rejected ? "rejected" : hash ? "rpc-error" : "rpc-error", hash, explorerUrl, error: failure.message });
       throw error instanceof ProtocolError ? error : new ProtocolError("RPC_ERROR", failure.message, error);
     }
-  }, [account.address, account.isGiwaSepolia, client, configuredRegistry, pool, queryClient, writer]);
+  }, [account.address, account.isRobinhoodTestnet, client, configuredRegistry, oracle, pool, queryClient, verifier, writer]);
 
   return {
     credentialLabel: "Project Test Credential",

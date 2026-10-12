@@ -1,4 +1,5 @@
 import { LENDING_V2_RAY } from "@/lib/lending/v2-config";
+export { repayAllowanceHeadroom } from "@/lib/lending/v2-transaction-safety";
 import type { LendingV2AccountData, LendingV2MarketSnapshot } from "@/lib/lending/v2-service";
 
 /* Presentation-only reading of what the pool already reported, and clearly labelled previews.
@@ -99,10 +100,3 @@ export function previewBorrow(input: {
  * than the debt that was displayed. This is only the size of the ALLOWANCE (the pool takes the real debt, never
  * more): the current borrow rate applied for a short window, plus one unit for rounding.
  */
-export const REPAY_ALLOWANCE_WINDOW_SECONDS = 900n;
-const SECONDS_PER_YEAR = 31_536_000n;
-
-export function repayAllowanceHeadroom(debt: bigint, borrowRateBps: bigint): bigint {
-  const accrued = (debt * borrowRateBps * REPAY_ALLOWANCE_WINDOW_SECONDS + (10_000n * SECONDS_PER_YEAR) - 1n) / (10_000n * SECONDS_PER_YEAR);
-  return accrued + 1n;
-}

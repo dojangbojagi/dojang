@@ -4,8 +4,8 @@ import Link from "next/link";
 import { shortAddress } from "@/components/lending/format";
 import { Chip, type Tone } from "@/components/lending-v2/v2-parts";
 import type { V2Market } from "@/components/lending-v2/v2-types";
-import { GIWA_CHAIN_ID, GIWA_EXPLORER_URL } from "@/lib/config/chain";
-import { projectContracts } from "@/lib/config/contracts";
+import { ROBINHOOD_TESTNET_CHAIN_ID, ROBINHOOD_TESTNET_EXPLORER_URL } from "@/lib/config/robinhood-testnet";
+import { robinhoodContracts } from "@/lib/config/contracts";
 
 /** What this market is, and is not. Always visible, never softened. */
 export function V2LimitationsNotice({ configured }: { configured: boolean }) {
@@ -21,7 +21,7 @@ export function V2LimitationsNotice({ configured }: { configured: boolean }) {
           <li><strong>Private eligibility only.</strong> Wallets, amounts, positions and actions are public on-chain.</li>
           {configured
             ? <li><strong>Check the address.</strong> A configured pool address is not an audit. Verify the pool and its tokens on the explorer before using it.</li>
-            : <li><strong>Not yet deployed.</strong> Controls stay off until a real Lending V2 pool is configured for GIWA Sepolia.</li>}
+            : <li><strong>Not yet deployed.</strong> Controls stay off until a real Lending V2 pool is configured for Robinhood Chain Testnet.</li>}
         </ul>
       </div>
     </aside>
@@ -32,11 +32,11 @@ const STATE_COPY: Record<V2Market["state"], { tone: Tone; label: string; text: s
   unconfigured: {
     tone: "warn",
     label: "Not deployed",
-    text: "Lending V2 is not live on GIWA Sepolia yet. No pool address is configured (NEXT_PUBLIC_LENDING_V2_POOL_CONTRACT), so every V2 control is off and no balance, rate, price or position is shown. Nothing is simulated.",
+    text: "Lending V2 is not live on Robinhood Chain Testnet yet. No pool address is configured (NEXT_PUBLIC_ROBINHOOD_LENDING_V2_POOL_CONTRACT), so every V2 control is off and no balance, rate, price or position is shown. Nothing is simulated.",
   },
   disconnected: { tone: "neutral", label: "Wallet needed", text: "Connect a wallet to use the market and see your position. Market data below is read without a wallet." },
-  "wrong-network": { tone: "warn", label: "Wrong network", text: "Switch your wallet to GIWA Sepolia to continue. Transactions are disabled until you do." },
-  checking: { tone: "pending", label: "Checking", text: "Reading the Lending V2 pool and your wallet from GIWA Sepolia…" },
+  "wrong-network": { tone: "warn", label: "Wrong network", text: "Switch your wallet to Robinhood Chain Testnet to continue. Transactions are disabled until you do." },
+  checking: { tone: "pending", label: "Checking", text: "Reading the Lending V2 pool and your wallet from Robinhood Chain Testnet…" },
   unavailable: { tone: "warn", label: "Unavailable", text: "The configured address is not a compatible Lending V2 deployment (missing code, mismatched policy, registry, verifier or oracle). Controls stay off." },
   "read-error": { tone: "invalid", label: "Read failed", text: "A pool or wallet read failed. This is not an empty position. Refresh to try again; nothing is shown in its place." },
   ready: { tone: "valid", label: "Market ready", text: "" },
@@ -53,16 +53,16 @@ export function ContextBar({ market, walletAddress, eligibility }: {
   eligibility: { tone: Tone; label: string };
 }) {
   const copy = STATE_COPY[market.state];
-  const pool = projectContracts.lendingPoolV2;
+  const pool = robinhoodContracts.lendingV2Pool;
   return (
     <section className="lendv2-context" aria-label="Lending V2 status">
       <ul>
-        <li><span>Network</span><Chip tone="demo">GIWA Sepolia testnet · {GIWA_CHAIN_ID}</Chip></li>
+        <li><span>Network</span><Chip tone="demo">Robinhood Chain Testnet · {ROBINHOOD_TESTNET_CHAIN_ID}</Chip></li>
         <li><span>Wallet</span><strong className="addr">{walletAddress ? shortAddress(walletAddress) : "Not connected"}</strong></li>
         <li>
           <span>V2 pool</span>
           {pool
-            ? <a className="addr" href={`${GIWA_EXPLORER_URL}/address/${pool}`} target="_blank" rel="noopener noreferrer">{shortAddress(pool)}<span className="visually-hidden"> (opens in a new tab)</span></a>
+            ? <a className="addr" href={`${ROBINHOOD_TESTNET_EXPLORER_URL}/address/${pool}`} target="_blank" rel="noopener noreferrer">{shortAddress(pool)}<span className="visually-hidden"> (opens in a new tab)</span></a>
             : <strong>Not configured</strong>}
         </li>
         <li><span>Market</span><Chip tone={copy.tone}>{copy.label}</Chip></li>

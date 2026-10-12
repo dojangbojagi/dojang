@@ -3,7 +3,7 @@ import { isAddress } from "viem";
 import type { Address, Hex } from "viem";
 
 const witnessSchema = z.object({
-  format: z.literal("giwa-demo-credential-v1"),
+  format: z.enum(["giwa-demo-credential-v1", "robinhood-demo-credential-v1"]),
   wallet: z.string().refine(isAddress, "wallet must be a valid EVM address"),
   policyId: z.number().int().positive(),
   commitment: z.string().regex(/^0x[0-9a-fA-F]{64}$/, "commitment must be bytes32"),
@@ -13,7 +13,7 @@ const witnessSchema = z.object({
 });
 
 export interface DemoCredentialWitness {
-  format: "giwa-demo-credential-v1";
+  format: "giwa-demo-credential-v1" | "robinhood-demo-credential-v1";
   wallet: Address;
   policyId: number;
   commitment: Hex;

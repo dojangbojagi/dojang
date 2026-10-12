@@ -23,6 +23,7 @@ function witnessMatches(witness: DemoCredentialWitness | undefined, input: {
 }): boolean {
   return Boolean(
     witness &&
+      witness.format === "giwa-demo-credential-v1" &&
       witness.policyId === Number(LENDING_POLICY_ID) &&
       witness.wallet.toLowerCase() === input.wallet.toLowerCase() &&
       witness.commitment.toLowerCase() === input.commitment.toLowerCase() &&
