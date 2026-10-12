@@ -69,11 +69,33 @@ export function ContractDirectory({ rows }: { rows: DirectoryRow[] }) {
 
   return (
     <div className="cdir">
-      <p className="cdir__summary" aria-live="polite">
-        <span><b>{rows.length}</b> contracts</span>
-        <span>{state === "ready" ? <><b>{deployed}</b> deployed</> : state === "checking" ? "Checking the network…" : "Network status unavailable"}</span>
-        {state === "ready" ? <span><b>{verified}</b> with verified source</span> : null}
-      </p>
+      <div className="cdir__head">
+        <h2 id="contracts-heading">Deployed contracts</h2>
+        <div className="cdir__net" role="group" aria-label="Network">
+          <button type="button" aria-pressed="true" className="cdir__net-opt" data-active="true">
+            <i aria-hidden="true" />
+            <span>Robinhood Testnet</span>
+            <small>Chain 46630 · Active</small>
+          </button>
+          <button
+            type="button"
+            className="cdir__net-opt"
+            disabled
+            aria-disabled="true"
+            title="Robinhood Mainnet has not launched. No contracts are deployed on it."
+          >
+            <i aria-hidden="true" />
+            <span>Robinhood Mainnet</span>
+            <small>Chain 4663 · Not launched</small>
+          </button>
+        </div>
+      </div>
+
+      <dl className="cdir__stats" aria-live="polite">
+        <div><dt>Contracts</dt><dd>{rows.length}</dd></div>
+        <div><dt>Deployed</dt><dd>{state === "ready" ? deployed : "…"}</dd><small>{state === "checking" ? "Checking the network" : state === "unavailable" ? "Network status unavailable" : "Code found at the address"}</small></div>
+        <div><dt>Source verified</dt><dd>{state === "ready" ? verified : "…"}</dd><small>{state === "ready" && verified === 0 ? "Not yet published on the explorer" : "Published on the explorer"}</small></div>
+      </dl>
 
       {groups.map((group) => (
         <section className="cdir__group" key={group} aria-label={group}>

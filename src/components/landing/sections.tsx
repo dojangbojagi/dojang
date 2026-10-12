@@ -93,168 +93,69 @@ export function PathSection() {
   );
 }
 
-/* ----------------------------------------------------------------- 03 */
-/* The trust layer: what DOJANG and BOJAGI are, and how they relate. One composition, not two cards: the
-   credential (public, white) and the proof (private, burgundy) are two panes, one in front of the other, and
-   below them the two access paths that both start from the same project credential registry.
-   Facts only, from the deployed Robinhood Testnet protocol: policy 4 gates DAO governance; policy 3 and a
-   real zero-knowledge proof gate Lending V2. These are project-issued credentials, not official GIWA,
-   Dojang or Upbit credentials, and the section says so. */
-export function TrustLayerSection() {
+/* ----------------------------------------------------------------- 04 */
+/* The trust layer itself (DOJANG, BOJAGI, DAO) is the pinned story in feature-story.tsx. Lending follows it as
+   an ordinary section: what the market does on Robinhood Testnet and which actions need a proof. Facts only:
+   supply, collateral, borrow, repay and withdraw exist; supply, collateral activation and borrow need a
+   policy-3 project credential and a genuine proof; repay and safe withdrawal do not. Prices are synthetic and
+   the tokens are test tokens; this is a credential-gated lending demonstration, not an exchange. */
+const ACTIONS = [
+  { name: "Supply", note: "Lend rUSD2 to the pool", proof: true },
+  { name: "Collateral", note: "Post rCOL2 as collateral", proof: true },
+  { name: "Borrow", note: "Draw rUSD2 against it", proof: true },
+  { name: "Repay", note: "Return what was borrowed", proof: false },
+  { name: "Withdraw", note: "Take back what is safe", proof: false },
+] as const;
+
+export function LendingSection() {
   return (
-    <section className="lp-sec lp-trust" id="trust" aria-labelledby="trust-title">
-      <div className="lp-wrap">
-        <Eyebrow n="03" ac="blue">The trust layer</Eyebrow>
-        <h2 className="lp-h2" id="trust-title" data-lp-reveal style={{ ["--i" as string]: 1 }}>
-          Trust is <em>verified.</em> Privacy is <em className="o">preserved.</em>
-        </h2>
-        <p className="lp-lead" data-lp-reveal style={{ ["--i" as string]: 2 }}>
-          DOJANG establishes project-defined eligibility. BOJAGI proves that eligibility without exposing the private value.
-        </p>
-
-        <div className="lp-trust__stage">
-          <article className="lp-layer lp-layer--public" id="dojang" data-lp-reveal="left" data-spot style={{ ["--i" as string]: 1 }}>
-            <figure className="lp-figure">
-              <div className="lp-cred" aria-hidden="true">
-                <div className="lp-cred__top"><i /><span>Project credential</span><b>Policy 4</b></div>
-                <div className="lp-cred__row"><span>Wallet</span><u /></div>
-                <div className="lp-cred__row"><span>Commitment</span><u /></div>
-                <div className="lp-cred__row"><span>Status</span><em>Active · example</em></div>
-                <span className="lp-cred__seal">
-                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12.5 4.2 4.2L19 7" /></svg>
-                </span>
-              </div>
-              <figcaption>Illustration, not a live result</figcaption>
-            </figure>
-            <p className="lp-layer__tag">Credential layer · public</p>
-            <h3>
-              <span className="lp-layer__name">DOJANG</span>
-              <span className="lp-layer__sub">Credential Access</span>
-            </h3>
-            <p className="lp-layer__text">A project credential layer that establishes eligibility for on-chain participation.</p>
-            <p className="lp-policy">
-              <span className="lp-policy__badge">Policy 4</span>
-              <span>Grants eligible project credential holders <strong>DAO participation</strong>.</span>
-            </p>
-            <ul className="lp-layer__facts">
-              <li>Issued by the project and bound to one wallet</li>
-              <li>Expiry and revocation are recorded on-chain</li>
-            </ul>
-            <Link className="lp-layer__link" href="/dojang">Explore DOJANG <Arrow /></Link>
-          </article>
-
-          <article className="lp-layer lp-layer--private" id="bojagi" data-lp-reveal="right" data-spot style={{ ["--i" as string]: 2 }}>
-            <figure className="lp-figure">
-              <div className="lp-proof" aria-hidden="true">
-                <div className="lp-proof__top"><span>Private proof</span><b>Policy 3</b></div>
-                <div className="lp-proof__row"><span>Value</span><i className="lp-veil" /></div>
-                <div className="lp-proof__row"><span>Salt</span><i className="lp-veil" /></div>
-                <div className="lp-proof__row"><span>Proof</span><em>Valid · example</em></div>
-              </div>
-              <figcaption>Illustration, not a live result</figcaption>
-            </figure>
-            <p className="lp-layer__tag">Proof layer · private</p>
-            <h3>
-              <span className="lp-layer__name">BOJAGI</span>
-              <span className="lp-layer__sub">Private Eligibility Proof</span>
-            </h3>
-            <p className="lp-layer__text">A zero-knowledge proof layer that confirms eligibility without exposing the underlying private value.</p>
-            <p className="lp-policy">
-              <span className="lp-policy__badge">Policy 3</span>
-              <span>Lets a credential holder show <strong>Lending eligibility</strong> through a genuine zero-knowledge proof check.</span>
-            </p>
-            <ul className="lp-layer__facts">
-              <li>The proof is generated in your browser</li>
-              <li>The private eligibility value never needs to appear publicly on-chain</li>
-            </ul>
-            <Link className="lp-layer__link" href="/bojagi">Explore BOJAGI <Arrow /></Link>
-          </article>
-
-          <article className="lp-layer lp-layer--dao" id="dao" data-lp-reveal="left" data-spot style={{ ["--i" as string]: 1 }}>
-            <figure className="lp-figure">
-              <div className="lp-ballot" aria-hidden="true">
-                <div className="lp-ballot__top"><span>Proposal</span><b>Example</b></div>
-                <ol className="lp-ballot__steps">
-                  <li data-done="true"><i />Propose</li>
-                  <li data-done="true"><i />Vote</li>
-                  <li><i />Finalize</li>
-                  <li><i />Execute</li>
-                </ol>
-                <div className="lp-ballot__bars">
-                  <span>For<u style={{ ["--w" as string]: "64%" }} /></span>
-                  <span>Against<u style={{ ["--w" as string]: "22%" }} /></span>
-                  <span>Abstain<u style={{ ["--w" as string]: "14%" }} /></span>
-                </div>
-              </div>
-              <figcaption>Illustration, not a live result</figcaption>
-            </figure>
-            <p className="lp-layer__tag">Governance layer · public</p>
-            <h3>
-              <span className="lp-layer__name">DAO</span>
-              <span className="lp-layer__sub">Credential-Gated Governance</span>
-            </h3>
-            <p className="lp-layer__text">Eligible project credential holders propose and vote on-chain. Each eligible wallet counts once per proposal, and every vote is public.</p>
-            <p className="lp-policy">
-              <span className="lp-policy__badge">Policy 4</span>
-              <span>An <strong>active project credential</strong> is what makes a wallet eligible to propose and vote.</span>
-            </p>
-            <ul className="lp-layer__facts">
-              <li>Phase 1 has one bounded action: the minimum remaining credential validity the DAO itself requires</li>
-              <li>It cannot change lending settings or move funds</li>
-            </ul>
-            <Link className="lp-layer__link" href="/dao">Explore DAO <Arrow /></Link>
-          </article>
-        </div>
-
-        <div className="lp-flow" data-lp-rail>
-          <p className="lp-flow__cap" data-lp-reveal>
-            <span>Two access paths</span>
-            <span>One project credential registry · Robinhood Testnet · chain {ROBINHOOD_TESTNET_CHAIN_ID}</span>
+    <section className="lp-sec lp-lend" id="lending" aria-labelledby="lending-title">
+      <div className="lp-wrap lp-lend__wrap">
+        <div className="lp-lend__copy">
+          <Eyebrow n="04" ac="blue">Lending</Eyebrow>
+          <h2 className="lp-h2" id="lending-title" data-lp-reveal style={{ ["--i" as string]: 1 }}>
+            Borrow with a <em className="o">proof,</em> not a disclosure.
+          </h2>
+          <p className="lp-lead" data-lp-reveal style={{ ["--i" as string]: 2 }}>
+            Lending V2 supports supply, collateral, borrow, repay and withdraw on Robinhood Testnet. The protected actions require a
+            valid project-issued policy-3 credential and a genuine zero-knowledge proof, checked again by the contract.
           </p>
-          <div className="lp-flow__body">
-            <div className="lp-flow__root" data-lp-reveal style={{ ["--i" as string]: 1 }}>
-              <span className="lp-flow__k">Origin</span>
-              <strong>DOJANG credential</strong>
-              <small>Project-issued, bound to your wallet</small>
-            </div>
-            <ol className="lp-flow__routes">
-              <li className="lp-route" data-kind="public" style={{ ["--r" as string]: 0 }}>
-                <span className="lp-route__policy"><b>DAO access</b><small>Policy 4</small></span>
-                <span className="lp-route__wire" aria-hidden="true" />
-                <span className="lp-route__node" data-lp-reveal style={{ ["--i" as string]: 2 }}>
-                  <b>DAO governance</b>
-                  <small>The credential is checked on-chain. Votes are public.</small>
-                  <code>RobinhoodGovernancePhase1</code>
-                </span>
-              </li>
-              <li className="lp-route" data-kind="private" style={{ ["--r" as string]: 1 }}>
-                <span className="lp-route__policy"><b>Lending proof</b><small>Policy 3</small></span>
-                <span className="lp-route__wire" aria-hidden="true" />
-                <span className="lp-route__node lp-route__node--proof" data-lp-reveal style={{ ["--i" as string]: 3 }}>
-                  <b>BOJAGI private proof</b>
-                  <small>Zero-knowledge, built in your browser. The value stays private.</small>
-                </span>
-                <span className="lp-route__wire lp-route__wire--b" aria-hidden="true" />
-                <span className="lp-route__node" data-lp-reveal style={{ ["--i" as string]: 4 }}>
-                  <b>Lending V2</b>
-                  <small>The pool verifies the proof inside the transaction.</small>
-                  <code>LendingPoolV2 · HonkVerifier</code>
-                </span>
-              </li>
-            </ol>
+          <p className="lp-lend__fine" data-lp-reveal style={{ ["--i" as string]: 3 }}>
+            Test tokens and synthetic test prices. A credential-gated demonstration of lending, not an exchange: there is no spot or
+            derivatives trading. Credentials are issued by this project, not by GIWA, Dojang or Upbit.
+          </p>
+          <div className="lp-lend__cta" data-lp-reveal style={{ ["--i" as string]: 4 }}>
+            <Link className="lp-btn lp-btn--primary" href="/lending">Open Lending <Arrow /></Link>
+            <Link className="lp-btn lp-btn--ghost" href="/app">Launch App</Link>
           </div>
         </div>
 
-        <p className="lp-trust__note" data-lp-reveal style={{ ["--i" as string]: 1 }}>
-          GYEVO credentials are issued by this project, not by GIWA, Dojang or Upbit. They are a separate,
-          project-owned credential layer on Robinhood Testnet: a test environment with test tokens.
-        </p>
+        <figure className="lp-lend__board" data-lp-reveal="right" style={{ ["--i" as string]: 2 }}>
+          <figcaption className="lp-lend__cap">
+            <span>Lending V2</span>
+            <span>Robinhood Testnet · {ROBINHOOD_TESTNET_CHAIN_ID}</span>
+          </figcaption>
+          <ol className="lp-lend__acts">
+            {ACTIONS.map((a, i) => (
+              <li key={a.name} data-proof={a.proof ? "true" : "false"}>
+                <span className="lp-lend__idx" aria-hidden="true">{`0${i + 1}`}</span>
+                <span className="lp-lend__act"><b>{a.name}</b><small>{a.note}</small></span>
+                <span className="lp-lend__gate">
+                  {a.proof ? (
+                    <><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="2.5" /><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" /></svg>Proof required</>
+                  ) : "No proof needed"}
+                </span>
+              </li>
+            ))}
+          </ol>
+          <p className="lp-lend__foot"><span>Policy 3</span>Three of five actions are gated by a private proof.</p>
+        </figure>
       </div>
     </section>
   );
 }
 
-/* ----------------------------------------------------------------- 04 */
+/* ----------------------------------------------------------------- 05 */
 /* The roadmap states what exists and what does not, from the project's own status notes
    (docs/LENDING_MVP_ARCHITECTURE.md, docs/FRONTEND_INTEGRATION_HANDOFF.md): no dates, no invented numbers,
    and nothing is called deployed until its address and receipt exist. */
@@ -311,7 +212,7 @@ export function RoadmapSection() {
   return (
     <section className="lp-sec lp-road" id="roadmap" aria-labelledby="road-title">
       <div className="lp-wrap">
-        <Eyebrow n="04" ac="blue">Roadmap</Eyebrow>
+        <Eyebrow n="05" ac="blue">Roadmap</Eyebrow>
         <h2 className="lp-h2" id="road-title" data-lp-reveal style={{ ["--i" as string]: 1 }}>
           Robinhood contracts deployed. <em className="o">GIWA</em> deployment remains pending.
         </h2>

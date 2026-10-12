@@ -7,7 +7,8 @@ import { LandingEffects } from "./landing-effects";
 import { LandingNav } from "./landing-nav";
 import { IdeaScene } from "./idea-scene";
 import { SmoothScroll } from "./smooth-scroll";
-import { FactsSection, PathSection, RoadmapSection, TrustLayerSection } from "./sections";
+import { FeatureStory } from "./feature-story";
+import { FactsSection, LendingSection, PathSection, RoadmapSection } from "./sections";
 
 /* The landing page. Presentation only: wallet, chain, credential and proof logic
    stay in the hooks and protocol modules, untouched. */
@@ -25,7 +26,8 @@ export function LandingPage() {
         <CoverReveal tagline={appEnv.tagline} />
         <IdeaScene />
         <PathSection />
-        <TrustLayerSection />
+        <FeatureStory />
+        <LendingSection />
         <RoadmapSection />
         <FactsSection />
       </main>

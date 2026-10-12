@@ -33,7 +33,7 @@ export default function ContractsPage() {
   }));
 
   return (
-    <main className="page">
+    <main className="page page--compact">
       <header className="page-head">
         <PageGlyphFigure glyph={{ shape: "stack", label: "The project's contracts, layer by layer, on Robinhood Chain Testnet.", caption: "Evidence, layer by layer", legend: ["public"] }} />
         <p className="eyebrow">Contract Explorer</p>
@@ -44,8 +44,7 @@ export default function ContractsPage() {
         </p>
       </header>
 
-      <section className="panel" aria-labelledby="contracts-heading">
-        <h2 id="contracts-heading">Deployed contracts</h2>
+      <section className="panel cdir__panel" aria-labelledby="contracts-heading">
         <ContractDirectory rows={rows} />
       </section>
 

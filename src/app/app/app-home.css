@@ -29,3 +29,6 @@
   .app-card { transition: none; }
   .app-card:hover, .app-card:focus-visible { transform: none; }
 }
+
+/* no picture here, so no room reserved for one */
+.app-home .page-head { min-height: 0; }

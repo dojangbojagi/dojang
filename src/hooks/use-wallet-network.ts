@@ -9,6 +9,33 @@ import type { WalletState } from "@/lib/protocol/types";
 
 export type ProtocolChainId = typeof GIWA_CHAIN_ID | typeof ROBINHOOD_TESTNET_CHAIN_ID;
 
+export interface WalletNetworkDiagnostics {
+  connectorName?: string;
+  accountChainId?: number;
+  providerChainId?: number;
+  providerReadErrorName?: string;
+  errorName?: string;
+  errorCode?: number;
+  requiredChainId: number;
+}
+
+function getErrorMetadata(error: unknown): Pick<WalletNetworkDiagnostics, "errorName" | "errorCode"> {
+  const visited = new Set<unknown>();
+  const pending: unknown[] = [error];
+  let errorName: string | undefined;
+  let errorCode: number | undefined;
+  while (pending.length > 0) {
+    const current = pending.shift();
+    if (!current || typeof current !== "object" || visited.has(current)) continue;
+    visited.add(current);
+    const item = current as { code?: unknown; name?: unknown; cause?: unknown; data?: { originalError?: unknown } };
+    if (errorCode === undefined && typeof item.code === "number") errorCode = item.code;
+    if (errorName === undefined && typeof item.name === "string") errorName = item.name;
+    pending.push(item.cause, item.data?.originalError);
+  }
+  return { errorName, errorCode };
+}
+
 function describeSwitchError(error: unknown, chainId: number, connectorName?: string): string {
   const parts: string[] = [];
   const codes: number[] = [];
@@ -29,7 +56,7 @@ function describeSwitchError(error: unknown, chainId: number, connectorName?: st
   if (codes.includes(-32002) || detail.includes("request already pending")) {
     return "Your wallet already has a request waiting. Complete or dismiss it, then retry.";
   }
-  if (detail.includes("disconnected") || detail.includes("not connected") || detail.includes("wallet is locked")) {
+  if (codes.includes(4900) || detail.includes("disconnected") || detail.includes("not connected") || detail.includes("wallet is locked")) {
     return "The selected wallet is disconnected or locked. Reconnect and unlock it, then retry.";
   }
   if (detail.includes("failed to fetch") || detail.includes("network error") || detail.includes("timed out") || detail.includes("timeout") || detail.includes("http request failed")) {
@@ -41,7 +68,10 @@ function describeSwitchError(error: unknown, chainId: number, connectorName?: st
   if (codes.includes(4902) || detail.includes("unknown chain") || detail.includes("chain not added")) {
     return `The selected wallet could not add chain ${chainId}. Add Robinhood Testnet in that wallet, then retry.`;
   }
-  if (detail.includes("switchchainnotsupported") || detail.includes("switch chain not supported") || detail.includes("does not support switching") || detail.includes("method not found") || codes.some((code) => code === 4200 || code === 4901 || code === -32601)) {
+  if (codes.includes(4901)) {
+    return `${connectorName ?? "The selected wallet"} could not connect to chain ${chainId}. Select the chain manually in the wallet or choose another EVM wallet.`;
+  }
+  if (detail.includes("switchchainnotsupported") || detail.includes("switch chain not supported") || detail.includes("does not support switching") || detail.includes("method not found") || codes.some((code) => code === 4200 || code === -32601)) {
     return `${connectorName ?? "This wallet"} cannot switch networks from the app. Select chain ${chainId} in the wallet, or disconnect and choose another EVM wallet that supports this chain.`;
   }
   const remainedOnChain = detail.match(/wallet stayed on chain (\d+)/);
@@ -55,6 +85,7 @@ export function useWalletNetwork(expectedChainId: ProtocolChainId = ROBINHOOD_TE
   const account = useAccount();
   const switchChain = useSwitchChain();
   const [switchError, setSwitchError] = useState<string>();
+  const [switchDiagnostics, setSwitchDiagnostics] = useState<WalletNetworkDiagnostics>();
   const state: WalletState = !account.isConnected
     ? account.status === "connecting" || account.status === "reconnecting"
       ? "connecting"
@@ -64,8 +95,30 @@ export function useWalletNetwork(expectedChainId: ProtocolChainId = ROBINHOOD_TE
       : "wrong-network";
 
   useEffect(() => {
-    if (!account.isConnected || account.chainId === expectedChainId) setSwitchError(undefined);
+    if (!account.isConnected || account.chainId === expectedChainId) {
+      setSwitchError(undefined);
+      setSwitchDiagnostics(undefined);
+    }
   }, [account.chainId, account.isConnected, expectedChainId]);
+
+  const refreshNetworkDiagnostics = useCallback(async (): Promise<void> => {
+    const connector = account.connector;
+    const base = {
+      connectorName: connector?.name,
+      accountChainId: account.chainId,
+      requiredChainId: expectedChainId,
+    };
+    if (!account.isConnected || !connector) {
+      setSwitchDiagnostics(base);
+      return;
+    }
+    try {
+      setSwitchDiagnostics({ ...base, providerChainId: await connector.getChainId() });
+    } catch (error) {
+      const metadata = getErrorMetadata(error);
+      setSwitchDiagnostics({ ...base, providerReadErrorName: metadata.errorName });
+    }
+  }, [account.chainId, account.connector, account.isConnected, expectedChainId]);
 
   const switchTo = useCallback(async (chainId: ProtocolChainId): Promise<boolean> => {
     setSwitchError(undefined);
@@ -98,9 +151,30 @@ export function useWalletNetwork(expectedChainId: ProtocolChainId = ROBINHOOD_TE
       if (activeChainId !== undefined && activeChainId !== chainId) {
         throw new Error(`Wallet stayed on chain ${activeChainId} after the switch request.`);
       }
+      setSwitchDiagnostics({
+        connectorName: account.connector.name,
+        accountChainId: account.chainId,
+        providerChainId: activeChainId,
+        requiredChainId: chainId,
+      });
       return true;
     } catch (error) {
       setSwitchError(describeSwitchError(error, chainId, account.connector.name));
+      let providerChainId: number | undefined;
+      let providerReadErrorName: string | undefined;
+      try {
+        providerChainId = await account.connector.getChainId();
+      } catch (readError) {
+        providerReadErrorName = getErrorMetadata(readError).errorName;
+      }
+      setSwitchDiagnostics({
+        connectorName: account.connector.name,
+        accountChainId: account.chainId,
+        providerChainId,
+        providerReadErrorName,
+        ...getErrorMetadata(error),
+        requiredChainId: chainId,
+      });
       return false;
     }
   }, [account.connector, account.isConnected, switchChain.isPending, switchChain.switchChainAsync]);
@@ -117,5 +191,7 @@ export function useWalletNetwork(expectedChainId: ProtocolChainId = ROBINHOOD_TE
     switchToRobinhoodTestnet: () => switchTo(ROBINHOOD_TESTNET_CHAIN_ID),
     isSwitching: switchChain.isPending,
     switchError,
+    switchDiagnostics,
+    refreshNetworkDiagnostics,
   };
 }

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { BrandLogo } from "@/components/brand-logo";
+import { getFeature, subscribeFeature, type FeatureId } from "./feature-state";
 import { scrollToId } from "./smooth-scroll";
 
 /* The public bar: the logo, three direct links to the introductions on this page (DOJANG, BOJAGI, DAO) and
@@ -14,35 +15,16 @@ const SECTIONS = [
   { id: "dao", label: "DAO", desc: "Credential-gated governance." },
 ] as const;
 
-type SectionId = (typeof SECTIONS)[number]["id"];
+type SectionId = FeatureId;
 
 export function LandingNav({ appName }: { appName: string }) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState<SectionId | null>(null);
 
-  /* which introduction is on screen: marks its link */
+  /* which introduction is on screen: written by the pinned story, and the only thing that marks a link */
   useEffect(() => {
-    const targets = SECTIONS.map((s) => document.getElementById(s.id)).filter((el): el is HTMLElement => Boolean(el));
-    if (!targets.length) return;
-    const visible = new Map<string, number>();
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) visible.set(entry.target.id, entry.intersectionRatio);
-          else visible.delete(entry.target.id);
-        }
-        let best: SectionId | null = null;
-        let ratio = 0;
-        for (const s of SECTIONS) {
-          const r = visible.get(s.id);
-          if (r !== undefined && r >= ratio) { best = s.id; ratio = r; }
-        }
-        setActive(best);
-      },
-      { rootMargin: "-30% 0px -35% 0px", threshold: [0, 0.2, 0.5, 0.8, 1] },
-    );
-    targets.forEach((el) => io.observe(el));
-    return () => io.disconnect();
+    setActive(getFeature());
+    return subscribeFeature(setActive);
   }, []);
 
   /* arriving with a hash (from another page, or back/forward): put the introduction in view once the page has laid out */

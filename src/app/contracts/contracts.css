@@ -14,8 +14,6 @@
 
 /* ---- The contract directory ------------------------------------------------------------------------------- */
 .cdir { display: grid; gap: var(--space-5, 1.6rem); margin-top: var(--space-4, 1.2rem); }
-.cdir__summary { display: flex; flex-wrap: wrap; gap: 0.4rem 1.6rem; margin: 0; font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
-.cdir__summary b { color: var(--text); font-weight: 600; }
 .cdir__group h3 { margin: 0; padding-bottom: 0.6rem; border-bottom: 1px solid var(--line-strong); font-family: var(--font-mono); font-size: 0.7rem; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-dim); }
 .cdir__group ul { list-style: none; margin: 0; padding: 0; }
 .cdir__row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: var(--space-2, 0.6rem) var(--space-6, 2.4rem); padding: var(--space-4, 1.2rem) 0; border-bottom: 1px dashed var(--line); }
@@ -47,3 +45,32 @@
 .cdir__more > summary { cursor: pointer; color: var(--text); font-family: var(--font-display); font-weight: 600; }
 .cdir__more[open] > summary { margin-bottom: var(--space-3, 1rem); }
 @media (max-width: 760px) { .cdir__row { grid-template-columns: minmax(0, 1fr); } }
+
+/* header row: the title and the network selector (a viewing control, never a wallet action) */
+.cdir__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3, 1rem) var(--space-5, 1.6rem); }
+.cdir__head h2 { margin: 0; }
+.cdir__net { display: inline-flex; padding: 0.3rem; gap: 0.2rem; border-radius: 16px; border: 1px solid var(--line-strong); background: rgba(6, 4, 5, 0.6); }
+.cdir__net-opt {
+  position: relative; display: grid; grid-template-columns: auto 1fr; column-gap: 0.55rem; align-items: center; padding: 0.55rem 0.9rem; border-radius: 12px; border: 1px solid transparent;
+  background: transparent; color: var(--text-muted); text-align: left; cursor: pointer; font: inherit; transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+.cdir__net-opt i { grid-row: 1 / span 2; width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--text-dim); }
+.cdir__net-opt span { font-family: var(--font-display); font-weight: 700; font-size: 0.86rem; color: var(--text); }
+.cdir__net-opt small { grid-column: 2; font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); }
+.cdir__net-opt[data-active="true"] { background: rgba(109, 0, 26, 0.45); border-color: rgba(184, 26, 52, 0.6); }
+.cdir__net-opt[data-active="true"] i { background: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.16); }
+.cdir__net-opt[data-active="true"] small { color: var(--text-muted); }
+.cdir__net-opt:disabled { cursor: not-allowed; opacity: 0.55; }
+.cdir__net-opt:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.cdir__stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4, 1.2rem); margin: 0; }
+.cdir__stats > div { display: grid; gap: 0.2rem; padding: 0.9rem 1.1rem; border-radius: 16px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.025); }
+.cdir__stats dt { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-dim); }
+.cdir__stats dd { margin: 0; font-family: var(--font-display); font-size: 1.8rem; font-weight: 700; line-height: 1.1; color: var(--text); }
+.cdir__stats small { color: var(--text-dim); font-size: 0.78rem; }
+@media (max-width: 640px) { .cdir__stats { grid-template-columns: minmax(0, 1fr); } .cdir__net { width: 100%; flex-direction: column; } }
+
+/* a page whose header should not reserve room for a tall picture */
+.page--compact .page-head { min-height: 0; }
+.page--compact .page-head .stub__glyph { transform: scale(0.62); transform-origin: top right; }
+@media (min-width: 901px) { .page--compact .page-head { min-height: clamp(10rem, 15vw, 13.5rem); } .page--compact .page-head > p, .page--compact .page-head > h1 { max-width: 40rem; } }
