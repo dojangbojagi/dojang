@@ -13,26 +13,26 @@ const SECTIONS = [
   {
     href: "/lending",
     name: "Lending",
-    tag: "Policy 3 · Private proof",
-    text: "Prove eligibility with a zero-knowledge proof built in your browser, then supply and borrow test assets in Lending V2.",
+    tag: "Private proof · Policy 3",
+    text: "Prove eligibility with a private proof built in your browser, then supply and borrow test assets in Lending V2.",
   },
   {
     href: "/dao",
-    name: "DAO",
-    tag: "Policy 4 · Public vote",
-    text: "Hold an active project credential to create proposals and vote in the Robinhood governance contract.",
+    name: "DAO Governance",
+    tag: "DAO Governance · Policy 4",
+    text: "Hold an active project credential to create proposals and vote on Robinhood Testnet. Votes are public.",
   },
   {
     href: "/docs",
     name: "Docs",
     tag: "Reference",
-    text: "The trust model, what is private and what is public, and the limits of this testnet demonstration.",
+    text: "How GYEVO works, what is private and what is public, and the limits of this testnet demonstration.",
   },
   {
     href: "/contracts",
     name: "Contracts",
     tag: "Transparency",
-    text: "The deployed addresses, the credential registry, the verifier and the evidence behind each claim.",
+    text: "The deployed contracts, their purpose and status on the Robinhood Testnet explorer.",
   },
 ] as const;
 

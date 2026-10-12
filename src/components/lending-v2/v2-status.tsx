@@ -32,7 +32,7 @@ const STATE_COPY: Record<V2Market["state"], { tone: Tone; label: string; text: s
   unconfigured: {
     tone: "warn",
     label: "Not deployed",
-    text: "Lending V2 is not live on Robinhood Chain Testnet yet. No pool address is configured (NEXT_PUBLIC_ROBINHOOD_LENDING_V2_POOL_CONTRACT), so every V2 control is off and no balance, rate, price or position is shown. Nothing is simulated.",
+    text: "Lending V2 is not available here: no pool address is configured, so every V2 control is off and no balance, rate, price or position is shown. Nothing is simulated.",
   },
   disconnected: { tone: "neutral", label: "Wallet needed", text: "Connect a wallet to use the market and see your position. Market data below is read without a wallet." },
   "wrong-network": { tone: "warn", label: "Wrong network", text: "Switch your wallet to Robinhood Chain Testnet to continue. Transactions are disabled until you do." },

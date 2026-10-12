@@ -151,7 +151,7 @@
 
 .lp-nav__links {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-  display: flex; gap: .15rem; padding: .35rem; border-radius: 999px;
+  display: flex; align-items: center; gap: .15rem; height: 2.9rem; padding: 0 .3rem; border-radius: 999px; /* the Launch App pill's height */
   border: 1px solid transparent;
   transition: background-color .4s ease, border-color .4s ease, box-shadow .4s ease;
 }
@@ -172,7 +172,7 @@
 .lp-nav__links[data-hover="true"] .lp-bead { opacity: 1; }
 .lp[data-phase="dark"] .lp-bead { background: rgba(255, 255, 255, .1); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14); }
 .lp .lp-nav__links a:not(.fx__item) {
-  position: relative; z-index: 1; padding: .72rem 1.1rem; border-radius: 999px;
+  position: relative; z-index: 1; display: inline-flex; align-items: center; height: 2.2rem; padding: 0 1.1rem; border-radius: 999px;
   font: 600 .76rem/1 var(--lp-font-display); letter-spacing: .08em; text-transform: uppercase;
 }
 .lp .lp-nav__links a:not(.fx__item)::after { /* a stitch under the link, drawn on hover */
@@ -180,7 +180,9 @@
   border-bottom: 1px dashed var(--lp-wine); transform: scaleX(0); transform-origin: left;
   transition: transform .45s var(--lp-ease);
 }
-.lp .lp-nav__links a:not(.fx__item):hover::after { transform: scaleX(1); }
+.lp .lp-nav__links a:not(.fx__item):hover::after, .lp .lp-nav__links a[data-active="true"]::after { transform: scaleX(1); }
+.lp .lp-nav__links a[data-active="true"] { background: rgba(109, 0, 26, .1); }
+.lp[data-phase="dark"] .lp-nav__links a[data-active="true"] { background: rgba(184, 26, 52, .24); color: #fff; }
 
 .lp-nav__right { display: flex; align-items: center; gap: .6rem; }
 
@@ -779,13 +781,13 @@
 /* ---- 03 The trust layer: two panes (credential, proof) and the two access paths that start from one registry ---- */
 .lp-trust .lp-h2 { max-width: 19ch; }
 .lp-trust__stage {
-  position: relative; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(1.2rem, 3vw, 3rem);
+  position: relative; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: clamp(.8rem, 2vw, 2rem); row-gap: clamp(1.2rem, 3vw, 2.4rem);
   margin-top: clamp(2.6rem, 5vw, 4.4rem); align-items: start;
 }
-.lp-trust__stage::before { /* the thread between the two panes: the credential is what the proof is about */
-  content: ""; position: absolute; left: 25%; right: 25%; top: 7.5rem; height: 1px; z-index: 0;
-  background: repeating-linear-gradient(90deg, var(--lp-line-2) 0 6px, transparent 6px 12px);
-}
+/* three introductions, set off against one another: left, right, left; each a destination of the bar above */
+.lp-trust__stage > .lp-layer--public, .lp-trust__stage > .lp-layer--dao { grid-column: 1 / span 7; }
+.lp-trust__stage > .lp-layer--private { grid-column: 6 / span 7; margin-top: clamp(0rem, -1vw, 0rem); }
+.lp-trust__stage > .lp-layer { scroll-margin-top: 6rem; }
 .lp-layer {
   --ac: var(--lp-public); position: relative; z-index: 1; display: grid; gap: .9rem; align-content: start;
   padding: clamp(1.4rem, 2.4vw, 2.2rem); border-radius: 26px; border: 1px solid var(--lp-line-2);
@@ -793,7 +795,7 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 60px 110px -60px rgba(0, 0, 0, .95);
 }
 .lp-layer--private {
-  --ac: var(--lp-wine); margin-top: clamp(0rem, 4vw, 3.6rem); /* one pane sits behind and lower: depth */
+  --ac: var(--lp-wine);
   background: linear-gradient(180deg, rgba(109, 0, 26, .5), rgba(109, 0, 26, .12) 72%), rgba(10, 7, 8, .8);
   border-color: rgba(184, 26, 52, .38);
 }
@@ -837,6 +839,29 @@
 .lp-layer__link svg { width: 1em; height: 1em; transition: transform .35s var(--lp-ease); }
 .lp-layer__link:hover { border-color: var(--ac); background: color-mix(in srgb, var(--ac) 22%, transparent); }
 .lp-layer__link:hover svg { transform: translateX(3px); }
+
+/* the DAO's instrument: where a proposal is in its life, and how a vote might split (an example, not a result) */
+.lp-ballot {
+  position: relative; display: grid; gap: .8rem; width: min(100%, 22rem); padding: 1rem 1.1rem 1.1rem; border-radius: 16px;
+  background: rgba(255, 255, 255, .06); border: 1px solid var(--lp-line-2); box-shadow: 0 26px 50px -26px rgba(0, 0, 0, .8);
+  font: 500 .66rem/1 var(--lp-font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--lp-dim);
+  transform: perspective(900px) rotateY(-7deg) rotateX(3deg); transform-origin: 20% 50%; transition: transform .7s var(--lp-ease);
+}
+.lp-layer:hover .lp-ballot { transform: perspective(900px) rotateY(0) rotateX(0); }
+.lp-ballot__top { display: flex; align-items: center; padding-bottom: .65rem; border-bottom: 1px dashed var(--lp-line-2); }
+.lp-ballot__top b { margin-left: auto; font-weight: 600; color: var(--lp-muted); }
+.lp-ballot__steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .3rem; }
+.lp-ballot__steps li { position: relative; display: grid; gap: .5rem; justify-items: start; padding-top: .9rem; font-size: .58rem; letter-spacing: .1em; color: var(--lp-dim); }
+.lp-ballot__steps li::before { content: ""; position: absolute; left: 0; right: -.3rem; top: .32rem; height: 1px; background: var(--lp-line-2); }
+.lp-ballot__steps li:last-child::before { right: 0; }
+.lp-ballot__steps i { position: absolute; left: 0; top: 0; width: .65rem; height: .65rem; border-radius: 50%; border: 1px solid var(--lp-line-2); background: var(--lp-bg); }
+.lp-ballot__steps li[data-done="true"] { color: var(--lp-text); }
+.lp-ballot__steps li[data-done="true"] i { background: var(--lp-public); border-color: var(--lp-public); }
+.lp-ballot__bars { display: grid; gap: .5rem; }
+.lp-ballot__bars span { display: grid; grid-template-columns: 4.2rem 1fr; align-items: center; gap: .6rem; font-size: .6rem; letter-spacing: .12em; }
+.lp-ballot__bars u { display: block; height: .45rem; width: var(--w, 40%); border-radius: 3px; background: rgba(255, 255, 255, .55); }
+.lp-ballot__bars span:nth-child(2) u { background: rgba(184, 26, 52, .85); }
+.lp-ballot__bars span:nth-child(3) u { background: rgba(255, 255, 255, .22); }
 
 /* the two small instruments: a credential card, and a proof card whose values are veiled */
 .lp-cred, .lp-proof {
@@ -969,8 +994,7 @@
 @media (max-width: 920px) {
   .lp-idea { grid-template-columns: 1fr; }
   .lp-trust__stage { grid-template-columns: minmax(0, 1fr); }
-  .lp-trust__stage::before { display: none; }
-  .lp-layer--private { margin-top: 0; }
+  .lp-trust__stage > .lp-layer--public, .lp-trust__stage > .lp-layer--private, .lp-trust__stage > .lp-layer--dao { grid-column: 1; }
   .lp-flow__body { grid-template-columns: minmax(0, 1fr); }
   .lp-route { flex-wrap: wrap; row-gap: .8rem; }
   .lp-route__node { flex: 1 1 14rem; }

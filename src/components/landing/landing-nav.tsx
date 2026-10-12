@@ -3,13 +3,59 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { BrandLogo } from "@/components/brand-logo";
-import { FEATURES, FeaturesMenu } from "@/components/features-menu";
+import { scrollToId } from "./smooth-scroll";
 
-/* The public bar: the logo, one Features menu (DOJANG and BOJAGI) and the way into the product.
-   Lending, governance, docs and contracts are inside the app, behind "Launch App"; connecting a wallet
-   happens there too. Light over the white cover, dark glass after it. */
+/* The public bar: the logo, three direct links to the introductions on this page (DOJANG, BOJAGI, DAO) and
+   the way into the product. Lending, docs and contracts are inside the app, behind "Launch App"; connecting a
+   wallet happens there too. Light over the white cover, dark glass after it. */
+const SECTIONS = [
+  { id: "dojang", label: "DOJANG", desc: "Project credentials and eligibility." },
+  { id: "bojagi", label: "BOJAGI", desc: "Private zero-knowledge proofs." },
+  { id: "dao", label: "DAO", desc: "Credential-gated governance." },
+] as const;
+
+type SectionId = (typeof SECTIONS)[number]["id"];
+
 export function LandingNav({ appName }: { appName: string }) {
   const [open, setOpen] = useState(false);
+  const [active, setActive] = useState<SectionId | null>(null);
+
+  /* which introduction is on screen: marks its link */
+  useEffect(() => {
+    const targets = SECTIONS.map((s) => document.getElementById(s.id)).filter((el): el is HTMLElement => Boolean(el));
+    if (!targets.length) return;
+    const visible = new Map<string, number>();
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) visible.set(entry.target.id, entry.intersectionRatio);
+          else visible.delete(entry.target.id);
+        }
+        let best: SectionId | null = null;
+        let ratio = 0;
+        for (const s of SECTIONS) {
+          const r = visible.get(s.id);
+          if (r !== undefined && r >= ratio) { best = s.id; ratio = r; }
+        }
+        setActive(best);
+      },
+      { rootMargin: "-30% 0px -35% 0px", threshold: [0, 0.2, 0.5, 0.8, 1] },
+    );
+    targets.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, []);
+
+  /* arriving with a hash (from another page, or back/forward): put the introduction in view once the page has laid out */
+  useEffect(() => {
+    const jump = () => {
+      const id = window.location.hash.slice(1);
+      if (!id || !SECTIONS.some((s) => s.id === id)) return;
+      window.setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: "auto", block: "start" }), 350);
+    };
+    jump();
+    window.addEventListener("hashchange", jump);
+    return () => window.removeEventListener("hashchange", jump);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -27,6 +73,14 @@ export function LandingNav({ appName }: { appName: string }) {
     };
   }, [open]);
 
+  const go = (id: SectionId) => (event: React.MouseEvent<HTMLAnchorElement>) => {
+    setOpen(false);
+    if (scrollToId(id)) {
+      event.preventDefault();
+      window.history.replaceState(null, "", `#${id}`);
+    }
+  };
+
   return (
     <>
       <header className="lp-nav" data-open={open}>
@@ -36,7 +90,17 @@ export function LandingNav({ appName }: { appName: string }) {
         </Link>
 
         <nav className="lp-nav__links" aria-label="Main navigation">
-          <FeaturesMenu />
+          {SECTIONS.map((s) => (
+            <a
+              key={s.id}
+              href={`#${s.id}`}
+              data-active={active === s.id ? "true" : "false"}
+              aria-current={active === s.id ? "location" : undefined}
+              onClick={go(s.id)}
+            >
+              {s.label}
+            </a>
+          ))}
         </nav>
 
         <div className="lp-nav__right">
@@ -69,12 +133,12 @@ export function LandingNav({ appName }: { appName: string }) {
         aria-label="Mobile navigation"
         hidden={!open}
       >
-        <p className="lp-menu__label">Features</p>
-        {FEATURES.map((f) => (
-          <Link href={f.href} key={f.href} onClick={() => setOpen(false)}>
-            <span className="lp-menu__name">{f.name}</span>
-            <span className="lp-menu__desc">{f.desc}</span>
-          </Link>
+        <p className="lp-menu__label">Explore</p>
+        {SECTIONS.map((s) => (
+          <a href={`#${s.id}`} key={s.id} onClick={go(s.id)}>
+            <span className="lp-menu__name">{s.label}</span>
+            <span className="lp-menu__desc">{s.desc}</span>
+          </a>
         ))}
         <Link className="lp-menu__launch" href="/app" onClick={() => setOpen(false)}>
           Launch App

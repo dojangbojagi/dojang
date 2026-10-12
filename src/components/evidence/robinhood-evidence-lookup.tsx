@@ -127,11 +127,11 @@ export function RobinhoodEvidenceLookup() {
   return (
     <section className="panel" aria-labelledby="robinhood-evidence-heading">
       <h2 id="robinhood-evidence-heading">Robinhood Testnet evidence</h2>
-      <p className="muted">Every lookup is made against chain {ROBINHOOD_TESTNET_CHAIN_ID}. Receipts are authentic Robinhood RPC results; project events are matched only to configured BOJOGAY addresses. Local Anvil transactions are not accepted as testnet evidence.</p>
+      <p className="muted">Every lookup is made against chain {ROBINHOOD_TESTNET_CHAIN_ID}. Receipts are authentic Robinhood RPC results; project events are matched only to the project's own contract addresses. Local Anvil transactions are not accepted as testnet evidence.</p>
 
       <div className="protocol-actions">
         <button className="btn btn--secondary btn--sm" type="button" onClick={() => void inspectCode()} disabled={!client || codeState === "reading"}>
-          {codeState === "reading" ? "Checking code…" : "Check configured address code"}
+          {codeState === "reading" ? "Checking code…" : "Check contract code"}
         </button>
       </div>
       {codeState === "error" && <p className="callout callout--caution" role="alert">{codeError}</p>}
@@ -176,7 +176,7 @@ export function RobinhoodEvidenceLookup() {
             <div className="kv__row"><dt>Gas used</dt><dd>{transaction.gasUsed.toString()}</dd></div>
             <div className="kv__row"><dt>Explorer</dt><dd><a href={transaction.explorerUrl} target="_blank" rel="noopener noreferrer">Open transaction<span className="visually-hidden"> (opens in a new tab)</span></a></dd></div>
           </dl>
-          <h3 className="evidence-subhead">Events from configured BOJOGAY contracts</h3>
+          <h3 className="evidence-subhead">Events from GYEVO contracts</h3>
           <EventList events={transaction.projectEvents} />
         </div>
       )}

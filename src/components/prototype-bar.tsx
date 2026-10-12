@@ -9,7 +9,7 @@ export function PrototypeBar() {
   return (
     <div className="proto-bar">
       <div className="container proto-bar__inner">
-        <span><strong>Robinhood Testnet demo · chain 46630.</strong> Project contracts are deployed; Credentials are issued by {appEnv.appName}, the project. Official Dojang verification is a separate GIWA integration.</span>
+        <span><strong>Robinhood Testnet · chain 46630.</strong> Test tokens only. {appEnv.appName} credentials are project-issued, not official GIWA or Upbit credentials.</span>
       </div>
     </div>
   );

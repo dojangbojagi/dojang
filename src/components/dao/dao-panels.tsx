@@ -39,9 +39,9 @@ export function GovernanceNotice({ chainId = GIWA_CHAIN_ID }: { chainId?: Protoc
       <ul className="dao-notice__list">
         <li><strong>Public votes.</strong> A vote is a public wallet action. It is not private, not anonymous, and counts one eligible wallet, not one person.</li>
         <li><strong>{isRobinhood ? "Project credential membership." : "Official Dojang membership."}</strong> {isRobinhood
-          ? "Creating a proposal and voting need a current BOJOGAY project-issued policy-4 credential, checked by the Robinhood DAO contract. This is not official Dojang verification; policy-3 Lending credentials do not count."
+          ? "Creating a proposal and voting need an active DAO Governance project credential (policy 4), checked by the DAO contract each time. Lending credentials (policy 3) do not count, and this is not official Dojang verification."
           : "Creating a proposal and voting need a wallet with an official Dojang Verified Address credential, checked by the contract each time. ZK proofs and project-issued demo credentials play no part."}</li>
-        <li><strong>One narrow power.</strong> An approved proposal changes only this contract&apos;s own minimum remaining credential validity. It does not change the LendingPool, the RestrictedVault or any other project contract.</li>
+        <li><strong>One narrow power.</strong> An approved proposal changes only this contract&apos;s own minimum remaining credential validity. It does not change Lending or any other project contract.</li>
         <li><strong>Plain rules.</strong> Voting opens one minute after a proposal is created. Quorum counts For, Against and Abstain together; approval needs more For than Against. Anyone may finalize and execute.</li>
       </ul>
       <p className="small muted">
@@ -158,7 +158,7 @@ function RobinhoodDeploymentStatus({ state }: { state: Governance["state"] }) {
       <div className="kv__row"><dt>Robinhood governance contract</dt><dd><Pill tone={pill.tone}>{pill.label}</Pill></dd></div>
       <p className="small muted">{detail}</p>
       {address && !invalid && <p className="small"><a className="addr" href={`${ROBINHOOD_TESTNET_EXPLORER_URL}/address/${address}`} target="_blank" rel="noopener noreferrer">{address}<span className="visually-hidden"> (opens in a new tab)</span></a></p>}
-      <p className="small muted">This is BOJOGAY project governance on Robinhood Testnet. It does not use official GIWA Dojang infrastructure. Local Anvil results are not public chain evidence.</p>
+      <p className="small muted">This is GYEVO project governance on Robinhood Testnet. It does not use official GIWA Dojang infrastructure.</p>
     </div>
   );
 }
@@ -220,7 +220,7 @@ export function GovernanceOverview({ gov, runner, gasBalance, chainId = GIWA_CHA
             </dl>
           ) : (
             <p className="protocol-empty">
-              {gov.state === "unconfigured" ? `Unavailable until the ${isRobinhood ? "NEXT_PUBLIC_ROBINHOOD_GOVERNANCE_CONTRACT" : "NEXT_PUBLIC_DAO_GOVERNANCE_CONTRACT"} address is configured.`
+              {gov.state === "unconfigured" ? "Unavailable: no DAO contract address is configured for this network."
                 : gov.state === "no-code" ? "The configured DAO address has no contract code on this network."
                 : gov.state === "dependency-mismatch" ? "The configured project credential registry does not match the DAO deployment."
                 : gov.state === "read-error" ? "The governance settings could not be read. Refresh to try again."

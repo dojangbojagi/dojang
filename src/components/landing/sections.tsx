@@ -113,7 +113,7 @@ export function TrustLayerSection() {
         </p>
 
         <div className="lp-trust__stage">
-          <article className="lp-layer lp-layer--public" data-lp-reveal="left" data-spot style={{ ["--i" as string]: 1 }}>
+          <article className="lp-layer lp-layer--public" id="dojang" data-lp-reveal="left" data-spot style={{ ["--i" as string]: 1 }}>
             <figure className="lp-figure">
               <div className="lp-cred" aria-hidden="true">
                 <div className="lp-cred__top"><i /><span>Project credential</span><b>Policy 4</b></div>
@@ -143,7 +143,7 @@ export function TrustLayerSection() {
             <Link className="lp-layer__link" href="/dojang">Explore DOJANG <Arrow /></Link>
           </article>
 
-          <article className="lp-layer lp-layer--private" data-lp-reveal="right" data-spot style={{ ["--i" as string]: 2 }}>
+          <article className="lp-layer lp-layer--private" id="bojagi" data-lp-reveal="right" data-spot style={{ ["--i" as string]: 2 }}>
             <figure className="lp-figure">
               <div className="lp-proof" aria-hidden="true">
                 <div className="lp-proof__top"><span>Private proof</span><b>Policy 3</b></div>
@@ -168,6 +168,41 @@ export function TrustLayerSection() {
               <li>The private eligibility value never needs to appear publicly on-chain</li>
             </ul>
             <Link className="lp-layer__link" href="/bojagi">Explore BOJAGI <Arrow /></Link>
+          </article>
+
+          <article className="lp-layer lp-layer--dao" id="dao" data-lp-reveal="left" data-spot style={{ ["--i" as string]: 1 }}>
+            <figure className="lp-figure">
+              <div className="lp-ballot" aria-hidden="true">
+                <div className="lp-ballot__top"><span>Proposal</span><b>Example</b></div>
+                <ol className="lp-ballot__steps">
+                  <li data-done="true"><i />Propose</li>
+                  <li data-done="true"><i />Vote</li>
+                  <li><i />Finalize</li>
+                  <li><i />Execute</li>
+                </ol>
+                <div className="lp-ballot__bars">
+                  <span>For<u style={{ ["--w" as string]: "64%" }} /></span>
+                  <span>Against<u style={{ ["--w" as string]: "22%" }} /></span>
+                  <span>Abstain<u style={{ ["--w" as string]: "14%" }} /></span>
+                </div>
+              </div>
+              <figcaption>Illustration, not a live result</figcaption>
+            </figure>
+            <p className="lp-layer__tag">Governance layer · public</p>
+            <h3>
+              <span className="lp-layer__name">DAO</span>
+              <span className="lp-layer__sub">Credential-Gated Governance</span>
+            </h3>
+            <p className="lp-layer__text">Eligible project credential holders propose and vote on-chain. Each eligible wallet counts once per proposal, and every vote is public.</p>
+            <p className="lp-policy">
+              <span className="lp-policy__badge">Policy 4</span>
+              <span>An <strong>active project credential</strong> is what makes a wallet eligible to propose and vote.</span>
+            </p>
+            <ul className="lp-layer__facts">
+              <li>Phase 1 has one bounded action: the minimum remaining credential validity the DAO itself requires</li>
+              <li>It cannot change lending settings or move funds</li>
+            </ul>
+            <Link className="lp-layer__link" href="/dao">Explore DAO <Arrow /></Link>
           </article>
         </div>
 

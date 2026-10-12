@@ -88,3 +88,6 @@
 @media (prefers-reduced-motion: reduce) {
   .protocol-cloth__square { animation: none; }
 }
+
+/* a policy number is metadata beside a human label, never the headline */
+.protocol-policy { display: inline-block; margin-left: 0.55rem; padding: 0.2rem 0.5rem; border-radius: 999px; border: 1px solid var(--line-strong); vertical-align: middle; font-family: var(--font-mono); font-size: 0.6rem; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-dim); }

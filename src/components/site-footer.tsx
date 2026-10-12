@@ -32,7 +32,7 @@ export function SiteFooter() {
         <div className="site-footer__legal">
           <div><span className="net-pill"><i className="net-pill__dot" aria-hidden="true" /><b>Robinhood Testnet</b><i>{ROBINHOOD_TESTNET_CHAIN_ID}</i></span></div>
           <p>Testnet demonstration on Robinhood Testnet (chain ID {ROBINHOOD_TESTNET_CHAIN_ID}). Not audited. Not a financial product. No funds are held.</p>
-          <p>Independent project, not affiliated with GIWA, Dojang or Upbit. The names Dojang and Bojagi refer to GIWA technologies that inspire this work; this site is not GIWA’s native Bojagi private-transfer system.</p>
+          <p>Independent project, not affiliated with GIWA or Upbit. DOJANG and BOJAGI are this project’s own credential and proof layers; they are separate from GIWA’s Dojang and native Bojagi.</p>
         </div>
       </div>
     </footer>

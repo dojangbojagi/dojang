@@ -36,7 +36,7 @@ export function LimitationsNotice() {
 }
 
 const MARKET_MESSAGES = {
-  unconfigured: "The lending market is unavailable: no LendingPool address is configured (NEXT_PUBLIC_LENDING_POOL_CONTRACT). Nothing is simulated, so no balances, positions or transactions are shown.",
+  unconfigured: "The lending market is unavailable: no lending pool address is configured. Nothing is simulated, so no balances, positions or transactions are shown.",
   disconnected: "Connect a wallet to see your balances and use the market.",
   "wrong-network": "Switch your wallet to GIWA Sepolia to continue.",
   "read-error": "A market or wallet read failed. This is not an empty position. Refresh to try again.",

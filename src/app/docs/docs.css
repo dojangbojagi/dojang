@@ -1,0 +1,32 @@
+/* Docs: one reading column of short panels, an index at the top, and plain definition lists. */
+.docs { display: grid; gap: var(--space-5, 1.6rem); }
+.docs__toc { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: var(--space-5, 1.6rem); max-width: 44rem; }
+.docs__toc a {
+  padding: 0.5rem 0.85rem; border-radius: 999px; border: 1px solid var(--line-strong); color: var(--text-muted);
+  font-family: var(--font-display); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none;
+  transition: border-color 0.25s ease, color 0.25s ease, background-color 0.25s ease;
+}
+.docs__toc a:hover, .docs__toc a:focus-visible { color: #fff; border-color: var(--gold); background: rgba(109, 0, 26, 0.35); outline: none; }
+.docs .panel { scroll-margin-top: calc(var(--header-h, 76px) + 1.5rem); max-width: 62rem; }
+.docs .panel p, .docs .panel li { color: var(--text-muted); }
+.docs .panel strong { color: var(--text); font-weight: 600; }
+.docs__steps { list-style: none; counter-reset: step; display: grid; gap: var(--space-3, 1rem); margin: var(--space-4, 1.2rem) 0 0; padding: 0; }
+.docs__steps li { position: relative; padding-left: 2.6rem; counter-increment: step; }
+.docs__steps li::before {
+  content: counter(step); position: absolute; left: 0; top: -0.05rem; display: grid; place-items: center; width: 1.7rem; height: 1.7rem; border-radius: 50%;
+  border: 1px solid var(--gold); color: #fff; font-family: var(--font-mono); font-size: 0.72rem; background: rgba(109, 0, 26, 0.4);
+}
+.docs__defs, .docs__table { display: grid; gap: 0; margin: var(--space-4, 1.2rem) 0 0; }
+.docs__defs > div, .docs__table > div { display: grid; grid-template-columns: minmax(9rem, 14rem) minmax(0, 1fr); gap: 0.4rem var(--space-5, 1.6rem); padding: 0.8rem 0; border-bottom: 1px dashed var(--line); }
+.docs__defs > div:last-child, .docs__table > div:last-child { border-bottom: 0; }
+.docs__defs dt, .docs__table dt { color: var(--text); font-family: var(--font-display); font-weight: 600; }
+.docs__defs dd, .docs__table dd { margin: 0; color: var(--text-muted); overflow-wrap: anywhere; }
+.docs__muted { margin-left: 0.4rem; font-size: 0.8rem; color: var(--text-dim); }
+.docs__note { padding: 0.8rem 1rem; border-left: 2px solid var(--gold); background: rgba(109, 0, 26, 0.18); border-radius: 0 12px 12px 0; }
+.docs__cta { margin: var(--space-4, 1.2rem) 0 0; }
+.docs__tech { margin-top: var(--space-5, 1.6rem); border-radius: 16px; border: 1px dashed var(--line-strong); padding: var(--space-3, 1rem) var(--space-4, 1.2rem); }
+.docs__tech > summary { cursor: pointer; color: var(--text); font-family: var(--font-display); font-weight: 600; }
+.docs__tech[open] > summary { margin-bottom: var(--space-3, 1rem); }
+@media (max-width: 640px) {
+  .docs__defs > div, .docs__table > div { grid-template-columns: minmax(0, 1fr); }
+}

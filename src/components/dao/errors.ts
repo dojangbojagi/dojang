@@ -14,7 +14,7 @@ export function explainGovernanceFailure(input: unknown, chainId: ProtocolChainI
     const lower = raw.toLowerCase();
     if (lower.includes("insufficient funds")) return "This wallet does not have enough Robinhood Testnet ETH to pay the network fee.";
     if (lower.includes("wrong network") || lower.includes("unsupportedchain")) return "Switch to Robinhood Chain Testnet (chain 46630) before using this DAO.";
-    if (lower.includes("notverifiedmember")) return "A current BOJOGAY project-issued policy-4 DAO credential is required. This is not official Dojang verification.";
+    if (lower.includes("notverifiedmember")) return "An active DAO Governance project credential (policy 4) is required. This is not official Dojang verification.";
     if (input instanceof ProtocolError) return input.message;
     if (RAW.test(text)) return "The Robinhood governance contract rejected this action, so nothing changed on-chain.";
     return "Robinhood Testnet could not complete the governance RPC request. No successful state change was confirmed; refresh and try again.";

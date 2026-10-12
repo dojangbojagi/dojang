@@ -6,7 +6,6 @@ import { CredentialWitnessImporter } from "@/components/credential-witness-impor
 import { DemoCredentialTools } from "@/components/demo-credential-tools";
 import { ProtocolPage } from "@/components/protocol-page";
 import { StateChip } from "@/components/protocol-state";
-import { WalletNetworkCard } from "@/components/wallet-network-card";
 import { RobinhoodProjectCredentialStatus } from "@/components/robinhood-project-credential-status";
 import { useDojangVerification } from "@/hooks/use-dojang-verification";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
@@ -27,13 +26,20 @@ export default function DojangPage() {
       page="dojang"
       tone="dojang"
       accent="celadon"
-      status="Official read + project demo credential"
-      glyph={{ shape: "orb", label: "A sphere of readable characters: the official Dojang record is public, so anyone can read it.", caption: "The official record is public", legend: ["public"] }}
-      title="Check what is officially trusted."
-      lead="Read the connected wallet’s official Dojang Verified Address record on GIWA Sepolia. Issuer-managed demo credentials are a separate path and are never shown as official identity verification."
+      status="Project credentials"
+      glyph={{ shape: "orb", label: "A sphere of readable characters: a credential record is public, so anyone can read it.", caption: "The record is public", legend: ["public"] }}
+      title="Your project credential."
+      lead="DOJANG is the credential layer: an authorized issuer records who is eligible, and contracts check it each time. See the credential held by your wallet on Robinhood Testnet. An optional read of an official GIWA Dojang record is kept below as an external reference."
     >
       <div className="protocol-stack protocol-section">
-        <WalletNetworkCard expectedChainId={GIWA_CHAIN_ID} />
+        <RobinhoodProjectCredentialStatus />
+
+        <section className="protocol-section" aria-labelledby="external-dojang-heading">
+          <header className="protocol-section__head">
+            <p className="stub__num">EXTERNAL REFERENCE · GIWA SEPOLIA</p>
+            <h2 id="external-dojang-heading">Official GIWA Dojang record</h2>
+            <p>Optional and read-only. This is GIWA&apos;s own credential system, separate from the project credentials above and not used for authorization on Robinhood Testnet.</p>
+          </header>
         <div className="protocol-grid protocol-grid--even">
           <section className="panel panel--ticks protocol-panel" aria-labelledby="official-dojang-heading">
             <div className="protocol-panel__head">
@@ -82,9 +88,10 @@ export default function DojangPage() {
             </dl>
           </section>
         </div>
+        </section>
 
-        <RobinhoodProjectCredentialStatus />
-
+        <details className="protocol-section">
+          <summary className="protocol-inline-link">Earlier GIWA prototype credential tools</summary>
         <section className="protocol-section" aria-labelledby="demo-path-heading">
           <header className="protocol-section__head">
             <p className="stub__num">LEGACY GIWA PROJECT DEMO · NOT OFFICIAL</p>
@@ -96,6 +103,7 @@ export default function DojangPage() {
             <DemoCredentialTools />
           </div>
         </section>
+        </details>
       </div>
     </ProtocolPage>
   );

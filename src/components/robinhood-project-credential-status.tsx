@@ -59,20 +59,20 @@ export function RobinhoodProjectCredentialStatus() {
   return (
     <section className="protocol-section" aria-labelledby="project-credential-heading">
       <header className="protocol-section__head">
-        <p className="stub__num">ROBINHOOD TESTNET · PROJECT ISSUED</p>
-        <h2 id="project-credential-heading">Project credentials for the demo flows</h2>
-        <p>These BOJOGAY project test credentials are not official GIWA Dojang or Upbit credentials. Only an authorized project issuer can issue them.</p>
+        <p className="stub__num">ROBINHOOD TESTNET · PROJECT CREDENTIALS</p>
+        <h2 id="project-credential-heading">Your project credentials</h2>
+        <p>These credentials are issued by the project's authorized issuer. They are not official GIWA Dojang or Upbit credentials.</p>
       </header>
       <WalletNetworkCard expectedChainId={ROBINHOOD_TESTNET_CHAIN_ID} />
       <div className="protocol-grid protocol-grid--even">
         <section className="panel panel--ticks protocol-panel" aria-labelledby="project-policy-3-heading">
-          <div className="protocol-panel__head"><h3 id="project-policy-3-heading">Lending · policy 3</h3><StateChip state={lendingState}>{lendingState === "active" ? "Credential active" : lendingState === "missing" ? "Credential missing" : lendingState.replaceAll("-", " ")}</StateChip></div>
+          <div className="protocol-panel__head"><h3 id="project-policy-3-heading">Lending <span className="protocol-policy">Policy 3</span></h3><StateChip state={lendingState}>{lendingState === "active" ? "Credential active" : lendingState === "missing" ? "Credential missing" : lendingState.replaceAll("-", " ")}</StateChip></div>
           <p className="protocol-copy">{lendingText}</p>
           {lending.credential && <p className="small muted">Credential version {lending.credential.version.toString()} · expires {new Date(Number(lending.credential.expiresAt) * 1000).toLocaleString()}</p>}
           <Link className="btn btn--secondary" href="/bojagi">Open private proof ↗</Link>
         </section>
         <section className="panel panel--ticks protocol-panel" aria-labelledby="project-policy-4-heading">
-          <div className="protocol-panel__head"><h3 id="project-policy-4-heading">DAO · policy 4</h3><StateChip state={daoState}>{daoState === "active" ? "Credential active" : daoState === "missing" ? "Credential missing" : daoState.replaceAll("-", " ")}</StateChip></div>
+          <div className="protocol-panel__head"><h3 id="project-policy-4-heading">DAO Governance <span className="protocol-policy">Policy 4</span></h3><StateChip state={daoState}>{daoState === "active" ? "Credential active" : daoState === "missing" ? "Credential missing" : daoState.replaceAll("-", " ")}</StateChip></div>
           <p className="protocol-copy">{daoText}</p>
           <Link className="btn btn--secondary" href="/dao">Open Robinhood governance ↗</Link>
         </section>

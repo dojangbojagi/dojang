@@ -1,9 +1,6 @@
 import Link from "next/link";
-import { ProofGenerationPanel } from "@/components/proof-generation-panel";
 import { RobinhoodBojagiProof } from "@/components/robinhood-bojagi-proof";
 import { ProtocolPage } from "@/components/protocol-page";
-import { WalletNetworkCard } from "@/components/wallet-network-card";
-import { GIWA_CHAIN_ID } from "@/lib/config/chain";
 import "@/components/lending-v2/lending-v2.css";
 
 export default function BojagiPage() {
@@ -15,7 +12,7 @@ export default function BojagiPage() {
       status="Private eligibility · browser proof"
       glyph={{ shape: "seal", label: "A burgundy core sealed inside a white ring: the value stays private and the proof is public.", caption: "Value sealed · proof public", legend: ["private", "public"] }}
       title="Prove it without showing it."
-      lead="Your device checks the issuer-backed witness against the current on-chain commitment, then proves that it meets the policy. The exact value stays hidden; the wallet and proof remain public."
+      lead="Your browser proves that your project credential meets a rule, without revealing the private value behind it. The wallet and the proof stay public."
     >
       <div className="protocol-stack protocol-section">
         <div className="protocol-grid protocol-grid--stretch">
@@ -50,18 +47,11 @@ export default function BojagiPage() {
             </article>
             <article className="panel panel--ticks protocol-panel">
               <div className="protocol-panel__head"><h2>Public to the verifier</h2></div>
-              <ul className="protocol-list"><li>Wallet address and commitment</li><li>Policy ID/version and threshold</li><li>Credential version and expiry</li><li>Chain, vault address and proof</li></ul>
+              <ul className="protocol-list"><li>Wallet address and commitment</li><li>Policy ID/version and threshold</li><li>Credential version and expiry</li><li>Chain, target contract and proof</li></ul>
               <div className="callout callout--caution protocol-notice">Wallet activity and transaction metadata remain visible. This is eligibility privacy, not a private transfer.</div>
             </article>
           </div>
         </section>
-
-        <details className="protocol-section">
-          <summary className="protocol-inline-link">Legacy GIWA Sepolia proof for the Restricted Vault</summary>
-          <p className="protocol-copy">This preserved proof path uses the separate GIWA credential registry, GIWA chain ID 91342, and the configured Restricted Vault. It does not authorize Robinhood Lending V2.</p>
-          <WalletNetworkCard expectedChainId={GIWA_CHAIN_ID} />
-          <ProofGenerationPanel />
-        </details>
 
         <div className="protocol-actions">
           <Link className="btn btn--secondary" href="/dojang">Check credential ↗</Link>
