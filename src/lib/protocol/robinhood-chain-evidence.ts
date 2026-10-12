@@ -28,6 +28,7 @@ export interface RobinhoodCodeEvidence {
   name: RobinhoodContractKey;
   address?: Address;
   state: "unconfigured" | "no-code" | "code-present";
+  sourceVerification: "verified" | "unverified" | "unavailable" | "not-applicable";
   runtimeCodeHash?: Hex;
   explorerUrl?: string;
 }
@@ -72,6 +73,27 @@ function addressUrl(address: Address): string {
   return `${ROBINHOOD_TESTNET_EXPLORER_URL}/address/${address}`;
 }
 
+async function readSourceVerification(address: Address): Promise<RobinhoodCodeEvidence["sourceVerification"]> {
+  const url = `${ROBINHOOD_TESTNET_EXPLORER_URL}/api?module=contract&action=getsourcecode&address=${address}`;
+  try {
+    const response = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(12_000) });
+    if (!response.ok) return "unavailable";
+    const body = await response.json() as {
+      status?: string;
+      result?: unknown;
+    };
+    const record = Array.isArray(body.result) ? body.result[0] as Record<string, unknown> | undefined : undefined;
+    if (body.status !== "1" || !record || typeof record.Address !== "string") return "unavailable";
+    if (record.Address.toLowerCase() !== address.toLowerCase()) return "unavailable";
+    const hasVerifiedSource = typeof record.SourceCode === "string" && Boolean(record.SourceCode.trim())
+      && typeof record.ABI === "string" && Boolean(record.ABI.trim())
+      && record.ABI !== "Contract source code not verified";
+    return hasVerifiedSource ? "verified" : "unverified";
+  } catch {
+    return "unavailable";
+  }
+}
+
 function transactionUrl(hash: Hash): string {
   return `${ROBINHOOD_TESTNET_EXPLORER_URL}/tx/${hash}`;
 }
@@ -91,13 +113,22 @@ async function requireRobinhood(client: PublicClient): Promise<number> {
 export async function inspectRobinhoodContracts(client: PublicClient): Promise<readonly RobinhoodCodeEvidence[]> {
   await requireRobinhood(client);
   return Promise.all(addresses.map(async ([name, address]) => {
-    if (!address) return { name, state: "unconfigured" } as const;
+    if (!address) return { name, state: "unconfigured", sourceVerification: "not-applicable" } as const;
     const code = await client.getBytecode({ address });
-    if (!code || code === "0x") return { name, address, state: "no-code", explorerUrl: addressUrl(address) } as const;
+    if (!code || code === "0x") {
+      return {
+        name,
+        address,
+        state: "no-code",
+        sourceVerification: "not-applicable",
+        explorerUrl: addressUrl(address),
+      } as const;
+    }
     return {
       name,
       address,
       state: "code-present",
+      sourceVerification: await readSourceVerification(address),
       runtimeCodeHash: keccak256(code),
       explorerUrl: addressUrl(address),
     } as const;

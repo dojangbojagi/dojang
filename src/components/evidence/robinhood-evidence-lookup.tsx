@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { isHash, type Hash } from "viem";
 import { usePublicClient } from "wagmi";
 import {
@@ -107,6 +107,23 @@ export function RobinhoodEvidenceLookup() {
     }
   }
 
+  useEffect(() => {
+    if (!client) return;
+    let current = true;
+    setCodeState("reading");
+    setCodeError("");
+    void inspectRobinhoodContracts(client).then((result) => {
+      if (!current) return;
+      setCode(result);
+      setCodeState("ready");
+    }).catch((error: unknown) => {
+      if (!current) return;
+      setCodeError(describeError(error));
+      setCodeState("error");
+    });
+    return () => { current = false; };
+  }, [client]);
+
   return (
     <section className="panel" aria-labelledby="robinhood-evidence-heading">
       <h2 id="robinhood-evidence-heading">Robinhood Testnet evidence</h2>
@@ -124,8 +141,11 @@ export function RobinhoodEvidenceLookup() {
             <div className="contract-row" key={item.name}>
               <dt><strong>{CONTRACT_LABELS[item.name]}</strong>{item.address && <span className="xsmall muted">{item.address}</span>}</dt>
               <dd>
-                <span className="status" data-state={item.state === "code-present" ? "valid" : item.state === "no-code" ? "invalid" : "warn"}>
-                  <i className="status__dot" aria-hidden="true" />{item.state === "code-present" ? "Code present" : item.state === "no-code" ? "No code at configured address" : "Not configured"}
+                <span className="status" data-state={item.state === "code-present" && item.sourceVerification === "verified" ? "valid" : item.state === "no-code" ? "invalid" : "warn"}>
+                  <i className="status__dot" aria-hidden="true" />
+                  {item.state === "code-present"
+                    ? `Code present · Blockscout source ${item.sourceVerification}`
+                    : item.state === "no-code" ? "No runtime bytecode at configured address" : "Not configured"}
                 </span>
                 {item.runtimeCodeHash && <span className="xsmall muted">Runtime code hash: <code>{item.runtimeCodeHash}</code></span>}
                 {item.explorerUrl && <a href={item.explorerUrl} target="_blank" rel="noopener noreferrer">Open address explorer<span className="visually-hidden"> (opens in a new tab)</span></a>}

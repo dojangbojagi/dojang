@@ -285,6 +285,7 @@ export const controlledTokenAbi = parseAbi([
   "function mintCap() view returns (uint256)",
   "function MINTER_ROLE() view returns (bytes32)",
   "function hasRole(bytes32 role, address account) view returns (bool)",
+  "function mint(address account, uint256 amount)",
   "function approve(address spender, uint256 amount) returns (bool)",
   "function allowance(address owner, address spender) view returns (uint256)",
   "function balanceOf(address account) view returns (uint256)",

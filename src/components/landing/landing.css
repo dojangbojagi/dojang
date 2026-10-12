@@ -14,11 +14,11 @@
    How the cover works
      .lp-cover is a tall runway; .lp-stage is sticky inside it. Scroll position is turned into
      a few numbers written on the stage by cover-reveal.tsx:
-       --e  how far the opening has grown (a dot, then a rounded square, then the screen)
+       --e  how far the opening has grown (the dot, cut into slabs that turn and settle as the screen)
        --c  how far the hero has come in (starts once the opening nearly fills the screen)
        --q  how far the camera has pushed into the hero (after a short hold): the hero zooms
             and fades, and the next section rises in behind it
-     plus the clip of the opening (--clip) and its rectangle (--bx --by --bw --bh --crad).
+     plus the clip of the opening (--clip): the union of the slabs' faces, drawn by cipher-sculpture.ts.
      All motion below is CSS reading those values, so it also runs in reverse when the visitor
      scrolls back up. With prefers-reduced-motion the two phases simply stack.
    ========================================================================== */
@@ -307,7 +307,8 @@
 }
 @keyframes lp-hint { 0% { transform: translateY(-100%); } 100% { transform: translateY(250%); } }
 
-/* The opening. clip-path shows a window onto the dark hero: a dot, a rounded square, the screen. */
+/* The opening. clip-path shows a window onto the dark hero: the dot, then the faces of the slabs it is cut into,
+   then the screen. */
 .lp-box {
   position: absolute; inset: 0; z-index: 2;
   background: var(--lp-bg); color: var(--lp-text);
@@ -324,36 +325,13 @@
   opacity: 0; transition: opacity 1.8s ease; will-change: transform, opacity; /* moved and faded by the compositor, never repainted */
 }
 .lp-light[data-on="1"] i { opacity: 1; transition-duration: .35s; }
-/* The dot is plain black, like the full stop it replaces; it turns into patchwork cloth, which dissolves into the hero */
+/* The dot is plain black, like the full stop it replaces; it hands over to the slabs drawn on .lp-cipher */
 .lp-dot {
   position: absolute; inset: 0; z-index: 5; pointer-events: none;
   background: #0A0708; opacity: calc(1.25 - var(--e) * 10);
 }
-.lp-veil-cover {
-  position: absolute; inset: 0; z-index: 4; pointer-events: none; will-change: opacity;
-  background: #0E0A0C var(--lp-veil) 0 0 / 150px 98px;
-  opacity: calc(min(1, var(--e) * 9) * (1.1 - var(--e) * 1.25));
-}
-/* A lit rim once it is a square, like light on glass. No shadows or halos: they are costly to repaint as it grows. */
-.lp-outline {
-  position: absolute; z-index: 5; pointer-events: none;
-  left: var(--bx, 50%); top: var(--by, 50%); width: var(--bw, 0px); height: var(--bh, 0px);
-  border-radius: var(--crad, 0px);
-  opacity: calc(min(1, max(0, (var(--e) - .035) * 14)) * (1 - var(--e) * 1.15));
-}
-.lp-outline::before {
-  content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1.5px;
-  background: linear-gradient(135deg, #FFFFFF 0%, rgba(255, 255, 255, .9) 16%, #B81A34 46%, #6D001A 78%, #FFFFFF 100%);
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor; mask-composite: exclude;
-}
-/* Sparks: a pool of small elements animated by the compositor (see cover-reveal.tsx) */
-.lp-sparks { position: absolute; inset: 0; z-index: 7; pointer-events: none; overflow: clip; }
-/* the glow is a static shadow: painted once per element, then only moved, never repainted */
-.lp-sparks i { position: absolute; left: 0; top: 0; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 0 7px 1px rgba(184, 26, 52, .8); opacity: 0; will-change: transform, opacity; }
-.lp-sparks i:nth-child(3n + 2) { background: #B81A34; box-shadow: 0 0 7px 1px rgba(184, 26, 52, .8); }
-.lp-sparks i:nth-child(3n) { background: #FFFFFF; box-shadow: 0 0 7px 1px rgba(255, 255, 255, .7); }
-.lp-sparks i:nth-child(7n) { background: #C2203F; box-shadow: 0 0 7px 1px rgba(194, 32, 63, .8); }
+/* The sculpture: slabs drawn by cipher-sculpture.ts, only when the scroll moves. Over the opening, under the marquee. */
+.lp-cipher { position: absolute; inset: 0; z-index: 5; width: 100%; height: 100%; pointer-events: none; }
 
 /* The clouds of characters: zoom out from the middle of the opening, and rush past when the camera pushes in */
 .lp-field {
@@ -980,7 +958,7 @@
   .lp-word, .lp-word--b, .lp-sub, .lp-hint { transform: none; opacity: 1; }
   .lp-box { position: relative; clip-path: none; min-height: 100svh; }
   .lp-field { transform: none; opacity: 1; }
-  .lp-veil-cover, .lp-dot, .lp-outline, .lp-sparks, .lp-hint, .lp-light { display: none; }
+  .lp-cipher, .lp-dot, .lp-hint, .lp-light { display: none; }
   .lp-hero { min-height: 100svh; height: auto; }
   .lp-hero__col { transform: none; will-change: auto; }
   .lp-glow, .lp-marq { opacity: 1; }

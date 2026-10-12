@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { Arrow } from "./arrow";
+import { createCipherSculpture } from "./cipher-sculpture";
 import { GlyphField } from "./glyph-field";
 import { scrollToId } from "./smooth-scroll";
 
 /* Phase 1 is the claim on white. The full stop after "more" is a black dot, like the one after "less";
-   scrolling swells it into a rounded square and then into the whole screen, and phase 2, the hero,
-   was inside it all along. After a short hold the camera pushes into the headline: it zooms in
-   until the hero is gone, and the next section rises in behind it.
+   scrolling cuts it into a row of slabs that turn, fly and settle as the strips of the screen (see
+   cipher-sculpture.ts), and phase 2, the hero, was behind them all along. After a short hold the camera
+   pushes into the headline: it zooms in until the hero is gone, and the next section rises in behind it.
 
    The cover is a tall runway with a sticky stage. Scroll position becomes a handful of
    numbers written on the stage (see the header of landing.css), and every animated value
@@ -47,65 +48,6 @@ function openness(p: number) {
 
 const motionQuery = () => window.matchMedia("(prefers-reduced-motion: reduce)");
 
-/* ---------------------------------------------------------------- sparks */
-/* While the opening is being scrolled, it throws off sparks from its rim.
-   They are a small pool of plain elements animated with the Web Animations API (transform and
-   opacity only), so the browser runs them off the main thread: no canvas, no frame loop, and
-   nothing for the scroll to wait on. */
-type Rect = { x: number; y: number; w: number; h: number };
-
-function createSparks(layer: HTMLElement) {
-  const pool = Array.from(layer.children) as HTMLElement[];
-  let next = 0;
-  return {
-    emit(rect: Rect, count: number) {
-      for (let i = 0; i < count; i++) {
-        const el = pool[next++ % pool.length];
-        /* a point on the perimeter, with its outward normal */
-        let t = Math.random() * (2 * (rect.w + rect.h));
-        let x = rect.x;
-        let y = rect.y;
-        let nx = 0;
-        let ny = -1;
-        if (t < rect.w) {
-          x += t;
-        } else if ((t -= rect.w) < rect.h) {
-          x += rect.w;
-          y += t;
-          nx = 1;
-          ny = 0;
-        } else if ((t -= rect.h) < rect.w) {
-          x += rect.w - t;
-          y += rect.h;
-          nx = 0;
-          ny = 1;
-        } else {
-          t -= rect.w;
-          y += rect.h - t;
-          nx = -1;
-          ny = 0;
-        }
-        const dist = 36 + Math.random() * 120;
-        const side = (Math.random() - 0.5) * 70;
-        const dx = nx * dist - ny * side;
-        const dy = ny * dist + nx * side;
-        el.getAnimations().forEach((a) => a.cancel());
-        el.animate(
-          [
-            { transform: `translate3d(${x.toFixed(0)}px, ${y.toFixed(0)}px, 0) scale(1.5)`, opacity: 1, offset: 0 },
-            { opacity: 0.9, offset: 0.55 },
-            { transform: `translate3d(${(x + dx).toFixed(0)}px, ${(y + dy).toFixed(0)}px, 0) scale(0.7)`, opacity: 0, offset: 1 },
-          ],
-          { duration: 520 + Math.random() * 480, easing: "cubic-bezier(0.2, 0.6, 0.3, 1)" },
-        );
-      }
-    },
-    destroy() {
-      pool.forEach((el) => el.getAnimations().forEach((a) => a.cancel()));
-    },
-  };
-}
-
 /* ------------------------------------------------------------- component */
 type Props = {
   tagline: string;
@@ -117,7 +59,7 @@ export function CoverReveal({ tagline }: Props) {
   const slotRef = useRef<HTMLSpanElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
-  const sparkRef = useRef<HTMLDivElement>(null);
+  const cipherRef = useRef<HTMLCanvasElement>(null);
   const [wordA, wordB] = splitTagline(tagline);
 
   useEffect(() => {
@@ -126,17 +68,15 @@ export function CoverReveal({ tagline }: Props) {
     const slot = slotRef.current;
     const box = boxRef.current;
     const hero = heroRef.current;
-    const sparkLayer = sparkRef.current;
-    if (!cover || !stage || !slot || !box || !hero || !sparkLayer) return;
+    const cipherCanvas = cipherRef.current;
+    if (!cover || !stage || !slot || !box || !hero || !cipherCanvas) return;
     const root = cover.closest<HTMLElement>(".lp");
     const motion = motionQuery();
-    const sparks = createSparks(sparkLayer);
+    const cipher = createCipherSculpture(cipherCanvas);
 
     let geo = { sw: 0, sh: 0, x: 0, y: 0, w: 0, h: 0 };
     let raf = 0;
     let last = -1;
-    let lastE = 0;
-    let lastSpark = 0;
     let heroOn: boolean | null = null;
 
     const setPhase = (dark: boolean) => {
@@ -163,6 +103,7 @@ export function CoverReveal({ tagline }: Props) {
       /* the dot never moves, so its centre is written once, not on every frame */
       stage.style.setProperty("--ox", `${(geo.x + geo.w / 2).toFixed(1)}px`);
       stage.style.setProperty("--oy", `${(geo.y + geo.h / 2).toFixed(1)}px`);
+      cipher.resize(geo.sw, geo.sh);
       last = -1;
     };
 
@@ -205,17 +146,15 @@ export function CoverReveal({ tagline }: Props) {
       const dotRadius = Math.min(bw, bh) * 0.2;
       const radius = Math.min(half, (dotRadius * (1 - toSquare) + 26 * toSquare) * (1 - smooth(0.5, 1, e)));
 
+      /* the window onto the hero is the union of the slabs' faces; at rest it is still the dot's own rectangle */
+      const windowPath = cipher.draw(e, { x: geo.x, y: geo.y, w: geo.w, h: geo.h });
+
       const s = stage.style;
       s.setProperty("--e", e.toFixed(4));
       s.setProperty("--c", clamp01((e - 0.6) / 0.34).toFixed(4));
       s.setProperty("--h", h.toFixed(4));
       s.setProperty("--q", q.toFixed(4));
-      s.setProperty("--clip", `inset(${t.toFixed(1)}px ${ri.toFixed(1)}px ${b.toFixed(1)}px ${l.toFixed(1)}px round ${radius.toFixed(1)}px)`);
-      s.setProperty("--bx", `${l.toFixed(1)}px`);
-      s.setProperty("--by", `${t.toFixed(1)}px`);
-      s.setProperty("--bw", `${bw.toFixed(1)}px`);
-      s.setProperty("--bh", `${bh.toFixed(1)}px`);
-      s.setProperty("--crad", `${radius.toFixed(1)}px`);
+      s.setProperty("--clip", windowPath ?? `inset(${t.toFixed(1)}px ${ri.toFixed(1)}px ${b.toFixed(1)}px ${l.toFixed(1)}px round ${radius.toFixed(1)}px)`);
 
       /* the glyph field only works while the hero is mostly open and not yet zoomed away */
       const live = e > 0.45 && q < 0.85 ? "1" : "0";
@@ -227,15 +166,6 @@ export function CoverReveal({ tagline }: Props) {
       /* the buttons are gone by q = .28, so from then on nothing in the hero can be clicked or tabbed to by mistake */
       setHero(e > 0.6 && q < 0.22);
       setPhase(t < NAV_H * 0.8 && b < 96);
-
-      /* sparks leave the rim while the opening is being scrolled, in either direction */
-      const moved = Math.abs(e - lastE);
-      const now = performance.now();
-      if (moved > 0.002 && e > 0.003 && e < 0.985 && now - lastSpark > 55) {
-        lastE = e;
-        lastSpark = now;
-        sparks.emit({ x: l, y: t, w: bw, h: bh }, Math.min(5, Math.ceil(moved * 110)));
-      }
     };
 
     const schedule = () => {
@@ -262,7 +192,7 @@ export function CoverReveal({ tagline }: Props) {
       window.removeEventListener("resize", remeasure);
       ro.disconnect();
       motion.removeEventListener("change", remeasure);
-      sparks.destroy();
+      cipher.clear();
     };
   }, []);
 
@@ -330,13 +260,9 @@ export function CoverReveal({ tagline }: Props) {
           </div>
 
           <p className="lp-pointer-hint" aria-hidden="true">Move the pointer · seal the data</p>
-          <div className="lp-veil-cover" aria-hidden="true" />
           <div className="lp-dot" aria-hidden="true" />
         </div>
-        <div className="lp-outline" aria-hidden="true" />
-        <div className="lp-sparks" ref={sparkRef} aria-hidden="true">
-          {Array.from({ length: 48 }, (_, i) => <i key={i} />)}
-        </div>
+        <canvas className="lp-cipher" ref={cipherRef} aria-hidden="true" />
 
         {/* ---- Always present, light then dark ---- */}
         <div className="lp-marq">

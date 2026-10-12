@@ -69,8 +69,15 @@ const PROJECT_CONTRACTS = [
     key: "lendingV2Pool",
     name: "LendingPoolV2",
     type: "Project-owned lending market",
-    role: "Multi-reserve test lending engine. The source allows up to eight configured reserves; this deployment plan seeds two demo reserves.",
+    role: "Multi-reserve test lending engine. This confirmed deployment has two configured demo reserves; the source supports up to eight.",
     env: "NEXT_PUBLIC_ROBINHOOD_LENDING_V2_POOL_CONTRACT",
+  },
+  {
+    key: "governance",
+    name: "RobinhoodGovernancePhase1",
+    type: "Project-owned Robinhood DAO Phase 1 contract",
+    role: "Uses project-issued policy-4 credentials. This is separate from the GIWA DAO and official Dojang path.",
+    env: "NEXT_PUBLIC_ROBINHOOD_GOVERNANCE_CONTRACT",
   },
 ] as const;
 
@@ -99,7 +106,7 @@ function ContractAddressRow({ item }: { item: (typeof PROJECT_CONTRACTS)[number]
   const status = invalid
     ? "Invalid address configuration"
     : address
-      ? "Address configured · chain evidence not read"
+      ? "Address configured · live chain evidence below"
       : "Not configured";
 
   return (
@@ -135,7 +142,7 @@ export default function ContractsPage() {
         <p className="eyebrow">Evidence · Project contracts and deployment status</p>
         <h1>Contract evidence</h1>
         <p className="page-lead">
-          Network: Robinhood Chain Testnet · Chain ID 46630. This inventory reads only Robinhood address configuration. An address setting is not proof of deployment, code, a successful receipt, or source verification.
+          Network: Robinhood Chain Testnet · Chain ID 46630. Configured addresses are checked against live chain and Blockscout evidence below; environment configuration alone is not proof of deployment.
         </p>
       </header>
 
@@ -147,15 +154,15 @@ export default function ContractsPage() {
         </dl>
         {configured === 0 ? (
           <p className="notice">
-            No Robinhood project contract address is configured. The current project record contains no public Robinhood deployment receipt or deployed address; local Foundry and Anvil results are not public-chain evidence.
+            No Robinhood project contract address is configured in this environment. Missing configuration does not establish that no contract is deployed; local Foundry and Anvil results are not public-chain evidence.
           </p>
         ) : (
           <p className="notice">
-            Configured addresses link to the Robinhood Testnet explorer. Use the read-only evidence tools below to check deployed bytecode, receipts, and project events.
+            Configured addresses link to the Robinhood Testnet explorer. Live RPC bytecode and Blockscout source-verification status are checked below; address configuration alone is not deployment evidence.
           </p>
         )}
         <p className="notice">
-          Evidence terms: “Not configured” means no address was supplied. “No code” and “Code present” come from Robinhood RPC bytecode reads. Receipt status and emitted project events come from the queried transaction receipt. Source verification status still requires a separate Blockscout verification lookup.
+          Evidence terms: “Not configured” means no address was supplied to this environment. “No code” and “Code present” come from Robinhood RPC bytecode reads. Receipt status and emitted project events come from the queried transaction receipt. Source status is fetched separately from Blockscout; lookup failures appear as unavailable.
         </p>
       </section>
 
