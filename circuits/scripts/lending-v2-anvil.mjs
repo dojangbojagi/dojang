@@ -578,7 +578,7 @@ function runFoundryDeploymentSimulation({ rpcUrl, admin, issuer, registry, verif
   const result = spawnSync("bash", [
     "scripts/forge-simulate.sh",
     script,
-    ...(robinhood ? ["--profile", "robinhood-testnet"] : []),
+    ...(robinhood ? ["--profile", "robinhood_testnet"] : []),
     "--rpc-url",
     rpcUrl,
   ], {

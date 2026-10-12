@@ -8,7 +8,7 @@ import { GIWA_CHAIN_ID, GIWA_EXPLORER_URL } from "@/lib/config/chain";
 import { projectContracts } from "@/lib/config/contracts";
 
 /** What this market is, and is not. Always visible, never softened. */
-export function V2LimitationsNotice() {
+export function V2LimitationsNotice({ configured }: { configured: boolean }) {
   return (
     <aside className="callout callout--caution lend-limits" aria-labelledby="lendv2-limits-heading">
       <div>
@@ -19,7 +19,9 @@ export function V2LimitationsNotice() {
           <li><strong>Variable rates, simple interest.</strong> Interest accrues linearly, not compounded, and changes with utilization.</li>
           <li><strong>Project Test Credential.</strong> Eligibility uses a project-issued policy-3 credential, not an official GIWA, Dojang or Upbit credential.</li>
           <li><strong>Private eligibility only.</strong> Wallets, amounts, positions and actions are public on-chain.</li>
-          <li><strong>Not yet deployed.</strong> Controls stay off until a real Lending V2 pool is configured for GIWA Sepolia.</li>
+          {configured
+            ? <li><strong>Check the address.</strong> A configured pool address is not an audit. Verify the pool and its tokens on the explorer before using it.</li>
+            : <li><strong>Not yet deployed.</strong> Controls stay off until a real Lending V2 pool is configured for GIWA Sepolia.</li>}
         </ul>
       </div>
     </aside>

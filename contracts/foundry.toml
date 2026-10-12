@@ -11,7 +11,7 @@ optimizer_runs = 200
 remappings = ["@openzeppelin/contracts/=../node_modules/@openzeppelin/contracts/"]
 fs_permissions = [{ access = "read", path = "../circuits/testdata" }]
 
-[profile.robinhood-testnet]
+[profile.robinhood_testnet]
 src = "src"
 test = "test"
 out = "out"

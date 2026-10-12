@@ -28,11 +28,14 @@ interface ReviewedActionProps {
   /** Present when the action pulls tokens through an allowance: the current allowance to the pool. */
   allowance?: bigint;
   onApprove?: (amount: bigint) => Promise<void>;
-  /**
-   * The allowance a typed amount needs, and therefore the exact amount to approve. Defaults to the typed amount.
-   * Never unlimited. Used where the pool may take slightly more than was displayed (repaying a debt in full).
-   */
+  /** The allowance below which an approval is needed first. Defaults to the typed amount. */
   requiredAllowance?: (amount: bigint, flags: ActionFlags) => bigint;
+  /**
+   * The exact amount to approve when one is needed. Defaults to the required allowance. Never unlimited. It may be
+   * a little above the threshold where the pool can take slightly more than was displayed (repaying a debt in full:
+   * interest accrues while the transaction waits).
+   */
+  approveAmount?: (amount: bigint, flags: ActionFlags) => bigint;
   /**
    * True when pressing Max means "the whole thing" for this action (repaying every unit of debt, which keeps
    * growing while the transaction waits). Then onSubmit receives flags.max and must not rely on the typed number.
@@ -58,7 +61,7 @@ interface ReviewedActionProps {
 export function ReviewedAction(props: ReviewedActionProps) {
   const {
     title, fieldLabel, asset, verb, submitLabel, successMessage, onSubmit, max, hint, balance, allowance, onApprove,
-    requiredAllowance, maxMeansFull, approveSuccessMessage, checkAmount, precondition, review, runner, tone = "primary", fullVerb,
+    requiredAllowance, approveAmount, maxMeansFull, approveSuccessMessage, checkAmount, precondition, review, runner, tone = "primary", fullVerb,
   } = props;
   const [text, setText] = useState("");
   const [usedMax, setUsedMax] = useState(false);
@@ -69,6 +72,7 @@ export function ReviewedAction(props: ReviewedActionProps) {
   const flags: ActionFlags = { max: usedMax && Boolean(maxMeansFull) };
   const allowanceNeeded = amount === null ? null : requiredAllowance ? requiredAllowance(amount, flags) : amount;
   const needsApproval = allowance !== undefined && allowanceNeeded !== null && allowanceNeeded > allowance;
+  const toApprove = amount === null ? null : approveAmount ? approveAmount(amount, flags) : allowanceNeeded;
   const reason =
     runner.block ??
     precondition ??
@@ -83,7 +87,7 @@ export function ReviewedAction(props: ReviewedActionProps) {
   async function click() {
     if (amount === null) return;
     if (needsApproval && onApprove) {
-      const exact = allowanceNeeded ?? amount;
+      const exact = toApprove ?? amount;
       await runner.run(
         `Approve ${formatAmount(exact, asset.decimals)} ${asset.symbol} for ${verb.toLowerCase()}`,
         () => onApprove(exact),
@@ -132,8 +136,8 @@ export function ReviewedAction(props: ReviewedActionProps) {
         <button className={`btn btn--${tone}`} type="button" onClick={() => void click()} disabled={disabled}>
           {runner.busy
             ? "Transaction in progress…"
-            : needsApproval && allowanceNeeded !== null
-              ? `Approve ${formatAmount(allowanceNeeded, asset.decimals)} ${asset.symbol}`
+            : needsApproval && toApprove !== null
+              ? `Approve ${formatAmount(toApprove, asset.decimals)} ${asset.symbol}`
               : submitLabel}
         </button>
       </div>

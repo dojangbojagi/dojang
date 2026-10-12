@@ -159,7 +159,7 @@ export function LendingV2Workspace() {
 
   return (
     <div className="lend lendv2">
-      <V2LimitationsNotice />
+      <V2LimitationsNotice configured={market.state !== "unconfigured"} />
       <WalletNetworkCard />
       <ContextBar market={market} walletAddress={wallet.address} eligibility={eligibility} />
 

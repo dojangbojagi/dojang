@@ -18,7 +18,7 @@
     "governance:anvil": "bun run contracts:build && bun scripts/governance-anvil.mjs",
     "deployment:gas-local": "bun scripts/estimate-giwa-sepolia-deployment-gas.mjs",
     "deployment:simulate": "bash scripts/forge-simulate.sh",
-    "robinhood:testnet:simulate": "bash scripts/forge-simulate.sh script/DeployLendingV2RobinhoodTestnet.s.sol:DeployLendingV2RobinhoodTestnet --profile robinhood-testnet --rpc-url \"$RH_TESTNET_RPC_URL\"",
+    "robinhood:testnet:simulate": "bash scripts/forge-simulate.sh script/DeployLendingV2RobinhoodTestnet.s.sol:DeployLendingV2RobinhoodTestnet --profile robinhood_testnet --rpc-url \"$RH_TESTNET_RPC_URL\"",
     "deploy:status": "bun scripts/deploy-console.ts status",
     "deploy:replay": "bun scripts/deploy-console.ts replay",
     "deploy:ascii": "bun scripts/deploy-console.ts ascii",

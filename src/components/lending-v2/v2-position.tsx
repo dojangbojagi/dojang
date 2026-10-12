@@ -136,7 +136,8 @@ export function PositionView({ market, runner, asset, onAsset }: {
               hint={position ? `You owe ${formatAmount(position.debt, reserve.decimals)} ${reserve.symbol}, including interest accrued to the block read. Max repays the whole debt, including interest that accrues while the transaction confirms.` : undefined}
               precondition={!position ? "Connect a wallet on GIWA Sepolia to repay." : position.debt === 0n ? `You have no ${reserve.symbol} debt.` : null}
               checkAmount={(amount) => position && amount > position.debt ? `This is more than your debt (${formatAmount(position.debt, reserve.decimals)} ${reserve.symbol}).` : null}
-              requiredAllowance={(amount, flags) => position && flags.max ? position.debt + repayAllowanceHeadroom(position.debt, reserve.data.currentBorrowRateBps) : amount}
+              requiredAllowance={(amount, flags) => position && flags.max ? position.debt : amount}
+              approveAmount={(amount, flags) => position && flags.max ? position.debt + repayAllowanceHeadroom(position.debt, reserve.data.currentBorrowRateBps) : amount}
               onApprove={(amount) => market.approveToken(reserve.asset, amount)}
               onSubmit={(amount, flags) => market.repay(reserve.asset, flags.max ? maxUint256 : amount)}
               review={(amount, flags) => (

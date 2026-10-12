@@ -88,7 +88,14 @@
 .lendv2-picker__reason { font-family: var(--font-body, inherit); font-weight: 400; font-size: var(--fs-xs); color: var(--text-dim); }
 
 /* ---- Actions: review before the wallet ----------------------------------- */
+/* grid tracks must be allowed to shrink (minmax(0, 1fr)): a bare 1fr grows to the widest field and clips the card on phones */
+.lendv2 .lend-steps, .lendv2 .lend-step, .lendv2 .lend-step__body, .lendv2-action { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+@media (max-width: 760px) { .lendv2 .lend-actions { grid-template-columns: minmax(0, 1fr); } }
 .lendv2-action { min-width: 0; }
+.lendv2-action .lend-flow { flex-wrap: wrap; }
+.lendv2-action .lend-flow li { min-width: 0; flex: 1 1 5.5rem; overflow-wrap: anywhere; }
+.lendv2-action .lend-field__box { min-width: 0; }
+.lendv2-action .lend-field__box input { min-width: 0; width: 100%; }
 .lendv2-review { display: grid; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-radius: 14px; border: 1px solid var(--line-strong); background: rgba(109, 0, 26, 0.16); }
 .lendv2-review__title { margin: 0; font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted); }
 .lendv2-review .kv { margin: 0; }
