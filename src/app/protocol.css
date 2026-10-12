@@ -8,6 +8,7 @@
 .protocol-field input,
 .protocol-field textarea,
 .protocol-field select {
+  font-family: var(--font-ui); /* form controls ignore inherited fonts; family only, the size stays the browser's */
   width: 100%; min-height: 46px; padding: .7rem .85rem; color: var(--text);
   background: color-mix(in srgb, var(--ink-1000) 70%, transparent);
   border: 1px solid var(--line-strong); border-radius: var(--radius-sm);

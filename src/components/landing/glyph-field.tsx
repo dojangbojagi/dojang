@@ -41,8 +41,8 @@ const PALETTE: readonly (readonly [number, number, number])[] = [
 const FRAME_MS = 40; /* ~25 frames a second while it drifts; the turn is slow, so it still looks smooth */
 const Q_GONE = 0.8; /* the zoom has faded the field out completely by here (see .lp-field), so there is nothing to draw */
 const CAMERA = 5; /* distance for the perspective; larger = flatter */
-const H_FROM = 0.05; /* the hold has just begun: form A, fully formed */
-const H_TO = 0.88; /* form B is complete here, a little before the push-in begins */
+const H_FROM = 0.22; /* form A stays fully formed and readable through the first fifth of the hold, then the morph begins */
+const H_TO = 0.90; /* form B is complete here, a little before the push-in begins */
 const SPREAD = 0.24; /* how far apart in time the points leave */
 const TAU = Math.PI * 2;
 

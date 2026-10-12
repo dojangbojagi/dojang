@@ -5,7 +5,7 @@ import { SiteHeader } from "@/components/site-header";
 import { PrototypeBar } from "@/components/prototype-bar";
 import { ReferenceEffects } from "@/components/reference-effects";
 import { appEnv } from "@/lib/config/env";
-import { hankenGrotesk, jetbrainsMono, sora } from "@/components/fonts";
+import { jetbrainsMono, pretendardDisplay, pretendardUi } from "@/components/fonts";
 import "./globals.css";
 import "./theme.css";
 
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${sora.variable} ${hankenGrotesk.variable} ${jetbrainsMono.variable}`}>
+    <html lang="en" className={`${pretendardDisplay.variable} ${pretendardUi.variable} ${jetbrainsMono.variable}`}>
       <body>
         <Providers>
           <PrototypeBar />
