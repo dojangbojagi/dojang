@@ -317,11 +317,9 @@ async function main() {
   assert.equal(reserveAssets.length, 2, "Expected exactly two configured lending reserves");
   assert.ok(reserveAssets.some((asset) => sameAddress(asset, loanAddress)), "rUSD2 missing from reserve list");
   assert.ok(reserveAssets.some((asset) => sameAddress(asset, collateralAddress)), "rCOL2 missing from reserve list");
-  const [loanReserve, collateralReserve, loanBounds, collateralBounds, loanPrice, collateralPrice] = await Promise.all([
+  const [loanReserve, collateralReserve, loanBounds, collateralBounds] = await Promise.all([
     read(client, poolAddress, lendingPoolV2Abi, "getReserveConfig", [loanAddress]),
     read(client, poolAddress, lendingPoolV2Abi, "getReserveConfig", [collateralAddress]),
-    read(client, oracleAddress, controlledTestOracleAbi, "getPriceBounds", [loanAddress]),
-    read(client, oracleAddress, controlledTestOracleAbi, "getPriceBounds", [collateralAddress]),
     read(client, oracleAddress, controlledTestOracleAbi, "getPriceBounds", [loanAddress]),
     read(client, oracleAddress, controlledTestOracleAbi, "getPriceBounds", [collateralAddress]),
   ]);
@@ -337,11 +335,49 @@ async function main() {
     closeFactorBps: "5000", reserveFactorBps: "1000", optimalUtilizationBps: "8000", baseBorrowRateBps: "200",
     slope1Bps: "400", slope2Bps: "6000", active: true, supplyEnabled: false, borrowEnabled: false, collateralEnabled: true,
   }, "Collateral reserve settings mismatch");
-  assert.deepEqual(loanBounds, [950000000000000000n, 1050000000000000000n, 0n, 0n], "Loan oracle bounds/price mismatch");
-  assert.deepEqual(collateralBounds, [500000000000000000n, 4000000000000000000n, 0n, 0n], "Collateral oracle bounds/price mismatch");
-  assert.deepEqual(loanPrice, loanBounds);
-  assert.deepEqual(collateralPrice, collateralBounds);
-  pass("Oracle and reserves", "two approved reserve configs and bounds confirmed; both oracle prices remain unset");
+  assert.deepEqual(loanBounds.slice(0, 2), [950000000000000000n, 1050000000000000000n], "Loan oracle bounds mismatch");
+  assert.deepEqual(collateralBounds.slice(0, 2), [500000000000000000n, 4000000000000000000n], "Collateral oracle bounds mismatch");
+
+  const block = await client.getBlock({ blockNumber: head });
+  const oracleStates = [
+    { name: "rUSD2", address: loanAddress, bounds: loanBounds, reserve: loanReserve },
+    { name: "rCOL2", address: collateralAddress, bounds: collateralBounds, reserve: collateralReserve },
+  ].map(({ name, address, bounds, reserve }) => {
+    const [minimum, maximum, priceWad, updatedAt] = bounds;
+    if (priceWad === 0n) {
+      assert.equal(updatedAt, 0n, `${name} unset oracle price has a nonzero timestamp`);
+      return { name, state: "missing", priceWad, updatedAt, ageSeconds: undefined, maxAge: BigInt(reserve.maxOracleAge) };
+    }
+
+    assert.ok(priceWad >= minimum && priceWad <= maximum, `${name} oracle price is outside its configured bounds`);
+    assert.ok(updatedAt > 0n, `${name} oracle price has no update timestamp`);
+    assert.ok(updatedAt <= block.timestamp, `${name} oracle timestamp is in the future`);
+    return {
+      name,
+      address,
+      state: block.timestamp - updatedAt > BigInt(reserve.maxOracleAge) ? "stale" : "fresh",
+      priceWad,
+      updatedAt,
+      ageSeconds: block.timestamp - updatedAt,
+      maxAge: BigInt(reserve.maxOracleAge),
+    };
+  });
+
+  const populatedOracleStates = oracleStates.filter((state) => state.state !== "missing");
+  const priceReadbacks = await Promise.all(populatedOracleStates.map((state) =>
+    read(client, oracleAddress, controlledTestOracleAbi, "getPrice", [state.address]),
+  ));
+  populatedOracleStates.forEach((state, index) => {
+    assert.deepEqual(priceReadbacks[index], [state.priceWad, state.updatedAt], `${state.name} oracle getter mismatch`);
+  });
+  pass("Oracle and reserves", "two approved reserve configs and price bounds confirmed; current oracle state follows");
+  for (const state of oracleStates) {
+    if (state.state === "missing") {
+      console.log(`BLOCKED ${state.name} oracle price missing · risk-increasing Lending actions cannot proceed`);
+    } else {
+      console.log(`${state.state === "fresh" ? "PASS" : "BLOCKED"} ${state.name} approved synthetic price ${state.priceWad} WAD · updated ${state.updatedAt} · age ${state.ageSeconds}s / ${state.maxAge}s${state.state === "stale" ? " · Lending risk-increasing actions require a guarded refresh" : ""}`);
+    }
+  }
 
   const verification = await Promise.all(verified.map(async (record) => [record.name, await sourceVerification(record.address)]));
   const verificationByName = new Map(verification);
@@ -366,7 +402,7 @@ async function main() {
   }
   console.log("\nReadbacks: adapter → HonkVerifier; pool → registry/adapter/oracle; governance → registry.");
   console.log(`Roles: admin ${ADMIN}; issuer ${ISSUER}. rUSD2 and rCOL2 identities match their deployed token bytecode and metadata.`);
-  console.log("Bootstrap remains pending: oracle prices are 0, token supplies are unminted, and no credentials were issued by this command.");
+  console.log("Read-only display only: this command did not write oracle prices, token supplies, or credentials.");
   console.log("READ-ONLY: this command performs RPC/explorer reads only; it has no signer, transaction, or broadcast path.");
 }
 

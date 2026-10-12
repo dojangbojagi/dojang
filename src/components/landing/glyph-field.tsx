@@ -56,6 +56,9 @@ const K_BC_FROM = 0.14;
 const K_BC_TO = 0.38;
 const K_CD_FROM = 0.58;
 const K_CD_TO = 0.82;
+/* where each change of form begins and ends, in --h and --k, so the words that go with the picture follow it
+   from one source (cover-reveal.tsx writes --s from these) */
+export const FORM_TIMELINE = { hFrom: H_FROM, hTo: H_TO, bcFrom: K_BC_FROM, bcTo: K_BC_TO, cdFrom: K_CD_FROM, cdTo: K_CD_TO } as const;
 const TAU = Math.PI * 2;
 
 const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);

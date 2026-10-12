@@ -439,6 +439,31 @@
 .lp-h__l2 { --in: clamp(0, calc((var(--c) - .22) * 3.2), 1); }
 .lp-h__l3 { --in: clamp(0, calc((var(--c) - .38) * 3.2), 1); margin-left: 1.1em; } /* the indent widens the block, so the rows below line up with its right edge too */
 
+/* The words of the hero follow the picture. --s (written by cover-reveal.tsx from the same numbers that morph the form)
+   counts the changes of form, 0 to 3; each text is fully shown while its form holds, fades out as the form begins to
+   change and the next fades in once it is recognisable, with the description a beat behind. The original text is the
+   one that sizes the block; the others overlay it, so nothing around them moves. */
+.lp-h, .lp-lede { position: relative; }
+.lp-story__t { --n: 0; display: block; }
+.lp-story__t[data-story-i="1"] { --n: 1; }
+.lp-story__t[data-story-i="2"] { --n: 2; }
+.lp-story__t[data-story-i="3"] { --n: 3; }
+.lp-story__g { display: grid; justify-items: inherit; }
+.lp-story__t--over { position: absolute; inset: 0 0 auto 0; }
+.lp-h .lp-story__t--over { inset: 0; display: grid; align-content: center; justify-items: inherit; }
+.lp-story__t[data-story-kind="head"] {
+  --fi: clamp(0, calc((var(--s, 0) - var(--n) + 1 - .46) / .34), 1);
+  --fo: clamp(0, calc(1 - (var(--s, 0) - var(--n) - .04) / .34), 1);
+  opacity: calc(var(--fi) * var(--fo));
+  translate: 0 calc((1 - var(--fi)) * .2em - (1 - var(--fo)) * .14em);
+}
+.lp-story__t[data-story-kind="lede"] {
+  --fi: clamp(0, calc((var(--s, 0) - var(--n) + 1 - .56) / .34), 1);
+  --fo: clamp(0, calc(1 - (var(--s, 0) - var(--n)) / .32), 1);
+  opacity: calc(var(--fi) * var(--fo));
+  translate: 0 calc((1 - var(--fi)) * 8px - (1 - var(--fo)) * 6px);
+}
+
 .lp-cta { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1.2rem 2.4rem; width: 100%; }
 .lp-lede, .lp-actions {
   --out: clamp(0, calc(var(--q) * 3.6), 1);
@@ -1129,6 +1154,8 @@
   .lp-box { position: relative; clip-path: none; min-height: 100svh; }
   .lp-field { transform: none; opacity: 1; }
   .lp-cipher, .lp-dot, .lp-hint, .lp-light { display: none; }
+  .lp-story__t--over { display: none; }
+  .lp-story__t { opacity: 1; translate: none; }
   .lp-hero { min-height: 100svh; height: auto; }
   .lp-hero__col { transform: none; will-change: auto; }
   .lp-glow, .lp-marq { opacity: 1; }

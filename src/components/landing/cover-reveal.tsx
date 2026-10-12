@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { Arrow } from "./arrow";
 import { createCipherSculpture } from "./cipher-sculpture";
-import { GlyphField } from "./glyph-field";
+import { FORM_TIMELINE, GlyphField } from "./glyph-field";
 import { scrollToId } from "./smooth-scroll";
 
 /* Phase 1 is the claim on white. The full stop after "more" is a black dot, like the one after "less";
@@ -51,6 +51,14 @@ function openness(p: number) {
   return 0.7 * geo + 0.3 * (p * p * (3 - 2 * p));
 }
 
+/* How far the picture has come through its four forms, 0 (the knot) to 3 (the pathways): each change of form
+   adds one. The words of the hero follow it in CSS (--s, see .lp-story__t in landing.css), so they change
+   when the picture does and the same numbers drive both; nothing here scrolls by itself. */
+function storyProgress(h: number, ex: number) {
+  const f = FORM_TIMELINE;
+  return clamp01((h - f.hFrom) / (f.hTo - f.hFrom)) + clamp01((ex - f.bcFrom) / (f.bcTo - f.bcFrom)) + clamp01((ex - f.cdFrom) / (f.cdTo - f.cdFrom));
+}
+
 const motionQuery = () => window.matchMedia("(prefers-reduced-motion: reduce)");
 
 /* ------------------------------------------------------------- component */
@@ -83,6 +91,8 @@ export function CoverReveal({ tagline }: Props) {
     let raf = 0;
     let last = -1;
     let heroOn: boolean | null = null;
+    let storyOn = -1;
+    const storyEls = Array.from(hero.querySelectorAll<HTMLElement>("[data-story-i]"));
 
     const setPhase = (dark: boolean) => {
       const next = dark ? "dark" : "light";
@@ -161,6 +171,17 @@ export function CoverReveal({ tagline }: Props) {
       s.setProperty("--h", h.toFixed(4));
       s.setProperty("--k", ex.toFixed(4));
       s.setProperty("--q", q.toFixed(4));
+      const story = storyProgress(h, ex);
+      s.setProperty("--s", story.toFixed(3));
+      const storyNow = Math.min(3, Math.round(story));
+      if (storyNow !== storyOn) {
+        /* only the words that are showing are exposed to assistive technology */
+        storyOn = storyNow;
+        for (const el of storyEls) {
+          if (el.dataset.storyI === String(storyNow)) el.removeAttribute("aria-hidden");
+          else el.setAttribute("aria-hidden", "true");
+        }
+      }
       s.setProperty("--clip", windowPath ?? `inset(${t.toFixed(1)}px ${ri.toFixed(1)}px ${b.toFixed(1)}px ${l.toFixed(1)}px round ${radius.toFixed(1)}px)`);
 
       /* the glyph field only works while the hero is mostly open and not yet zoomed away */
@@ -238,13 +259,39 @@ export function CoverReveal({ tagline }: Props) {
                 <span>No funds held</span>
               </p>
               <h2 className="lp-h">
-                <span className="lp-h__line lp-h__l1"><span className="lp-h__in">Verify the <b className="lp-h__public">fact</b></span></span>
-                <span className="lp-h__line lp-h__l2"><span className="lp-h__in">Prove it <b className="lp-h__private">privately</b></span></span>
-                <span className="lp-h__line lp-h__l3"><span className="lp-h__in">Unlock <b className="lp-h__public">on-chain</b></span></span>
+                {/* the first words are the original headline, untouched; the other three overlay it, one at a time, as the picture changes form */}
+                <span className="lp-story__t lp-story__g" data-story-i={0} data-story-kind="head">
+                  <span className="lp-h__line lp-h__l1"><span className="lp-h__in">Verify the <b className="lp-h__public">fact</b></span></span>
+                  <span className="lp-h__line lp-h__l2"><span className="lp-h__in">Prove it <b className="lp-h__private">privately</b></span></span>
+                  <span className="lp-h__line lp-h__l3"><span className="lp-h__in">Unlock <b className="lp-h__public">on-chain</b></span></span>
+                </span>
+                <span className="lp-story__t lp-story__t--over" data-story-i={1} data-story-kind="head" aria-hidden="true">
+                  <span className="lp-h__line lp-h__l1"><span className="lp-h__in">Dojang.</span></span>
+                  <span className="lp-h__line lp-h__l2"><span className="lp-h__in">Access with <b className="lp-h__private">proof.</b></span></span>
+                </span>
+                <span className="lp-story__t lp-story__t--over" data-story-i={2} data-story-kind="head" aria-hidden="true">
+                  <span className="lp-h__line lp-h__l1"><span className="lp-h__in">Prove the rule.</span></span>
+                  <span className="lp-h__line lp-h__l2"><span className="lp-h__in">Not the <b className="lp-h__private">value.</b></span></span>
+                </span>
+                <span className="lp-story__t lp-story__t--over" data-story-i={3} data-story-kind="head" aria-hidden="true">
+                  <span className="lp-h__line lp-h__l1"><span className="lp-h__in">One protocol.</span></span>
+                  <span className="lp-h__line lp-h__l2"><span className="lp-h__in">Two ways to <b className="lp-h__public">act.</b></span></span>
+                </span>
               </h2>
               <div className="lp-cta">
                 <p className="lp-lede">
-                  The exact value stays on your device. Only a proof that it met the rule is checked <span style={{ whiteSpace: "nowrap" }}>on-chain</span>.
+                  <span className="lp-story__t" data-story-i={0} data-story-kind="lede">
+                    The exact value stays on your device. Only a proof that it met the rule is checked <span style={{ whiteSpace: "nowrap" }}>on-chain</span>.
+                  </span>
+                  <span className="lp-story__t lp-story__t--over" data-story-i={1} data-story-kind="lede" aria-hidden="true">
+                    Project-issued credentials establish wallet eligibility for on-chain participation.
+                  </span>
+                  <span className="lp-story__t lp-story__t--over" data-story-i={2} data-story-kind="lede" aria-hidden="true">
+                    BOJAGI builds a zero-knowledge proof in your browser. The private value stays on your device.
+                  </span>
+                  <span className="lp-story__t lp-story__t--over" data-story-i={3} data-story-kind="lede" aria-hidden="true">
+                    Eligible wallets join DAO governance. Private proofs unlock protected Lending actions on Robinhood Testnet.
+                  </span>
                 </p>
                 <div className="lp-actions">
                   <Link className="lp-btn lp-btn--primary" href="/dojang">
