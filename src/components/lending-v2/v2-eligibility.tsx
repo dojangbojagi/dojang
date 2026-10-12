@@ -1,0 +1,245 @@
+"use client";
+
+import Link from "next/link";
+import { useState, type FormEvent } from "react";
+import { useReadContract } from "wagmi";
+import { formatAmount, shortAddress } from "@/components/lending/format";
+import { Chip, type Tone } from "@/components/lending-v2/v2-parts";
+import { dateTimeText } from "@/components/lending-v2/v2-format";
+import type { V2Market, V2Proof } from "@/components/lending-v2/v2-types";
+import { StateChip, TransactionSummary } from "@/components/protocol-state";
+import { useDojangVerification } from "@/hooks/use-dojang-verification";
+import { useLendingV2CredentialIssuance } from "@/hooks/use-lending-v2-credential-issuance";
+import { useWalletNetwork } from "@/hooks/use-wallet-network";
+import { GIWA_CHAIN_ID } from "@/lib/config/chain";
+import { credentialIssuerRoleAbi } from "@/lib/contracts/abis";
+import { parseDemoCredentialWitness, type DemoCredentialWitness } from "@/lib/credential/witness";
+import { LENDING_V2_ELIGIBILITY_THRESHOLD, LENDING_V2_POLICY_ID } from "@/lib/lending/v2-config";
+import { mapLendingV2Error } from "@/lib/lending/v2-errors";
+import { explainProtocolError } from "@/lib/protocol/errors";
+
+const PROOF_COPY: Record<V2Proof["state"], { tone: Tone; label: string; text: string }> = {
+  unconfigured: { tone: "warn", label: "Not available", text: "Lending V2 is not configured, so there is no policy-3 registry to check against." },
+  disconnected: { tone: "neutral", label: "Wallet needed", text: "Connect a wallet to check its Project Test Credential." },
+  "wrong-network": { tone: "warn", label: "Wrong network", text: "Switch to GIWA Sepolia before checking or proving." },
+  checking: { tone: "pending", label: "Checking", text: "Reading the policy-3 credential from the registry…" },
+  unavailable: { tone: "warn", label: "Not available", text: "The configured address is not a compatible Lending V2 deployment." },
+  "read-error": { tone: "invalid", label: "Unable to check", text: "The credential could not be read. This does not mean the wallet has none; try again in a moment." },
+  "credential-required": { tone: "neutral", label: "Credential not found", text: "No policy-3 Project Test Credential is registered for this wallet. The project issuer must issue one and deliver its private witness." },
+  "credential-expired": { tone: "warn", label: "Expired", text: "The credential has expired. New supply, collateral activation and borrowing are blocked. Repaying and withdrawing stay available." },
+  "credential-revoked": { tone: "invalid", label: "Revoked", text: "The project issuer revoked this credential. New supply, collateral activation and borrowing are blocked. Repaying and withdrawing stay available." },
+  "credential-not-yet-valid": { tone: "warn", label: "Not yet valid", text: "The credential's start time has not been reached." },
+  "issuer-untrusted": { tone: "warn", label: "Issuer not authorized", text: "The credential's issuer no longer holds the registry issuer role, so the pool would reject it." },
+  "witness-required": { tone: "demo", label: "Action required", text: "A credential is on record. Import the private witness your issuer delivered so a proof can be built in this browser." },
+  "witness-mismatch": { tone: "invalid", label: "Witness mismatch", text: "The imported witness does not match the active credential for this wallet." },
+  "ready-to-prove": { tone: "demo", label: "Ready to prove", text: "Ready. The proof is built in this browser and can take a while; the private value never leaves this device." },
+  generating: { tone: "pending", label: "Verifying", text: "Generating the proof in your browser. Keep this tab open." },
+  "proof-ready": { tone: "valid", label: "Proof ready", text: "A proof bound to this wallet, credential, policy 3 and the Lending V2 pool was verified locally. Nothing has been sent on-chain yet." },
+  invalid: { tone: "invalid", label: "Proof failed", text: "The witness, credential or proof does not satisfy the V2 policy." },
+};
+
+function IssuerTools({ market, onIssued }: { market: V2Market; onIssued: (witness: DemoCredentialWitness) => void }) {
+  const wallet = useWalletNetwork();
+  const issuance = useLendingV2CredentialIssuance();
+  const [privateValue, setPrivateValue] = useState("1250");
+  const [expiresAt, setExpiresAt] = useState(() => {
+    const date = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+    return date.toISOString().slice(0, 16);
+  });
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const validValue = /^(0|[1-9][0-9]*)$/.test(privateValue) && BigInt(privateValue || "0") >= LENDING_V2_ELIGIBILITY_THRESHOLD;
+  const expiresMs = Date.parse(expiresAt);
+  const validExpiry = Number.isFinite(expiresMs) && Math.floor(expiresMs / 1000) > Math.floor(Date.now() / 1000);
+  const canIssue = Boolean(wallet.address && wallet.isGiwaSepolia && market.readAvailable && validValue && validExpiry && !issuance.isSubmitting);
+
+  async function issue(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage("");
+    setError("");
+    if (!wallet.address || !canIssue) return;
+    try {
+      const witness = await issuance.issueCredential({ wallet: wallet.address, privateValue, expiresAt: BigInt(Math.floor(expiresMs / 1000)) });
+      onIssued(witness);
+      setPrivateValue("");
+      setMessage("The credential was confirmed by the registry readback. Its private witness is held in this browser session only; it was not displayed or exported.");
+    } catch (cause) {
+      setError(cause instanceof Error && "code" in cause ? explainProtocolError(cause) : mapLendingV2Error(cause).message);
+    }
+  }
+
+  return (
+    <details className="lend-issuer">
+      <summary className="protocol-inline-link">Project issuer tools: issue a Project Test Credential to this wallet</summary>
+      <div className="lend-issuer__body">
+        <p className="small muted">
+          Shown only because this wallet holds the project registry&apos;s issuer role. It issues a policy {LENDING_V2_POLICY_ID.toString()} <strong>Project Test Credential</strong>,
+          bound to the Lending V2 pool. It is not an official GIWA, Dojang or Upbit credential. The registry stores a commitment only; the private value and salt stay in this browser.
+        </p>
+        <form className="protocol-form" onSubmit={(event) => void issue(event)}>
+          <div className="protocol-form__grid">
+            <label className="protocol-field" htmlFor="lendv2-private-value"><span>Private eligibility value</span>
+              <input id="lendv2-private-value" type="password" inputMode="numeric" autoComplete="off" value={privateValue} onChange={(event) => setPrivateValue(event.currentTarget.value)} />
+            </label>
+            <label className="protocol-field" htmlFor="lendv2-expiry"><span>Credential expiry</span>
+              <input id="lendv2-expiry" type="datetime-local" value={expiresAt} onChange={(event) => setExpiresAt(event.currentTarget.value)} />
+            </label>
+          </div>
+          <p className="xsmall muted">At least {LENDING_V2_ELIGIBILITY_THRESHOLD.toString()} test units. This is not a currency amount and is never sent to the registry.</p>
+          <div className="protocol-actions">
+            <button className="btn btn--secondary" type="submit" disabled={!canIssue}>{issuance.isSubmitting ? "Issuing credential…" : "Issue to connected wallet"}</button>
+          </div>
+        </form>
+        <TransactionSummary lifecycle={issuance.transaction} />
+        {error && <p className="callout callout--caution protocol-notice" role="alert">{error}</p>}
+        {message && <p className="callout callout--demo protocol-notice" role="status" aria-live="polite">{message}</p>}
+      </div>
+    </details>
+  );
+}
+
+/**
+ * Eligibility, kept honest: official Dojang status and the Project Test Credential are separate rows; a proof is
+ * "verified locally" until the pool verifies it again inside a transaction.
+ */
+export function EligibilityCard({ market, proof, witness, onWitness }: {
+  market: V2Market;
+  proof: V2Proof;
+  witness: DemoCredentialWitness | null;
+  onWitness: (witness: DemoCredentialWitness | null) => void;
+}) {
+  const wallet = useWalletNetwork();
+  const dojang = useDojangVerification(wallet.address);
+  const [importMessage, setImportMessage] = useState("");
+  const [proofMessage, setProofMessage] = useState("");
+  const registry = market.snapshot?.credentialRegistry;
+  const role = useReadContract({
+    address: registry,
+    chainId: GIWA_CHAIN_ID,
+    abi: credentialIssuerRoleAbi,
+    functionName: "ISSUER_ROLE",
+    query: { enabled: Boolean(registry && wallet.address), retry: 1 },
+  });
+  const isIssuer = useReadContract({
+    address: registry,
+    chainId: GIWA_CHAIN_ID,
+    abi: credentialIssuerRoleAbi,
+    functionName: "hasRole",
+    args: role.data && wallet.address ? [role.data, wallet.address] : undefined,
+    query: { enabled: Boolean(registry && wallet.address && role.data), retry: 1 },
+  });
+
+  const copy = PROOF_COPY[proof.state];
+  const record = proof.credential;
+  const canProve = (proof.state === "ready-to-prove" || proof.state === "proof-ready") && !market.isSubmitting;
+  const proofBytes = proof.proof ? (proof.proof.proof.length - 2) / 2 : 0;
+
+  async function importWitness(file?: File) {
+    if (!file) return;
+    setImportMessage("");
+    try {
+      const candidate = parseDemoCredentialWitness(JSON.parse(await file.text()));
+      if (!wallet.address || candidate.wallet.toLowerCase() !== wallet.address.toLowerCase()) throw new Error("This witness is not bound to the connected wallet.");
+      if (candidate.policyId !== Number(LENDING_V2_POLICY_ID)) {
+        throw new Error(`This witness belongs to policy ${candidate.policyId}. Lending V2 uses policy ${LENDING_V2_POLICY_ID.toString()}; a V1 (policy 2) witness cannot authorize V2.`);
+      }
+      if (!record) throw new Error("There is no active policy-3 credential on record for this wallet to match.");
+      if (candidate.commitment.toLowerCase() !== record.commitment.toLowerCase()) throw new Error("The witness commitment does not match the credential on record.");
+      if (BigInt(candidate.expiresAt) !== record.expiresAt) throw new Error("The witness expiry does not match the credential on record.");
+      onWitness(candidate);
+      setImportMessage("The witness metadata matches the credential on record. The circuit checks the private value and salt when the proof is generated.");
+    } catch (cause) {
+      onWitness(null);
+      setImportMessage(cause instanceof SyntaxError ? "That file is not valid JSON." : cause instanceof Error && !("code" in cause) ? cause.message : explainProtocolError(cause));
+    }
+  }
+
+  async function generate() {
+    setProofMessage("");
+    try {
+      await proof.generateProof();
+      setProofMessage("Proof generated and verified locally in this browser. No transaction was submitted.");
+    } catch (cause) {
+      setProofMessage(explainProtocolError(cause));
+    }
+  }
+
+  return (
+    <section className="panel panel--ticks protocol-panel lendv2-eligibility" id="lendv2-eligibility" aria-labelledby="lendv2-eligibility-heading">
+      <div className="protocol-panel__head">
+        <h2 id="lendv2-eligibility-heading">Eligibility</h2>
+        <Chip tone={copy.tone}>{copy.label}</Chip>
+      </div>
+      <p className={`callout ${copy.tone === "invalid" || copy.tone === "warn" ? "callout--caution" : "callout--demo"}`} role="status" aria-live="polite">
+        {proof.state === "invalid" && proof.error ? proof.error : copy.text}
+      </p>
+
+      <dl className="kv protocol-kv">
+        <div className="kv__row">
+          <dt>Official Dojang status</dt>
+          <dd><StateChip state={dojang.state} /> <Link className="protocol-inline-link" href="/dojang">Dojang ↗</Link></dd>
+        </div>
+        <div className="kv__row">
+          <dt>Lending V2 authorization</dt>
+          <dd>Project Test Credential, policy {LENDING_V2_POLICY_ID.toString()}. <span className="muted">Official Dojang does not authorize this pool.</span></dd>
+        </div>
+        <div className="kv__row"><dt>Policy and threshold</dt><dd>Policy {LENDING_V2_POLICY_ID.toString()} · private value of at least {formatAmount(LENDING_V2_ELIGIBILITY_THRESHOLD, 0)} test units</dd></div>
+        {record ? (
+          <>
+            <div className="kv__row"><dt>Credential</dt><dd>{proof.credentialLabel} · version {record.version.toString()}</dd></div>
+            <div className="kv__row"><dt>Issuer</dt><dd className="addr">{shortAddress(record.issuer)} <span className="muted">(project issuer)</span></dd></div>
+            <div className="kv__row"><dt>Issued</dt><dd>{dateTimeText(record.issuedAt)}</dd></div>
+            <div className="kv__row"><dt>Expires</dt><dd>{dateTimeText(record.expiresAt)}</dd></div>
+          </>
+        ) : null}
+        <div className="kv__row">
+          <dt>Zero-knowledge proof</dt>
+          <dd>{proof.verificationStatus === "locally-verified" ? "Verified locally in this browser" : proof.state === "generating" ? "Generating…" : "Not generated"}</dd>
+        </div>
+        {proof.proof && (
+          <>
+            <div className="kv__row"><dt>Proof</dt><dd>{proofBytes.toLocaleString("en-US")} bytes · {proof.proof.publicInputs.length} public inputs</dd></div>
+            <div className="kv__row"><dt>Bound to</dt><dd className="addr">Lending V2 pool {shortAddress(proof.proof.publicContext.vault)}</dd></div>
+            <div className="kv__row"><dt>Created</dt><dd>{new Date(proof.proof.createdAt).toLocaleString()}</dd></div>
+          </>
+        )}
+      </dl>
+
+      <p className="xsmall muted">
+        A locally verified proof is not an on-chain verification. The pool verifies the proof again inside each supply, collateral activation and borrow transaction;
+        the contract is the final authority. Repaying, withdrawing and liquidation never need a current credential.
+      </p>
+
+      <label className="protocol-field" htmlFor="lendv2-witness-file"><span>Private witness JSON (delivered by the project issuer)</span>
+        <input id="lendv2-witness-file" type="file" accept="application/json,.json" disabled={!record || proof.state === "generating"} onChange={(event) => { void importWitness(event.currentTarget.files?.[0]); event.currentTarget.value = ""; }} />
+      </label>
+      {witness && <p className="small muted" role="status">Witness loaded in memory for <span className="addr">{shortAddress(witness.wallet)}</span>. It is not uploaded or stored.</p>}
+      {importMessage && <p className={`callout ${witness ? "callout--demo" : "callout--caution"}`} role="status" aria-live="polite">{importMessage}</p>}
+
+      <div className="protocol-actions">
+        <button className="btn btn--primary" type="button" onClick={() => void generate()} disabled={!canProve}>
+          {proof.state === "generating" ? "Generating proof…" : proof.state === "proof-ready" ? "Generate a new proof" : "Generate private proof"}
+        </button>
+        <button className="btn btn--secondary" type="button" onClick={() => { onWitness(null); setImportMessage("Witness cleared from memory."); }} disabled={!witness}>Clear witness</button>
+        <button className="btn btn--secondary" type="button" onClick={() => void proof.refetchCredential()} disabled={!record && proof.state !== "credential-required"}>Re-check credential</button>
+      </div>
+      {proofMessage && proof.state !== "invalid" && <p className="small" role="status" aria-live="polite">{proofMessage}</p>}
+
+      <details className="lendv2-privacy">
+        <summary className="protocol-inline-link">What stays private?</summary>
+        <div className="lendv2-privacy__body">
+          <p><strong>Private:</strong> the eligibility value and its salt, which never leave this browser.</p>
+          <p><strong>Public:</strong> your wallet address, the credential commitment, policy and threshold, credential version and expiry, the chain, the V2 pool address and the proof itself.</p>
+          <p><strong>Not private:</strong> every supply, borrow, repayment, collateral and debt amount, and the fact that an eligibility-gated action happened. This is private eligibility data, not private lending.</p>
+        </div>
+      </details>
+
+      {isIssuer.data === true ? (
+        <IssuerTools market={market} onIssued={(issued) => { onWitness(issued); setImportMessage("The new credential and its witness are ready."); void proof.refetchCredential(); }} />
+      ) : (
+        <p className="xsmall muted">Project Test Credentials are issued only by wallets that hold the project registry&apos;s issuer role. Ordinary wallets receive a witness file from the project issuer.</p>
+      )}
+    </section>
+  );
+}

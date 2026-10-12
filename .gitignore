@@ -28,6 +28,7 @@ contracts/lib/
 
 # Documentation & Handoffs (keep the source-controlled Next.js /docs route)
 /docs/*
+!/docs/DEPLOYMENT_TERMINAL.md
 !/docs/LENDING_MVP_ARCHITECTURE.md
 !/docs/DEPLOYMENT_READINESS.md
 !/docs/PROTOCOL_ROADMAP.md

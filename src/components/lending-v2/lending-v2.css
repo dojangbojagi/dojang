@@ -1,0 +1,124 @@
+/* ==========================================================================
+   Lending V2 (/lending)
+   Builds on lending.css and theme.css: the same ink panels, thin lines, mono labels, white = public,
+   burgundy = private and actions. Only new classes live here; nothing shared is overridden.
+   ========================================================================== */
+
+.lendv2, .lendv2-experience { display: grid; gap: var(--space-5); }
+.lendv2 > *, .lendv2-experience > * { min-width: 0; }
+.lendv2 .callout, .lendv2 .protocol-empty, .lendv2 .kv dd, .lendv2-metric dd { overflow-wrap: anywhere; }
+
+/* ---- Which market: V2, or the legacy demo ------------------------------- */
+.lendv2-modes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.4rem; padding: 0.4rem; border-radius: 22px; background: rgba(21, 15, 18, 0.7); box-shadow: inset 0 0 0 1px var(--line); }
+.lendv2-mode {
+  display: grid; gap: 0.15rem; padding: 0.8rem 1.1rem; border: 0; border-radius: 16px; background: transparent; cursor: pointer; text-align: left; color: var(--text-muted);
+  font-family: var(--font-display); font-size: 0.9rem; font-weight: 700; letter-spacing: 0.02em;
+  transition: background-color 0.25s var(--ease-out), color 0.25s var(--ease-out), box-shadow 0.25s var(--ease-out);
+}
+.lendv2-mode small { font-family: var(--font-mono); font-size: 0.64rem; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.8; }
+.lendv2-mode:hover { color: var(--text); background: rgba(255, 255, 255, 0.05); }
+.lendv2-mode[aria-selected="true"] { color: #fff; background: rgba(255, 255, 255, 0.07); box-shadow: inset 0 0 0 1px var(--line-strong), inset 0 -2px 0 var(--burgundy); }
+.lendv2-mode:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+@media (max-width: 560px) { .lendv2-modes { grid-template-columns: 1fr; } }
+.lendv2-legacy-note { margin: 0 0 var(--space-4); }
+/* the page figure hangs below the header on wide screens; keep the first control clear of its caption */
+@media (min-width: 901px) { .lendv2-experience { margin-top: 5.2rem; } }
+
+/* ---- Context bar --------------------------------------------------------- */
+.lendv2-context { border-radius: 18px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.02); padding: var(--space-3) var(--space-4); }
+.lendv2-context ul { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); margin: 0; padding: 0; list-style: none; align-items: center; }
+.lendv2-context li { display: flex; align-items: center; gap: 0.55rem; min-width: 0; font-size: var(--fs-sm); }
+.lendv2-context li > span:first-child { font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-dim); }
+.lendv2-context__links { margin-left: auto; gap: var(--space-4) !important; }
+
+/* ---- Four areas ---------------------------------------------------------- */
+.lendv2-tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); border-radius: 22px; }
+.lendv2-tabs .lend-tab { border-radius: 16px; }
+@media (max-width: 760px) { .lendv2-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ---- Dense metrics ------------------------------------------------------- */
+.lendv2-metrics { display: grid; grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr)); gap: var(--space-3) var(--space-5); margin: var(--space-3) 0 0; padding: 0; }
+.lendv2-metrics--summary { grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); }
+.lendv2-metric { display: grid; gap: 0.2rem; align-content: start; padding: 0.55rem 0; border-top: 1px dashed var(--line); min-width: 0; }
+.lendv2-metric dt { font-family: var(--font-mono); font-size: 0.64rem; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); }
+.lendv2-metric dd { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.5rem; font-size: var(--fs-sm); font-weight: 600; color: var(--text); }
+.lendv2-metric__note { margin: 0; font-size: var(--fs-xs); color: var(--text-dim); }
+
+.lendv2-meter { display: block; flex: 1 0 100%; height: 0.32rem; border-radius: 999px; background: rgba(255, 255, 255, 0.09); overflow: hidden; }
+.lendv2-meter > i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--burgundy-hi, #8F1332), var(--gold)); }
+.lendv2-meter[data-tone="warn"] > i { background: var(--state-warn); }
+.lendv2-meter[data-tone="invalid"] > i { background: var(--state-invalid); }
+
+/* ---- Markets ------------------------------------------------------------- */
+.lendv2-markets { display: grid; gap: var(--space-5); }
+.lendv2-reserves { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-5); align-items: start; }
+@media (max-width: 1100px) { .lendv2-reserves { grid-template-columns: 1fr; } }
+.lendv2-reserve { display: grid; gap: var(--space-3); padding: var(--space-5); border-radius: 22px; min-width: 0; }
+.lendv2-reserve__head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-3); }
+.lendv2-reserve__head h3 { margin: 0; font-family: var(--font-display); font-size: 1.35rem; font-weight: 700; letter-spacing: -0.02em; text-transform: none; }
+.lendv2-roles { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
+.lendv2-roles li { padding: 0.25rem 0.65rem; border-radius: 999px; font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); box-shadow: inset 0 0 0 1px var(--line); }
+.lendv2-roles li[data-on="true"] { color: var(--text); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.lendv2-caps { display: grid; gap: 0.55rem; padding-top: var(--space-2); border-top: 1px dashed var(--line); }
+.lendv2-caps__row { display: grid; grid-template-columns: minmax(6rem, 0.4fr) minmax(0, 1fr); gap: 0.25rem var(--space-3); margin: 0; font-size: var(--fs-xs); color: var(--text-muted); }
+.lendv2-caps__row > span:first-child { font-family: var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); }
+.lendv2-caps__row .lendv2-meter { grid-column: 1 / -1; }
+.lendv2-oracle { display: grid; gap: 0.3rem; padding-top: var(--space-2); border-top: 1px dashed var(--line); }
+.lendv2-oracle__row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem var(--space-3); margin: 0; font-size: var(--fs-sm); }
+.lendv2-oracle__row > span:first-child { font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); }
+.lendv2-reserve__actions { margin-top: 0; }
+
+/* ---- "Not available": calm, honest, no placeholder numbers --------------- */
+.lendv2-unavailable { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-4); align-items: start; padding: var(--space-5); border-radius: 18px; border: 1px dashed var(--line-strong); background: rgba(255, 255, 255, 0.02); }
+.lendv2-unavailable__mark { width: 0.7rem; height: 0.7rem; margin-top: 0.45rem; border-radius: 2px; background: var(--gold); transform: rotate(45deg); }
+.lendv2-unavailable__title { margin: 0; font-family: var(--font-display); font-size: 1.05rem; font-weight: 700; letter-spacing: -0.01em; }
+.lendv2-unavailable__body { display: grid; gap: var(--space-2); margin-top: var(--space-2); font-size: var(--fs-sm); color: var(--text-muted); }
+.lendv2-unavailable__body p { margin: 0; }
+
+/* ---- Asset picker -------------------------------------------------------- */
+.lendv2-picker { margin: 0; padding: 0; border: 0; min-width: 0; }
+.lendv2-picker legend { padding: 0; margin-bottom: 0.45rem; font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); }
+.lendv2-picker__options { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.lendv2-picker__option { position: relative; display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.95rem; border-radius: 999px; cursor: pointer; box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--text-muted); font-family: var(--font-display); font-weight: 700; font-size: 0.85rem; transition: background-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease; }
+.lendv2-picker__option:hover { color: var(--text); background: rgba(255, 255, 255, 0.05); }
+.lendv2-picker__option[data-checked="true"] { color: #fff; background: rgba(150, 16, 50, 0.3); box-shadow: inset 0 0 0 1px var(--gold); }
+.lendv2-picker__option[data-disabled="true"] { opacity: 0.65; }
+.lendv2-picker__option input { position: absolute; inset: 0; opacity: 0; cursor: pointer; margin: 0; }
+.lendv2-picker__option:focus-within { outline: 2px solid var(--gold); outline-offset: 3px; }
+.lendv2-picker__reason { font-family: var(--font-body, inherit); font-weight: 400; font-size: var(--fs-xs); color: var(--text-dim); }
+
+/* ---- Actions: review before the wallet ----------------------------------- */
+.lendv2-action { min-width: 0; }
+.lendv2-review { display: grid; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-radius: 14px; border: 1px solid var(--line-strong); background: rgba(109, 0, 26, 0.16); }
+.lendv2-review__title { margin: 0; font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted); }
+.lendv2-review .kv { margin: 0; }
+.lendv2-review .callout { margin: var(--space-2) 0 0; }
+.lendv2-failure { color: var(--text-muted); }
+
+/* ---- Position ------------------------------------------------------------ */
+.lendv2-position { display: grid; gap: var(--space-5); }
+.lendv2-table-wrap { overflow-x: auto; border-radius: 14px; border: 1px solid var(--line); }
+.lendv2-table-wrap:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.lendv2-table { width: 100%; min-width: 30rem; border-collapse: collapse; font-size: var(--fs-sm); }
+.lendv2-table th, .lendv2-table td { padding: 0.7rem 0.9rem; text-align: right; border-bottom: 1px dashed var(--line); font-variant-numeric: tabular-nums; }
+.lendv2-table thead th { font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); font-weight: 500; }
+.lendv2-table th:first-child, .lendv2-table td:first-child { text-align: left; }
+.lendv2-table tbody th { font-family: var(--font-display); font-weight: 700; }
+.lendv2-table tr:last-child th, .lendv2-table tr:last-child td { border-bottom: 0; }
+.lendv2-table td[data-strong="true"] { color: var(--text); font-weight: 700; }
+.lendv2-tag { margin-left: 0.45rem; padding: 0.1rem 0.45rem; border-radius: 999px; font-family: var(--font-mono); font-size: 0.58rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); box-shadow: inset 0 0 0 1px var(--line); }
+
+/* ---- Eligibility, privacy and liquidation -------------------------------- */
+.lendv2-privacy, .lendv2-liquidation { border-radius: 16px; border: 1px dashed var(--line-strong); padding: var(--space-3) var(--space-4); }
+.lendv2-liquidation { margin-top: var(--space-5); }
+.lendv2-privacy > summary, .lendv2-liquidation > summary { cursor: pointer; }
+.lendv2-privacy[open] > summary, .lendv2-liquidation[open] > summary { margin-bottom: var(--space-3); }
+.lendv2-privacy__body, .lendv2-liquidation__body, .lendv2-liquidation__result { display: grid; gap: var(--space-3); }
+.lendv2-privacy__body p { margin: 0; font-size: var(--fs-sm); color: var(--text-muted); }
+.lendv2-privacy__body strong { color: var(--text); }
+.lendv2-liquidation__pickers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+@media (max-width: 760px) { .lendv2-liquidation__pickers { grid-template-columns: 1fr; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .lendv2-mode, .lendv2-picker__option { transition: none; }
+}

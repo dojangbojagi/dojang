@@ -8,8 +8,8 @@ fi
 
 for argument in "$@"; do
   case "$argument" in
-    --broadcast|--broadcast=*|--resume|--verify|--account|--account=*|--private-key|--private-key=*|--keystore|--keystore=*|--mnemonic|--mnemonic=*|--ledger|--trezor)
-      echo "deployment:simulate refuses broadcast, verification, and signer options: $argument" >&2
+    --broadcast|--broadcast=*|--resume|--verify|--verify=*|--account|--account=*|--sender|--sender=*|--private-key|--private-key=*|--keystore|--keystore=*|--mnemonic|--mnemonic=*|--mnemonic-derivation-path|--mnemonic-derivation-path=*|--mnemonic-passphrase|--mnemonic-passphrase=*|--ledger|--trezor|--unlocked)
+      echo "deployment:simulate refuses broadcast, verification, and signer options: ${argument%%=*}" >&2
       exit 2
       ;;
   esac
