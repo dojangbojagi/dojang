@@ -1,5 +1,5 @@
 import { zeroAddress, type Address, type PublicClient } from "viem";
-import { controlledTestOracleAbi, controlledTokenAbi, credentialIssuerRoleAbi, credentialRegistryAbi, lendingPoolV2Abi } from "../contracts/abis";
+import { controlledTestOracleAbi, controlledTokenAbi, credentialIssuerRoleAbi, credentialRegistryAbi, eligibilityVerifierAdapterAbi, lendingPoolV2Abi } from "../contracts/abis";
 import { LENDING_V2_ELIGIBILITY_THRESHOLD, LENDING_V2_POLICY_ID, LENDING_V2_POLICY_VERSION, LENDING_V2_RAY } from "./v2-config";
 import { GIWA_SEPOLIA_CHAIN_ID, type LendingV2ChainId } from "./v2-network";
 import type { DemoCredentialRecord } from "../protocol/types";
@@ -90,6 +90,7 @@ export type LendingV2MarketSnapshot = {
   riskPaused: boolean;
   credentialRegistry: Address;
   eligibilityVerifier: Address;
+  honkVerifier: Address;
   oracle: Address;
   policyId: bigint;
   policyVersion: bigint;
@@ -162,10 +163,12 @@ export async function readLendingV2Deployment(
   expectedChainId: LendingV2ChainId = GIWA_SEPOLIA_CHAIN_ID,
   expectedVerifier?: Address,
   expectedOracle?: Address,
+  expectedHonkVerifier?: Address,
 ): Promise<{
   pool: Address;
   credentialRegistry: Address;
   eligibilityVerifier: Address;
+  honkVerifier: Address;
   oracle: Address;
   policyId: bigint;
   policyVersion: bigint;
@@ -212,9 +215,22 @@ export async function readLendingV2Deployment(
     client.getCode({ address: oracle, blockNumber }),
   ]);
   if (!codeExists(registryCode) || !codeExists(verifierCode) || !codeExists(oracleCode)) {
-    throw new LendingV2UnavailableError("The V2 pool references a registry, verifier, or oracle without deployed bytecode.");
+    throw new LendingV2UnavailableError("The V2 pool references a registry, verifier adapter, or oracle without deployed bytecode.");
   }
-  return { pool, credentialRegistry, eligibilityVerifier, oracle, policyId, policyVersion, threshold };
+  const honkVerifier = await client.readContract({
+    address: eligibilityVerifier,
+    abi: eligibilityVerifierAdapterAbi,
+    functionName: "honkVerifier",
+    blockNumber,
+  });
+  if (expectedHonkVerifier && expectedHonkVerifier.toLowerCase() !== honkVerifier.toLowerCase()) {
+    throw new LendingV2UnavailableError("The verifier adapter does not link to the configured HonkVerifier.");
+  }
+  const honkVerifierCode = await client.getCode({ address: honkVerifier, blockNumber });
+  if (!codeExists(honkVerifierCode)) {
+    throw new LendingV2UnavailableError("The verifier adapter references a HonkVerifier without deployed bytecode.");
+  }
+  return { pool, credentialRegistry, eligibilityVerifier, honkVerifier, oracle, policyId, policyVersion, threshold };
 }
 
 export async function readLendingV2Credential(
@@ -267,6 +283,8 @@ export async function readLendingV2Market(
     expectedChainId?: LendingV2ChainId;
     expectedVerifier?: Address;
     expectedOracle?: Address;
+    expectedHonkVerifier?: Address;
+    expectedAssets?: readonly Address[];
   },
 ): Promise<LendingV2MarketSnapshot> {
   const block = await client.getBlock({ blockTag: "latest" });
@@ -278,6 +296,7 @@ export async function readLendingV2Market(
     input.expectedChainId,
     input.expectedVerifier,
     input.expectedOracle,
+    input.expectedHonkVerifier,
   );
   const [assets, riskPaused] = await Promise.all([
     client.readContract({ address: input.pool, abi: lendingPoolV2Abi, functionName: "getReserveAssets", blockNumber: block.number }),
@@ -286,6 +305,14 @@ export async function readLendingV2Market(
   const reserveCount = await client.readContract({ address: input.pool, abi: lendingPoolV2Abi, functionName: "reserveCount", blockNumber: block.number });
   if (reserveCount !== BigInt(assets.length) || assets.length > 8 || new Set(assets.map((asset) => asset.toLowerCase())).size !== assets.length) {
     throw new LendingV2UnavailableError("The pool reserve count and reserve list are inconsistent.");
+  }
+  if (input.expectedAssets) {
+    const actualAssets = new Set(assets.map((asset) => asset.toLowerCase()));
+    const configuredAssets = new Set(input.expectedAssets.map((asset) => asset.toLowerCase()));
+    if (configuredAssets.size !== input.expectedAssets.length || actualAssets.size !== configuredAssets.size ||
+      [...actualAssets].some((asset) => !configuredAssets.has(asset))) {
+      throw new LendingV2UnavailableError("The Robinhood pool reserve list does not match the configured project test assets.");
+    }
   }
 
   const reserves = await Promise.all(assets.map(async (asset): Promise<LendingV2ReserveSnapshot> => {

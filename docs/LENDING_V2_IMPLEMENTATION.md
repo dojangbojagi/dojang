@@ -79,7 +79,7 @@ The simulation wrapper rejects broadcast and signer options. Do not copy simulat
 
 The V2 Foundry suite uses a mock verifier for focused financial/accounting tests. The local Anvil script separately deploys the generated verifier and adapter, issues policy-3 project test credentials, generates a real proof with the existing Noir circuit, verifies it locally, and exercises on-chain proof acceptance against the deployed local V2 pool. It runs only against a private ephemeral Anvil instance and reports transaction hashes, receipt status, and event evidence. This does not constitute GIWA Sepolia deployment or official Dojang verification.
 
-Verified in this implementation run:
+Original V2 implementation checkpoint:
 
 - `bun run contracts:test`: 78 passed, 0 failed (the prior 60-test suite plus 18 V2 tests).
 - `bun run contracts:build --sizes`: passed; `LendingPoolV2` runtime is 20,288 bytes and the V2 deployment script is 4,506 bytes.
@@ -91,6 +91,10 @@ Verified in this implementation run:
 In that run, 500.000001 gUSD debt accrued to 500.924660 gUSD over 30 days at 225 BPS current borrow APR; supplier balance rose to 10,000.832193 gUSD. After a synthetic price move, the second position's health factor was below 1 and liquidation reduced its debt while transferring collateral.
 
 Selected successful receipts from the final ephemeral Anvil run: supply `0xd5640cda278abc8f3754025aad0e52a3444ee3f06305b1397d37ef3cf6db1392`; borrow `0x73625da127dce84680c33bee55253b7293779b6891c7abbf98d3eff0038d1b66`; liquidation `0x3ba26d2e9bbdb934622f73cb103041e3e364e46a33099dd6eb565bc8293bf3f5`. These hashes belong only to the one local Anvil run and cannot be looked up on GIWA Sepolia.
+
+## Subsequent Robinhood protocol regression checkpoint
+
+On 2026-10-12, the full Foundry suite passed with `90` tests, including the separately versioned Robinhood DAO Phase 1 tests. Typecheck, production build, and ZK proof conformance passed. `bun run robinhood:protocol:anvil` exercised the policy-4 DAO lifecycle and the policy-3 genuine-proof Lending V2 lifecycle on ephemeral chain ID `46630`, including invalid proof/domain rejection and liquidation. Full-stack and verifier-only Foundry deployment simulations also succeeded locally without broadcast. These results do not change the earlier V2-specific run's count of 78 tests or establish a public Robinhood deployment.
 
 ## Explicitly out of scope
 

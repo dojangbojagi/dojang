@@ -60,16 +60,17 @@ export function useLendingV2EligibilityProof(witness?: DemoCredentialWitness): {
   const robinhood = getLendingV2ContractSet(ROBINHOOD_TESTNET_CHAIN_ID)!;
   const pool = robinhood.pool;
   const verifier = robinhood.verifierAdapter;
+  const honkVerifier = robinhood.verifierDependencies[2];
   const oracle = robinhood.oracle;
   const configuredPoolValue = appEnv.robinhoodContracts.lendingV2Pool;
-  const invalidPoolConfig = robinhood.invalidConfigNames.length > 0;
+  const invalidPoolConfig = robinhood.invalidConfigNames.length > 0 || robinhood.missingRequiredConfigNames.length > 0;
   const deploymentQuery = useQuery({
     queryKey: robinhoodLendingV2DeploymentQueryKey(pool),
     queryFn: () => {
       if (!client || !pool) throw new LendingV2UnavailableError("Lending V2 is not configured.");
-      return readLendingV2Deployment(client, pool, robinhood.credentialRegistry, undefined, ROBINHOOD_TESTNET_CHAIN_ID, verifier, oracle);
+      return readLendingV2Deployment(client, pool, robinhood.credentialRegistry, undefined, ROBINHOOD_TESTNET_CHAIN_ID, verifier, oracle, honkVerifier);
     },
-    enabled: Boolean(pool && client),
+    enabled: Boolean(pool && client && !invalidPoolConfig),
     retry: 1,
     staleTime: 15_000,
   });
@@ -169,7 +170,7 @@ export function useLendingV2EligibilityProof(witness?: DemoCredentialWitness): {
   }, [account.address, credentialQuery, deploymentQuery.data]);
 
   const error = generationError ?? (state === "unconfigured"
-    ? "Set NEXT_PUBLIC_LENDING_V2_POOL_CONTRACT to the real deployed V2 pool address."
+    ? "Set NEXT_PUBLIC_ROBINHOOD_LENDING_V2_POOL_CONTRACT to the confirmed Robinhood V2 pool address."
     : state === "unavailable"
       ? deploymentQuery.error instanceof Error ? deploymentQuery.error.message : "The configured address is not a compatible deployed V2 pool."
       : state === "read-error"

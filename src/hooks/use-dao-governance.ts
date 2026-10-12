@@ -41,15 +41,15 @@ interface GovernanceWriteContext {
   client: NonNullable<ReturnType<typeof usePublicClient>>;
 }
 
-export function useDaoGovernance(proposalId?: bigint) {
-  const account = useWalletNetwork();
+export function useDaoGovernance(proposalId?: bigint, enabled = true) {
+  const account = useWalletNetwork(GIWA_CHAIN_ID);
   const client = usePublicClient({ chainId: GIWA_CHAIN_ID });
   const writer = useWriteContract();
   const queryClient = useQueryClient();
   const contractAddress = projectContracts.daoGovernance;
   const [transaction, setTransaction] = useState<TransactionLifecycle>({ state: "idle" });
   const queryKey = useMemo(
-    () => daoGovernanceQueryKey(contractAddress, account.address, proposalId),
+    () => daoGovernanceQueryKey(contractAddress, account.address, proposalId, GIWA_CHAIN_ID),
     [account.address, contractAddress, proposalId],
   );
 
@@ -59,13 +59,13 @@ export function useDaoGovernance(proposalId?: bigint) {
       if (!client || !contractAddress) throw new Error("DAO Governance is not configured.");
       return readGovernanceSnapshot(client, contractAddress, account.address, proposalId);
     },
-    enabled: Boolean(client && contractAddress),
+    enabled: Boolean(enabled && client && contractAddress),
     refetchInterval: 15_000,
     retry: 1,
   });
 
   let state: "unconfigured" | "checking" | "ready" | "read-error";
-  if (!contractAddress) state = "unconfigured";
+  if (!enabled || !contractAddress) state = "unconfigured";
   else if (snapshotQuery.isError) state = "read-error";
   else if (snapshotQuery.isPending) state = "checking";
   else state = "ready";
@@ -114,8 +114,8 @@ export function useDaoGovernance(proposalId?: bigint) {
         return undefined;
       }
 
-      await queryClient.invalidateQueries({ queryKey: ["dao-governance", contractAddress] });
-      await queryClient.invalidateQueries({ queryKey: ["dao-proposal-feed", contractAddress] });
+      await queryClient.invalidateQueries({ queryKey: ["dao-governance", GIWA_CHAIN_ID, contractAddress] });
+      await queryClient.invalidateQueries({ queryKey: ["dao-proposal-feed", GIWA_CHAIN_ID, contractAddress] });
       setTransaction({ state: "confirmed", hash, explorerUrl });
       return { result: simulation.result, receipt };
     } catch (error) {

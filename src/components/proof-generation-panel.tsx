@@ -8,11 +8,12 @@ import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import { useDemoWitness } from "@/components/witness-context";
 import { explainProtocolError } from "@/lib/protocol/errors";
 import { StateChip } from "@/components/protocol-state";
+import { GIWA_CHAIN_ID } from "@/lib/config/chain";
 
 export function ProofGenerationPanel() {
   const proof = useEligibilityProof();
   const credential = useDemoCredential();
-  const wallet = useWalletNetwork();
+  const wallet = useWalletNetwork(GIWA_CHAIN_ID);
   const { witness } = useDemoWitness();
   const [message, setMessage] = useState("");
 

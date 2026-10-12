@@ -12,7 +12,7 @@ import { explainProtocolError } from "@/lib/protocol/errors";
 import { ProtocolError, type TransactionLifecycle } from "@/lib/protocol/types";
 
 export function useDemoCredentialRevocation(walletOverride?: Address) {
-  const account = useWalletNetwork();
+  const account = useWalletNetwork(GIWA_CHAIN_ID);
   const wallet = walletOverride ?? account.address;
   const credential = useDemoCredential(walletOverride);
   const client = usePublicClient({ chainId: GIWA_CHAIN_ID });

@@ -85,13 +85,15 @@ export function useLendingMarketV2(): {
   const client = usePublicClient({ chainId: ROBINHOOD_TESTNET_CHAIN_ID });
   const writer = useWriteContract();
   const queryClient = useQueryClient();
-  const robinhood = getLendingV2ContractSet(ROBINHOOD_TESTNET_CHAIN_ID)!;
+  const robinhood = useMemo(() => getLendingV2ContractSet(ROBINHOOD_TESTNET_CHAIN_ID)!, []);
   const pool = robinhood.pool;
   const poolValue = appEnv.robinhoodContracts.lendingV2Pool;
   const registry = robinhood.credentialRegistry;
   const verifier = robinhood.verifierAdapter;
+  const honkVerifier = robinhood.verifierDependencies[2];
   const oracle = robinhood.oracle;
   const invalidPoolConfig = robinhood.invalidConfigNames.length > 0;
+  const missingRequiredConfig = robinhood.missingRequiredConfigNames.length > 0;
   const [transaction, setTransaction] = useState<TransactionLifecycle>({ state: "idle" });
   const [failure, setFailure] = useState<LendingV2Failure>();
 
@@ -99,9 +101,9 @@ export function useLendingMarketV2(): {
     queryKey: ["lending-v2-deployment", String(ROBINHOOD_TESTNET_CHAIN_ID), pool?.toLowerCase() ?? "unconfigured"],
     queryFn: async () => {
       if (!client || !pool) throw new LendingV2UnavailableError("The Lending V2 pool is not configured.");
-      return readLendingV2Deployment(client, pool, registry, undefined, ROBINHOOD_TESTNET_CHAIN_ID, verifier, oracle);
+      return readLendingV2Deployment(client, pool, registry, undefined, ROBINHOOD_TESTNET_CHAIN_ID, verifier, oracle, honkVerifier);
     },
-    enabled: Boolean(pool && client),
+    enabled: Boolean(pool && client && !invalidPoolConfig && !missingRequiredConfig),
     retry: 1,
     staleTime: 15_000,
   });
@@ -118,9 +120,11 @@ export function useLendingMarketV2(): {
         expectedChainId: ROBINHOOD_TESTNET_CHAIN_ID,
         expectedVerifier: verifier,
         expectedOracle: oracle,
+        expectedHonkVerifier: honkVerifier,
+        expectedAssets: robinhood.configuredAssets,
       });
     },
-    enabled: Boolean(pool && client),
+    enabled: Boolean(pool && client && !invalidPoolConfig && !missingRequiredConfig),
     retry: 1,
     staleTime: 8_000,
     refetchOnWindowFocus: true,
@@ -128,7 +132,7 @@ export function useLendingMarketV2(): {
 
   let state: LendingV2MarketState;
   if (!poolValue) state = "unconfigured";
-  else if (invalidPoolConfig) state = "unavailable";
+  else if (invalidPoolConfig || missingRequiredConfig) state = "unavailable";
   else if (!account.address) state = "disconnected";
   else if (!account.isRobinhoodTestnet) state = "wrong-network";
   else if (deploymentQuery.isPending || marketQuery.isPending) state = "checking";
@@ -140,11 +144,11 @@ export function useLendingMarketV2(): {
   const assertBase = useCallback(async () => {
     if (!account.address) throw new ProtocolError("WALLET_REQUIRED", "Connect a wallet before using Lending V2.");
     if (!account.isRobinhoodTestnet) throw new ProtocolError("WRONG_NETWORK", "Switch to Robinhood Chain Testnet before submitting a Lending V2 transaction.");
-    if (!pool || !client || !poolValue || invalidPoolConfig) {
-      throw new ProtocolError("LENDING_NOT_CONFIGURED", "A valid Lending V2 pool address is not configured.");
+    if (!pool || !client || !poolValue || invalidPoolConfig || missingRequiredConfig) {
+      throw new ProtocolError("LENDING_NOT_CONFIGURED", "Configure the Robinhood V2 pool, registry, verifier, oracle, and both reserve token addresses.");
     }
-    await readLendingV2Deployment(client, pool, registry, undefined, ROBINHOOD_TESTNET_CHAIN_ID, verifier, oracle);
-  }, [account.address, account.isRobinhoodTestnet, client, invalidPoolConfig, oracle, pool, poolValue, registry, verifier]);
+    await readLendingV2Deployment(client, pool, registry, undefined, ROBINHOOD_TESTNET_CHAIN_ID, verifier, oracle, honkVerifier);
+  }, [account.address, account.isRobinhoodTestnet, client, honkVerifier, invalidPoolConfig, missingRequiredConfig, oracle, pool, poolValue, registry, verifier]);
 
   const assertSupportedAsset = useCallback(async (asset: Address) => {
     if (!client || !pool) throw new ProtocolError("LENDING_NOT_CONFIGURED", "The V2 pool is not configured.");
@@ -173,7 +177,7 @@ export function useLendingMarketV2(): {
 
   const assertV2Proof = useCallback(async (proof: EligibilityProof) => {
     if (!client || !pool || !account.address) throw new ProtocolError("LENDING_NOT_CONFIGURED", "The V2 proof context is not available.");
-    const deployment = await readLendingV2Deployment(client, pool, registry, undefined, ROBINHOOD_TESTNET_CHAIN_ID, verifier, oracle);
+    const deployment = await readLendingV2Deployment(client, pool, registry, undefined, ROBINHOOD_TESTNET_CHAIN_ID, verifier, oracle, honkVerifier);
     const credential = await readLendingV2Credential(client, deployment.credentialRegistry, account.address);
     if (credential.state !== "active" || !credential.record) {
       throw new ProtocolError("CREDENTIAL_REQUIRED", "An active policy-3 Project Test Credential from a current authorized issuer is required.");
@@ -182,7 +186,7 @@ export function useLendingMarketV2(): {
     if (!isRobinhoodLendingV2ProofForContext(proof, context)) {
       throw new ProtocolError("INVALID_PROOF", "A locally verified proof for this wallet, policy 3, credential, chain, and V2 pool is required.");
     }
-  }, [account.address, client, oracle, pool, registry, verifier]);
+  }, [account.address, client, honkVerifier, oracle, pool, registry, verifier]);
 
   const refetch = useCallback(async () => {
     await marketQuery.refetch();
@@ -200,11 +204,13 @@ export function useLendingMarketV2(): {
         expectedChainId: ROBINHOOD_TESTNET_CHAIN_ID,
         expectedVerifier: verifier,
         expectedOracle: oracle,
+        expectedHonkVerifier: honkVerifier,
+        expectedAssets: robinhood.configuredAssets,
       }),
       staleTime: 8_000,
     });
     return snapshot.position;
-  }, [client, oracle, pool, queryClient, registry, verifier]);
+  }, [client, honkVerifier, oracle, pool, queryClient, registry, verifier, robinhood.configuredAssets]);
 
   const run = useCallback(async (input: {
     simulate: () => Promise<{ request: WriteRequest }>;
@@ -221,12 +227,17 @@ export function useLendingMarketV2(): {
       phase = "simulating";
       setTransaction({ state: "simulating" });
       const simulation = await input.simulate();
-      const [estimatedGas, fees, nativeBalance] = await Promise.all([
+      const [estimatedGas, nativeBalance] = await Promise.all([
         client.estimateContractGas(simulation.request as never),
-        client.estimateFeesPerGas(),
         client.getBalance({ address: account.address }),
       ]);
-      const maxFeePerGas = fees.maxFeePerGas ?? fees.gasPrice ?? await client.getGasPrice();
+      let maxFeePerGas: bigint;
+      try {
+        const fees = await client.estimateFeesPerGas();
+        maxFeePerGas = fees.maxFeePerGas ?? fees.gasPrice ?? await client.getGasPrice();
+      } catch {
+        maxFeePerGas = await client.getGasPrice();
+      }
       const requiredGasBalance = requiredNativeGasBalance(estimatedGas, maxFeePerGas);
       if (nativeBalance < requiredGasBalance) {
         throw new ProtocolError(
@@ -236,7 +247,7 @@ export function useLendingMarketV2(): {
       }
       phase = "signature";
       setTransaction({ state: "awaiting-signature" });
-      hash = await writer.writeContractAsync(simulation.request);
+      hash = await writer.writeContractAsync({ ...simulation.request, chainId: ROBINHOOD_TESTNET_CHAIN_ID });
       explorerUrl = `${ROBINHOOD_TESTNET_EXPLORER_URL}/tx/${hash}`;
       phase = "submitted";
       setTransaction({ state: "submitted", hash, explorerUrl });
@@ -580,7 +591,7 @@ export function useLendingMarketV2(): {
     failure,
     isSubmitting: transactionPending(transaction.state),
     readAvailable: Boolean(poolValue && deploymentQuery.data && marketQuery.data),
-    writesAvailable: Boolean(poolValue && deploymentQuery.data && marketQuery.data && account.address && account.isRobinhoodTestnet && !transactionPending(transaction.state)),
+    writesAvailable: Boolean(poolValue && !invalidPoolConfig && !missingRequiredConfig && deploymentQuery.data && marketQuery.data && account.address && account.isRobinhoodTestnet && !transactionPending(transaction.state)),
     refetch,
     inspectPosition,
     approveToken,

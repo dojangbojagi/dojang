@@ -174,7 +174,17 @@ export interface LendingUserPosition {
   remainingBorrowCapacity: bigint;
 }
 
-export type GovernanceState = "unconfigured" | "checking" | "ready" | "read-error";
+export type GovernanceState = "unconfigured" | "checking" | "ready" | "no-code" | "dependency-mismatch" | "read-error";
+
+export type GovernanceCredentialState =
+  | "not-applicable"
+  | "missing"
+  | "active"
+  | "expired"
+  | "revoked"
+  | "issuer-untrusted"
+  | "invalid"
+  | "read-error";
 
 export type GovernanceProposalState =
   | "pending"
@@ -213,6 +223,10 @@ export interface GovernanceSnapshot {
   nextProposalId: bigint;
   isVerifiedMember?: boolean;
   protectedActionCount?: bigint;
+  credentialState?: GovernanceCredentialState;
+  credential?: DemoCredentialRecord;
+  credentialPolicyId?: bigint;
+  paused?: boolean;
   proposal?: GovernanceProposal;
 }
 
@@ -221,6 +235,7 @@ export type GovernanceProposalFeedState =
   | "checking"
   | "ready"
   | "no-code"
+  | "dependency-mismatch"
   | "read-error";
 
 export interface GovernanceProposalPage {
@@ -237,7 +252,7 @@ export interface GovernanceProposalPage {
 
 export type GovernanceProposalPageResult =
   | { state: "ready"; page: GovernanceProposalPage }
-  | { state: "no-code" };
+  | { state: "no-code" | "dependency-mismatch" };
 
 export interface GovernanceWriteResult<TResult = undefined> {
   result: TResult;

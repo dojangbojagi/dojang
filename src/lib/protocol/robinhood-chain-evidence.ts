@@ -13,6 +13,7 @@ import {
   controlledTestOracleAbi,
   controlledTokenAbi,
   credentialRegistryAbi,
+  robinhoodGovernanceAbi,
   eligibilityVerifierAdapterAbi,
   lendingPoolV2Abi,
 } from "@/lib/contracts/abis";
@@ -64,6 +65,7 @@ const eventAbiByContract = {
   lendingV2Asset: controlledTokenAbi,
   lendingV2Collateral: controlledTokenAbi,
   lendingV2Pool: lendingPoolV2Abi,
+  governance: robinhoodGovernanceAbi,
 } as const;
 
 function addressUrl(address: Address): string {
@@ -176,7 +178,7 @@ export async function scanRobinhoodProjectEvents(
   if (input.fromBlock < 0n || input.toBlock < input.fromBlock) {
     throw new ProtocolError("RPC_ERROR", "The last block must not be before the first block.");
   }
-  if (input.toBlock - input.fromBlock > MAX_LOG_RANGE) {
+  if (input.toBlock - input.fromBlock + 1n > MAX_LOG_RANGE) {
     throw new ProtocolError("RPC_ERROR", "At most 100,000 blocks may be scanned per request.");
   }
   const latest = await client.getBlockNumber();

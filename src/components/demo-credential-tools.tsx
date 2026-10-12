@@ -8,6 +8,7 @@ import { useDemoCredentialIssuance } from "@/hooks/use-demo-credential-issuance"
 import { useDemoCredentialRevocation } from "@/hooks/use-demo-credential-revocation";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import { projectContracts } from "@/lib/config/contracts";
+import { GIWA_CHAIN_ID } from "@/lib/config/chain";
 import { explainProtocolError } from "@/lib/protocol/errors";
 
 function defaultExpiry() {
@@ -17,7 +18,7 @@ function defaultExpiry() {
 }
 
 export function DemoCredentialTools() {
-  const wallet = useWalletNetwork();
+  const wallet = useWalletNetwork(GIWA_CHAIN_ID);
   const credential = useDemoCredential();
   const issuance = useDemoCredentialIssuance();
   const revocation = useDemoCredentialRevocation();

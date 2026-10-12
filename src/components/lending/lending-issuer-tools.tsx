@@ -7,6 +7,7 @@ import { useLendingCredential, useLendingCredentialIssuance } from "@/hooks/use-
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import { projectContracts } from "@/lib/config/contracts";
 import { LENDING_ELIGIBILITY_THRESHOLD, LENDING_POLICY_ID } from "@/lib/lending/config";
+import { GIWA_CHAIN_ID } from "@/lib/config/chain";
 import type { DemoCredentialWitness } from "@/lib/credential/witness";
 
 function defaultExpiry() {
@@ -21,7 +22,7 @@ function defaultExpiry() {
  * form, decides who may issue.
  */
 export function LendingIssuerTools({ onIssued }: { onIssued: (witness: DemoCredentialWitness) => void }) {
-  const wallet = useWalletNetwork();
+  const wallet = useWalletNetwork(GIWA_CHAIN_ID);
   const credential = useLendingCredential();
   const issuance = useLendingCredentialIssuance();
   const [privateValue, setPrivateValue] = useState("1250");

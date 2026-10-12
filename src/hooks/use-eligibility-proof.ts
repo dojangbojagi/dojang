@@ -8,6 +8,7 @@ import { projectContracts } from "@/lib/config/contracts";
 import { useDemoWitness } from "@/components/witness-context";
 import { generateEligibilityProof, proofContextForCredential } from "@/lib/zk/eligibility-prover";
 import { ProtocolError, type EligibilityProof, type ProofState } from "@/lib/protocol/types";
+import { GIWA_CHAIN_ID } from "@/lib/config/chain";
 
 export function useEligibilityProof(): {
   state: ProofState;
@@ -16,7 +17,7 @@ export function useEligibilityProof(): {
   generateProof: () => Promise<EligibilityProof>;
   error?: string;
 } {
-  const account = useWalletNetwork();
+  const account = useWalletNetwork(GIWA_CHAIN_ID);
   const credential = useDemoCredential();
   const { witness, proof: storedProof, setProof } = useDemoWitness();
   const [isGenerating, setIsGenerating] = useState(false);

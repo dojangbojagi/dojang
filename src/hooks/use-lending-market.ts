@@ -47,7 +47,7 @@ export function useLendingMarket(): {
   borrow: (amount: bigint, proof: EligibilityProof) => Promise<void>;
   repay: (amount: bigint) => Promise<void>;
 } {
-  const account = useWalletNetwork();
+  const account = useWalletNetwork(GIWA_CHAIN_ID);
   const client = usePublicClient({ chainId: GIWA_CHAIN_ID });
   const writer = useWriteContract();
   const credential = useLendingCredential();

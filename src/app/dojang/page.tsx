@@ -10,14 +10,14 @@ import { WalletNetworkCard } from "@/components/wallet-network-card";
 import { useDojangVerification } from "@/hooks/use-dojang-verification";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import { officialDojang } from "@/lib/config/contracts";
-import { GIWA_EXPLORER_URL } from "@/lib/config/chain";
+import { GIWA_CHAIN_ID, GIWA_EXPLORER_URL } from "@/lib/config/chain";
 
 function dateLabel(value: bigint) {
   return value === 0n ? "No expiry" : new Date(Number(value) * 1000).toLocaleString();
 }
 
 export default function DojangPage() {
-  const wallet = useWalletNetwork();
+  const wallet = useWalletNetwork(GIWA_CHAIN_ID);
   const dojang = useDojangVerification(wallet.address);
   const [readRequested, setReadRequested] = useState(false);
 
@@ -32,7 +32,7 @@ export default function DojangPage() {
       lead="Read the connected wallet’s official Dojang Verified Address record on GIWA Sepolia. Issuer-managed demo credentials are a separate path and are never shown as official identity verification."
     >
       <div className="protocol-stack protocol-section">
-        <WalletNetworkCard />
+        <WalletNetworkCard expectedChainId={GIWA_CHAIN_ID} />
         <div className="protocol-grid protocol-grid--even">
           <section className="panel panel--ticks protocol-panel" aria-labelledby="official-dojang-heading">
             <div className="protocol-panel__head">

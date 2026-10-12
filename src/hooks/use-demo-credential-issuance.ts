@@ -13,7 +13,7 @@ import type { DemoCredentialWitness } from "@/lib/credential/witness";
 import { computeEligibilityCommitment, generateFieldSalt } from "@/lib/zk/commitment";
 
 export function useDemoCredentialIssuance() {
-  const account = useWalletNetwork();
+  const account = useWalletNetwork(GIWA_CHAIN_ID);
   const client = usePublicClient({ chainId: GIWA_CHAIN_ID });
   const writer = useWriteContract();
   const [transaction, setTransaction] = useState<TransactionLifecycle>({ state: "idle" });

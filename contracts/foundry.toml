@@ -9,7 +9,10 @@ chain_id = 91342
 optimizer = true
 optimizer_runs = 200
 remappings = ["@openzeppelin/contracts/=../node_modules/@openzeppelin/contracts/"]
-fs_permissions = [{ access = "read", path = "../circuits/testdata" }]
+fs_permissions = [
+    { access = "read", path = "../circuits/testdata" },
+    { access = "read", path = "out" }
+]
 
 [profile.robinhood_testnet]
 src = "src"
@@ -22,7 +25,10 @@ chain_id = 46630
 optimizer = true
 optimizer_runs = 200
 remappings = ["@openzeppelin/contracts/=../node_modules/@openzeppelin/contracts/"]
-fs_permissions = [{ access = "read", path = "../circuits/testdata" }]
+fs_permissions = [
+    { access = "read", path = "../circuits/testdata" },
+    { access = "read", path = "out" }
+]
 
 [fmt]
 line_length = 100

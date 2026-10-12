@@ -22,6 +22,7 @@ export interface LendingV2ContractSet {
   verifierDependencies: readonly (Address | undefined)[];
   configuredAssets: readonly Address[];
   invalidConfigNames: readonly string[];
+  missingRequiredConfigNames: readonly string[];
 }
 
 /** Resolves only addresses explicitly configured for the requested network; it never falls back across chains. */
@@ -39,6 +40,15 @@ export function getLendingV2ContractSet(chainId: number): LendingV2ContractSet |
         (address): address is Address => Boolean(address),
       ),
       invalidConfigNames: invalidRobinhoodContractConfig,
+      missingRequiredConfigNames: Object.entries({
+        lendingV2Pool: robinhoodContracts.lendingV2Pool,
+        credentialRegistry: robinhoodContracts.credentialRegistry,
+        verifierAdapter: robinhoodContracts.verifierAdapter,
+        honkVerifier: robinhoodContracts.honkVerifier,
+        lendingV2Oracle: robinhoodContracts.lendingV2Oracle,
+        lendingV2Asset: robinhoodContracts.lendingV2Asset,
+        lendingV2Collateral: robinhoodContracts.lendingV2Collateral,
+      }).filter(([, address]) => !address).map(([name]) => name),
     };
   }
   if (chainId === GIWA_CHAIN_ID) {
@@ -52,6 +62,7 @@ export function getLendingV2ContractSet(chainId: number): LendingV2ContractSet |
       oracle: undefined,
       configuredAssets: [],
       invalidConfigNames: invalidContractConfig,
+      missingRequiredConfigNames: [],
     };
   }
   return undefined;

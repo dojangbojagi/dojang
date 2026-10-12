@@ -23,7 +23,7 @@ import {
 import type { DemoCredentialWitness } from "@/lib/credential/witness";
 
 export function useLendingCredential(walletOverride?: Address) {
-  const account = useWalletNetwork();
+  const account = useWalletNetwork(GIWA_CHAIN_ID);
   const wallet = walletOverride ?? account.address;
   const registry = projectContracts.credentialRegistry;
   const query = useReadContract({
@@ -87,7 +87,7 @@ export function useLendingCredential(walletOverride?: Address) {
 }
 
 export function useLendingCredentialIssuance() {
-  const account = useWalletNetwork();
+  const account = useWalletNetwork(GIWA_CHAIN_ID);
   const client = usePublicClient({ chainId: GIWA_CHAIN_ID });
   const writer = useWriteContract();
   const [transaction, setTransaction] = useState<TransactionLifecycle>({ state: "idle" });

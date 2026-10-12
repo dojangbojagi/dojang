@@ -5,6 +5,13 @@ import { PROPOSAL_LABEL, Pill } from "@/components/dao/dao-panels";
 import { contentLink, formatDuration, percent, relativeTime, shortAddress, useNowSeconds } from "@/components/dao/format";
 import { useDaoProposalFeed } from "@/hooks/use-dao-proposal-feed";
 import type { GovernanceProposal } from "@/lib/protocol/types";
+import type { ProtocolChainId } from "@/hooks/use-wallet-network";
+import { GIWA_CHAIN_ID } from "@/lib/config/chain";
+import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
+
+function networkName(chainId: ProtocolChainId) {
+  return chainId === ROBINHOOD_TESTNET_CHAIN_ID ? "Robinhood Testnet" : "GIWA Sepolia";
+}
 
 const PAGE_SIZE = 5;
 
@@ -72,18 +79,20 @@ function Card({ proposal, quorum, selected, now, onSelect }: {
   );
 }
 
-function FeedPage({ beforeId, first, last, selectedId, now, onSelect, onMore }: {
+function FeedPage({ beforeId, first, last, selectedId, now, chainId, onSelect, onMore }: {
   beforeId?: bigint; first: boolean; last: boolean; selectedId?: bigint; now: number;
+  chainId: ProtocolChainId;
   onSelect: (p: GovernanceProposal) => void; onMore: (cursor: bigint) => void;
 }) {
-  const feed = useDaoProposalFeed({ beforeId, pageSize: PAGE_SIZE });
+  const feed = useDaoProposalFeed({ beforeId, pageSize: PAGE_SIZE, chainId });
 
-  if (first && feed.state === "unconfigured") return <p className="protocol-empty">Proposals cannot be listed: no governance contract is configured, so there is nothing to read. Nothing is simulated.</p>;
-  if (first && feed.state === "no-code") return <p className="protocol-empty">The configured governance address has no contract code on GIWA Sepolia, so there are no proposals to read.</p>;
+  if (first && feed.state === "unconfigured") return <p className="protocol-empty">Proposals cannot be listed: the {chainId === ROBINHOOD_TESTNET_CHAIN_ID ? "Robinhood governance contract or project credential registry" : "GIWA governance contract"} is not configured, so there is nothing to read. Nothing is simulated.</p>;
+  if (feed.state === "no-code") return <p className="protocol-empty">The configured governance address has no contract code on {networkName(chainId)}, so there are no proposals to read.</p>;
+  if (feed.state === "dependency-mismatch") return <p className="protocol-empty">The configured Robinhood DAO does not point to the configured project credential registry. No proposals are read from this mismatched deployment.</p>;
   if (feed.state === "read-error") {
     return (
       <div className="callout callout--caution" role="alert">
-        <p>The proposal list could not be read from GIWA Sepolia. This is not the same as having no proposals.</p>
+        <p>The proposal list could not be read from {networkName(chainId)}. This is not the same as having no proposals.</p>
         <div className="protocol-actions"><button className="btn btn--secondary btn--sm" type="button" onClick={() => void feed.refetch()}>Try again</button></div>
       </div>
     );
@@ -108,13 +117,13 @@ function FeedPage({ beforeId, first, last, selectedId, now, onSelect, onMore }: 
 }
 
 /** Real proposals read from the contract, newest first, five at a time. The list is never padded or invented. */
-export function ProposalFeed({ selectedId, onSelect }: { selectedId?: bigint; onSelect: (p: GovernanceProposal) => void }) {
+export function ProposalFeed({ selectedId, onSelect, chainId = GIWA_CHAIN_ID }: { selectedId?: bigint; onSelect: (p: GovernanceProposal) => void; chainId?: ProtocolChainId }) {
   const [cursors, setCursors] = useState<(bigint | undefined)[]>([undefined]);
   const now = useNowSeconds();
   return (
     <section className="panel panel--ticks protocol-panel" aria-labelledby="dao-feed-heading">
       <div className="protocol-panel__head"><h2 id="dao-feed-heading">Proposals</h2></div>
-      <p className="protocol-copy">Read directly from the governance contract and refreshed every 15 seconds. Pick one to see its details and act on it.</p>
+      <p className="protocol-copy">Read directly from the {networkName(chainId)} governance contract and refreshed every 15 seconds. Pick one to see its details and act on it.</p>
       {cursors.map((cursor, index) => (
         <FeedPage
           key={cursor?.toString() ?? "first"}
@@ -123,6 +132,7 @@ export function ProposalFeed({ selectedId, onSelect }: { selectedId?: bigint; on
           last={index === cursors.length - 1}
           selectedId={selectedId}
           now={now}
+          chainId={chainId}
           onSelect={onSelect}
           onMore={(next) => setCursors((current) => [...current, next])}
         />

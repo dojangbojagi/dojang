@@ -14,6 +14,7 @@ import { parseDemoCredentialWitness, type DemoCredentialWitness } from "@/lib/cr
 import { LENDING_ELIGIBILITY_THRESHOLD, LENDING_MAX_LTV_BPS, LENDING_POLICY_ID } from "@/lib/lending/config";
 import { explainProtocolError } from "@/lib/protocol/errors";
 import { ProtocolError, type LendingCredentialState, type LendingProofState } from "@/lib/protocol/types";
+import { GIWA_CHAIN_ID } from "@/lib/config/chain";
 
 interface BorrowViewProps {
   market: LendingMarket;
@@ -67,7 +68,7 @@ function Step({ n, title, done, status, children }: { n: number; title: string; 
 
 /** The borrower experience, in the order the pool requires it: credential, proof, collateral, borrow, repay. */
 export function BorrowView({ market, runner, credential, proof, witness, onWitness }: BorrowViewProps) {
-  const wallet = useWalletNetwork();
+  const wallet = useWalletNetwork(GIWA_CHAIN_ID);
   const [importMessage, setImportMessage] = useState("");
   const [proofMessage, setProofMessage] = useState("");
   const { summary, position } = market;

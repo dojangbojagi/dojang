@@ -26,7 +26,7 @@ const TABS: readonly { id: Tab; label: string; note: string }[] = [
  * behind them; this component only arranges them, gates the buttons and reports what happened.
  */
 export function LendingWorkspace() {
-  const wallet = useWalletNetwork();
+  const wallet = useWalletNetwork(GIWA_CHAIN_ID);
   const market = useLendingMarket();
   const credential = useLendingCredential();
   const [witness, setWitness] = useState<DemoCredentialWitness | null>(null);
@@ -100,7 +100,7 @@ export function LendingWorkspace() {
   return (
     <div className="lend">
       <LimitationsNotice />
-      <WalletNetworkCard />
+      <WalletNetworkCard expectedChainId={GIWA_CHAIN_ID} />
       <div className="lend-layout">
         <div className="lend-main">
           <MarketOverview market={market} />

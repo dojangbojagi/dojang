@@ -1,6 +1,7 @@
 import type { useDaoGovernance } from "@/hooks/use-dao-governance";
+import type { useRobinhoodDaoGovernance } from "@/hooks/use-robinhood-dao-governance";
 
-export type Governance = ReturnType<typeof useDaoGovernance>;
+export type Governance = ReturnType<typeof useDaoGovernance> | ReturnType<typeof useRobinhoodDaoGovernance>;
 
 /** Shared by the three write panels: one gate for the whole page and one place that reports the outcome. */
 export interface GovRunner {

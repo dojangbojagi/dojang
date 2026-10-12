@@ -26,6 +26,10 @@ import {
   generateFieldSalt,
 } from "../../src/lib/zk/commitment.ts";
 import { readLendingV2Market } from "../../src/lib/lending/v2-service.ts";
+import {
+  readRobinhoodGovernanceProposalPage,
+  readRobinhoodGovernanceSnapshot,
+} from "../../src/lib/governance/robinhood-service.ts";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const artifactsRoot = path.resolve(root, "contracts/out");
@@ -104,7 +108,8 @@ async function main() {
 
     const accounts = await rpc(rpcUrl, "eth_accounts");
     assert.ok(accounts.length >= 7, "Anvil should expose seven local test accounts.");
-    const [admin, issuer, supplier, borrower, liquidator, liquidationBorrower, staleOracleBorrower] = accounts;
+    assert.ok(accounts.length >= 8, "Anvil should expose eight local test accounts.");
+    const [admin, issuer, supplier, borrower, liquidator, liquidationBorrower, staleOracleBorrower, daoVoter] = accounts;
     const walletFor = (account) => createWalletClient({ account, chain: localChain, transport: http(rpcUrl) });
     const adminWallet = walletFor(admin);
     const issuerWallet = walletFor(issuer);
@@ -456,8 +461,182 @@ async function main() {
     const liquidatedMarket = await readLendingV2Market(publicClient, { pool: lendingPool, wallet: liquidationBorrower, expectedRegistry: registry, expectedChainId: chainId });
     assert.ok(liquidatedMarket.position.byAsset[lendingAsset.toLowerCase()].debt < 900n * loanUnit, "Typed adapter did not refresh liquidation debt.");
 
+    let governanceEvidence;
+    if (chainId === 46_630) {
+      const governanceArtifactPath = "RobinhoodGovernancePhase1.sol/RobinhoodGovernancePhase1.json";
+      const governanceArtifact = await loadArtifact(governanceArtifactPath);
+      const governance = await deploy(governanceArtifactPath, [registry, admin, 3_600, 2, 7 * 24 * 60 * 60, 0]);
+      const governancePolicyId = 4n;
+      const governanceMembers = [borrower, daoVoter];
+      const emptyGovernancePage = await readRobinhoodGovernanceProposalPage(publicClient, governance, registry, { pageSize: 5 });
+      assert.equal(emptyGovernancePage.state, "ready", "Robinhood proposal discovery did not confirm deployed code and registry.");
+      assert.equal(emptyGovernancePage.page.totalProposals, 0n, "Empty Robinhood DAO was reported with a fake proposal count.");
+      assert.equal(emptyGovernancePage.page.proposals.length, 0, "Empty Robinhood DAO returned a fabricated proposal.");
+      const lendingCredentialStatus = await readRobinhoodGovernanceSnapshot(publicClient, governance, registry, borrower);
+      assert.equal(lendingCredentialStatus.state, "ready");
+      assert.equal(lendingCredentialStatus.snapshot.isVerifiedMember, false, "Lending policy 3 incorrectly granted governance membership.");
+      assert.equal(lendingCredentialStatus.snapshot.credentialState, "missing", "DAO discovery did not enforce policy 4.");
+      const credentialExpiry = (await publicClient.getBlock()).timestamp + 10n * 24n * 60n * 60n;
+      assert.equal(await publicClient.readContract({
+        address: governance,
+        abi: governanceArtifact.abi,
+        functionName: "isVerifiedMember",
+        args: [borrower],
+      }), false, "Lending policy 3 must not grant Robinhood DAO membership.");
+
+      const daoReceipts = {};
+      for (const [index, member] of governanceMembers.entries()) {
+        const credentialHash = toHex(BigInt(index + 101), { size: 32 });
+        daoReceipts[`issuePolicy4Credential${index + 1}`] = receiptSummary(await transact(
+          issuerWallet,
+          registry,
+          credentialRegistryAbi,
+          "recordCredential",
+          [member, governancePolicyId, credentialHash, credentialExpiry, 1],
+          publicClient,
+        ));
+        assert.equal(await publicClient.readContract({
+          address: governance,
+          abi: governanceArtifact.abi,
+          functionName: "isVerifiedMember",
+          args: [member],
+        }), true, "Policy-4 issuer credential did not grant DAO membership.");
+      }
+
+      const createTx = await transact(
+        borrowerWallet,
+        governance,
+        governanceArtifact.abi,
+        "createProposal",
+        ["local-e2e://phase1/protected-access-policy", 2 * 24 * 60 * 60],
+        publicClient,
+      );
+      assertEvent(createTx.receipt, governance, governanceArtifact.abi, "ProposalCreated");
+      daoReceipts.createProposal = receiptSummary(createTx);
+      const proposalId = 1n;
+      const timing = await publicClient.readContract({
+        address: governance,
+        abi: governanceArtifact.abi,
+        functionName: "proposalTiming",
+        args: [proposalId],
+      });
+      await expectSimulationFailure(() => publicClient.simulateContract({
+        account: borrower,
+        address: governance,
+        abi: governanceArtifact.abi,
+        functionName: "castVote",
+        args: [proposalId, 1],
+      }), /votingnotstarted/i, "DAO must reject a vote before the proposal's voting start.");
+
+      await rpc(rpcUrl, "evm_increaseTime", [60]);
+      await rpc(rpcUrl, "evm_mine");
+      const firstVote = await transact(borrowerWallet, governance, governanceArtifact.abi,
+        "castVote", [proposalId, 1], publicClient);
+      assertEvent(firstVote.receipt, governance, governanceArtifact.abi, "VoteCast");
+      daoReceipts.firstVote = receiptSummary(firstVote);
+      await expectSimulationFailure(() => publicClient.simulateContract({
+        account: borrower,
+        address: governance,
+        abi: governanceArtifact.abi,
+        functionName: "castVote",
+        args: [proposalId, 0],
+      }), /alreadyvoted/i, "DAO must reject a duplicate vote from the same wallet.");
+      const secondVote = await transact(walletFor(daoVoter), governance, governanceArtifact.abi,
+        "castVote", [proposalId, 1], publicClient);
+      assertEvent(secondVote.receipt, governance, governanceArtifact.abi, "VoteCast");
+      daoReceipts.secondVote = receiptSummary(secondVote);
+
+      const currentBlock = await publicClient.getBlock();
+      const secondsToDeadline = timing[1] > currentBlock.timestamp ? Number(timing[1] - currentBlock.timestamp) : 0;
+      if (secondsToDeadline > 0) await rpc(rpcUrl, "evm_increaseTime", [secondsToDeadline]);
+      await rpc(rpcUrl, "evm_mine");
+      const finalizeTx = await transact(adminWallet, governance, governanceArtifact.abi,
+        "finalizeProposal", [proposalId], publicClient);
+      assertEvent(finalizeTx.receipt, governance, governanceArtifact.abi, "ProposalFinalized");
+      daoReceipts.finalize = receiptSummary(finalizeTx);
+      const executeTx = await transact(adminWallet, governance, governanceArtifact.abi,
+        "executeProposal", [proposalId], publicClient);
+      assertEvent(executeTx.receipt, governance, governanceArtifact.abi, "ProposalExecuted");
+      assertEvent(executeTx.receipt, governance, governanceArtifact.abi, "MinimumRemainingValidityChanged");
+      daoReceipts.execute = receiptSummary(executeTx);
+
+      const finalProposal = await publicClient.readContract({
+        address: governance,
+        abi: governanceArtifact.abi,
+        functionName: "getProposal",
+        args: [proposalId],
+      });
+      const finalState = await publicClient.readContract({
+        address: governance,
+        abi: governanceArtifact.abi,
+        functionName: "proposalState",
+        args: [proposalId],
+      });
+      assert.equal(finalProposal.finalized, true, "DAO proposal did not finalize.");
+      assert.equal(finalProposal.approved, true, "DAO proposal did not meet its configured quorum.");
+      assert.equal(finalProposal.executed, true, "DAO proposal did not execute.");
+      assert.equal(finalState, 6, "DAO proposal did not reach Executed state.");
+      const discoveredPage = await readRobinhoodGovernanceProposalPage(publicClient, governance, registry, { pageSize: 5, wallet: borrower });
+      assert.equal(discoveredPage.state, "ready");
+      assert.equal(discoveredPage.page.totalProposals, 1n, "Proposal discovery did not return the contract's actual proposal count.");
+      assert.equal(discoveredPage.page.proposals.length, 1, "Proposal discovery did not return the actual proposal.");
+      assert.equal(discoveredPage.page.proposals[0].id, proposalId);
+      assert.equal(discoveredPage.page.proposals[0].state, "executed");
+      assert.equal(discoveredPage.page.proposals[0].forVotes, 2n);
+      assert.equal(discoveredPage.page.quorum, 2n);
+      const activeCredentialSnapshot = await readRobinhoodGovernanceSnapshot(publicClient, governance, registry, borrower, proposalId);
+      assert.equal(activeCredentialSnapshot.state, "ready");
+      assert.equal(activeCredentialSnapshot.snapshot.isVerifiedMember, true);
+      assert.equal(activeCredentialSnapshot.snapshot.credentialState, "active", "Current issuer-backed policy-4 credential was not recognized.");
+      assert.equal(activeCredentialSnapshot.snapshot.credential?.issuer.toLowerCase(), issuer.toLowerCase());
+      assert.equal(activeCredentialSnapshot.snapshot.credentialPolicyId, 4n);
+      assert.equal(activeCredentialSnapshot.snapshot.proposal?.id, proposalId);
+      assert.equal(activeCredentialSnapshot.snapshot.paused, false);
+      assert.equal(await publicClient.readContract({
+        address: governance,
+        abi: governanceArtifact.abi,
+        functionName: "minimumRemainingValidity",
+      }), 2n * 24n * 60n * 60n, "DAO Phase 1 bounded action was not applied.");
+      const protectedActionTx = await transact(borrowerWallet, governance, governanceArtifact.abi,
+        "performProtectedAction", [], publicClient);
+      assertEvent(protectedActionTx.receipt, governance, governanceArtifact.abi, "ProtectedActionPerformed");
+      daoReceipts.protectedAction = receiptSummary(protectedActionTx);
+
+      daoReceipts.revokePolicy4Credential = receiptSummary(await transact(
+        issuerWallet, registry, credentialRegistryAbi, "revokeCredential", [borrower, governancePolicyId], publicClient,
+      ));
+      const revokedCredentialSnapshot = await readRobinhoodGovernanceSnapshot(publicClient, governance, registry, borrower);
+      assert.equal(revokedCredentialSnapshot.state, "ready");
+      assert.equal(revokedCredentialSnapshot.snapshot.isVerifiedMember, false, "Revoked project credential still granted DAO membership.");
+      assert.equal(revokedCredentialSnapshot.snapshot.credentialState, "revoked", "DAO read adapter did not identify a revoked policy-4 record.");
+      await rpc(rpcUrl, "evm_increaseTime", [11 * 24 * 60 * 60]);
+      await rpc(rpcUrl, "evm_mine");
+      const expiredCredentialSnapshot = await readRobinhoodGovernanceSnapshot(publicClient, governance, registry, daoVoter);
+      assert.equal(expiredCredentialSnapshot.state, "ready");
+      assert.equal(expiredCredentialSnapshot.snapshot.isVerifiedMember, false, "Expired project credential still granted DAO membership.");
+      assert.equal(expiredCredentialSnapshot.snapshot.credentialState, "expired", "DAO read adapter did not identify an expired policy-4 record.");
+      governanceEvidence = {
+        result: "Robinhood-native DAO Phase 1 local lifecycle passed",
+        chainId,
+        credential: { issuer, policyId: governancePolicyId.toString(), membershipSource: "project-issued registry record" },
+        proposal: {
+          id: proposalId.toString(),
+          finalState: "executed",
+          forVotes: finalProposal.forVotes.toString(),
+          action: "updated only minimumRemainingValidity on the DAO-owned protected action",
+        },
+        duplicateVoteRejected: true,
+        preStartVoteRejected: true,
+        proposalDiscovery: "empty page, proposal ID, lifecycle state, vote totals, and quorum read from local contract",
+        credentialReadback: "active issuer-backed, revoked, and expired policy-4 states confirmed",
+        receipts: daoReceipts,
+      };
+    }
+
     process.stdout.write(JSON.stringify({
-      result: "LendingPoolV2 local Anvil lifecycle passed with real generated proof and on-chain verifier acceptance",
+      result: chainId === 46_630
+        ? "Robinhood local Anvil DAO Phase 1 and Lending V2 lifecycles passed"
+        : "LendingPoolV2 local Anvil lifecycle passed with real generated proof and on-chain verifier acceptance",
       chainId,
       environment: `isolated local Anvil chain ${chainId}; synthetic test prices; no Robinhood Testnet or GIWA Sepolia transactions`,
       addresses: { registry, generatedVerifier, verifierAdapter, testOracle, lendingAsset, collateralAsset, lendingPool },
@@ -481,6 +660,7 @@ async function main() {
         debtAfter: liquidationDebtAfter.toString(),
         collateralReceivedByLiquidator: seizedCollateral.toString(),
       },
+      governance: governanceEvidence,
       typedAdapter: {
         reserveCount: initialMarket.reserves.length,
         riskPaused: initialMarket.riskPaused,
@@ -564,7 +744,8 @@ function describeError(error, depth = 0) {
   const detail = [value.name, value.message, value.shortMessage, data.errorName, data.reason, describeError(value.cause, depth + 1)]
     .filter(Boolean).join(" ");
   const decodedNames = [
-    "WrongPolicy()", "WrongLendingPool()", "CredentialExpired(address)", "StaleOraclePrice(address,uint64,uint64)",
+      "WrongPolicy()", "WrongLendingPool()", "CredentialExpired(address)", "StaleOraclePrice(address,uint64,uint64)",
+      "VotingNotStarted()", "AlreadyVoted()",
   ].filter((signature) => detail.toLowerCase().includes(toFunctionSelector(signature).toLowerCase()))
     .map((signature) => signature.slice(0, signature.indexOf("(")));
   return `${detail} ${decodedNames.join(" ")}`;
@@ -572,39 +753,76 @@ function describeError(error, depth = 0) {
 
 function runFoundryDeploymentSimulation({ rpcUrl, admin, issuer, registry, verifierAdapter, generatedVerifier, chainId }) {
   const robinhood = chainId === 46_630;
-  const script = robinhood
-    ? "script/DeployLendingV2RobinhoodTestnet.s.sol:DeployLendingV2RobinhoodTestnet"
-    : "script/DeployLendingV2GIWASepolia.s.sol:DeployLendingV2GIWASepolia";
-  const result = spawnSync("bash", [
-    "scripts/forge-simulate.sh",
-    script,
-    ...(robinhood ? ["--profile", "robinhood_testnet"] : []),
-    "--rpc-url",
-    rpcUrl,
-  ], {
-    cwd: root,
-    encoding: "utf8",
-    maxBuffer: 16 * 1024 * 1024,
-    env: {
-      ...process.env,
-      ...(robinhood ? {
-        RH_TESTNET_ADMIN_ADDRESS: admin,
-        RH_TESTNET_ISSUER_ADDRESS: issuer,
-        RH_TESTNET_HONK_VERIFIER_ADDRESS: generatedVerifier,
-      } : {
-        GIWA_ADMIN_ADDRESS: admin,
-        GIWA_ISSUER_ADDRESS: issuer,
-        GIWA_CREDENTIAL_REGISTRY_ADDRESS: registry,
-        GIWA_VERIFIER_ADAPTER_ADDRESS: verifierAdapter,
-      }),
-    },
-  });
-  if (result.error) throw result.error;
-  assert.equal(
-    result.status,
-    0,
-    `Foundry local no-broadcast deployment simulation failed:\n${result.stdout}\n${result.stderr}`,
+  const baseEnv = {
+    ...process.env,
+    ...(robinhood ? {
+      RH_TESTNET_ADMIN_ADDRESS: admin,
+      RH_TESTNET_ISSUER_ADDRESS: issuer,
+      RH_TESTNET_HONK_VERIFIER_ADDRESS: generatedVerifier,
+    } : {
+      GIWA_ADMIN_ADDRESS: admin,
+      GIWA_ISSUER_ADDRESS: issuer,
+      GIWA_CREDENTIAL_REGISTRY_ADDRESS: registry,
+      GIWA_VERIFIER_ADAPTER_ADDRESS: verifierAdapter,
+    }),
+  };
+  const simulate = (script, env) => {
+    const result = spawnSync("bash", [
+      "scripts/forge-simulate.sh",
+      script,
+      ...(robinhood ? ["--profile", "robinhood_testnet"] : []),
+      "--rpc-url",
+      rpcUrl,
+    ], {
+      cwd: root,
+      encoding: "utf8",
+      maxBuffer: 16 * 1024 * 1024,
+      env,
+    });
+    if (result.error) throw result.error;
+    assert.equal(
+      result.status,
+      0,
+      `Foundry local no-broadcast deployment simulation failed for ${script}:\n${result.stdout}\n${result.stderr}`,
+    );
+  };
+
+  simulate(
+    robinhood
+      ? "script/DeployLendingV2RobinhoodTestnet.s.sol:DeployLendingV2RobinhoodTestnet"
+      : "script/DeployLendingV2GIWASepolia.s.sol:DeployLendingV2GIWASepolia",
+    baseEnv,
   );
+
+  if (robinhood) {
+    simulate("script/DeployRobinhoodProtocolStack.s.sol:DeployRobinhoodProtocolStack", {
+      ...baseEnv,
+      RH_TESTNET_GOVERNANCE_VOTING_PERIOD: "3600",
+      RH_TESTNET_GOVERNANCE_QUORUM: "2",
+      RH_TESTNET_GOVERNANCE_EXECUTION_WINDOW: String(7 * 24 * 60 * 60),
+      RH_TESTNET_GOVERNANCE_INITIAL_MIN_VALIDITY: "0",
+      RH_TESTNET_LENDING_TOKEN_MINT_CAP: String(1_000_000n * loanUnit),
+      RH_TESTNET_COLLATERAL_TOKEN_MINT_CAP: String(1_000_000n * collateralUnit),
+      RH_TESTNET_LENDING_SUPPLY_CAP: String(100_000n * loanUnit),
+      RH_TESTNET_LENDING_BORROW_CAP: String(50_000n * loanUnit),
+      RH_TESTNET_COLLATERAL_CAP: String(100_000n * collateralUnit),
+      RH_TESTNET_MIN_BORROW_AMOUNT: String(loanUnit),
+      RH_TESTNET_MAX_ORACLE_AGE: "3600",
+      RH_TESTNET_MAX_LTV_BPS: "5000",
+      RH_TESTNET_LIQUIDATION_THRESHOLD_BPS: "6500",
+      RH_TESTNET_LIQUIDATION_BONUS_BPS: "500",
+      RH_TESTNET_CLOSE_FACTOR_BPS: "5000",
+      RH_TESTNET_RESERVE_FACTOR_BPS: "1000",
+      RH_TESTNET_OPTIMAL_UTILIZATION_BPS: "8000",
+      RH_TESTNET_BASE_BORROW_RATE_BPS: "200",
+      RH_TESTNET_SLOPE1_BPS: "400",
+      RH_TESTNET_SLOPE2_BPS: "6000",
+      RH_TESTNET_LENDING_PRICE_MIN_WAD: "950000000000000000",
+      RH_TESTNET_LENDING_PRICE_MAX_WAD: "1050000000000000000",
+      RH_TESTNET_COLLATERAL_PRICE_MIN_WAD: "500000000000000000",
+      RH_TESTNET_COLLATERAL_PRICE_MAX_WAD: "4000000000000000000",
+    });
+  }
 }
 
 main().catch((error) => {

@@ -1,14 +1,17 @@
 # Lending V2 Frontend Integration Handoff
 
-This handoff describes the nonvisual Lending V2 interfaces available to UI components. It does not authorize changes to the V1 Lending path, DAO, protocol contracts, circuits, wallet providers, or security behavior.
+This handoff describes the nonvisual Lending V2 interfaces and the current Robinhood Testnet runtime integration. The active V2 path uses chain 46630; GIWA V1, official Dojang and DAO paths remain separately bound to chain 91342.
 
 ## Deployment and credential status
 
-- Lending V2 is project-owned code, but it is **not deployed** to GIWA Sepolia. The V2 pool, oracle, verifier adapter, and test tokens have only been exercised in local Anvil workflows.
-- GIWA Sepolia is chain `91342`. Configure `NEXT_PUBLIC_LENDING_V2_POOL_CONTRACT` only after a real compatible V2 deployment. The hook checks the network, pool bytecode, policy constants, dependency bytecode, and configured registry before enabling use.
+- Lending V2 is project-owned code. There is no confirmed public Robinhood V2 deployment, and no Robinhood address is currently configured. The RH pool, registry, verifier adapter, oracle, and test tokens have been exercised in local Anvil workflows.
+- Robinhood Chain Testnet is chain `46630`. Configure the pool, registry, verifier adapter, HonkVerifier, oracle and both reserve token outputs only from confirmed Robinhood deployment records. The hook stays unavailable until every required address is present, then checks chain ID, dependency bytecode/links and exact configured reserve addresses before enabling use.
+- GIWA Sepolia is chain `91342` and remains available to the existing V1/official Dojang/DAO flows through its own `projectContracts` mapping. RH hooks never fall back to those addresses.
 - The current policy is policy `3`, version `1`, with threshold `1000`. V1 policy `2` remains separate; a V1 proof cannot authorize a V2 action.
 - The implemented proof path consumes the project's policy-3 credential record and its matching private witness. The UI must call it **Project Test Credential**. It is not an official Dojang credential or proof of an official Dojang balance. Access to official Dojang private balance witnesses remains unavailable/unconfirmed; do not describe this path as official Dojang-backed lending.
-- A proof is locally verified by the existing browser prover and bound to the connected wallet, credential commitment/version/expiry, GIWA chain ID, V2 policy, and exact V2 pool address. The contract remains the final verifier and authorization boundary.
+- A proof is locally verified by the existing browser prover and bound to the connected wallet, credential commitment/version/expiry, RH chain ID, V2 policy, and exact RH pool address. The contract remains the final verifier and authorization boundary.
+
+The Robinhood witness format is `robinhood-demo-credential-v1`; GIWA witness import remains `giwa-demo-credential-v1`. The policy-3 RH proof path does not consume official Dojang state as an authorization credential.
 
 ## Import paths
 
@@ -28,6 +31,13 @@ import {
   lendingV2MarketQueryKey,
 } from "@/lib/lending/v2-config";
 import { mapLendingV2Error } from "@/lib/lending/v2-errors";
+import {
+  robinhoodLendingV2DeploymentQueryKey,
+  robinhoodLendingV2CredentialQueryKey,
+  robinhoodLendingV2QueryKey,
+} from "@/lib/lending/v2-network";
+import { getLendingV2ContractSet } from "@/lib/config/network-registry";
+import { RobinhoodEvidenceLookup } from "@/components/evidence/robinhood-evidence-lookup";
 ```
 
 ## Read service contracts
@@ -40,10 +50,15 @@ readLendingV2Deployment(
   pool: Address,
   expectedRegistry?: Address,
   readAtBlock?: bigint,
+  expectedChainId?: 91342 | 46630,
+  expectedVerifier?: Address,
+  expectedOracle?: Address,
+  expectedHonkVerifier?: Address,
 ): Promise<{
   pool: Address;
   credentialRegistry: Address;
   eligibilityVerifier: Address;
+  honkVerifier: Address;
   oracle: Address;
   policyId: bigint;
   policyVersion: bigint;
@@ -58,7 +73,15 @@ readLendingV2Credential(
 
 readLendingV2Market(
   client: PublicClient,
-  input: { pool: Address; wallet?: Address; expectedRegistry?: Address },
+  input: {
+    pool: Address;
+    wallet?: Address;
+    expectedRegistry?: Address;
+    expectedChainId?: 91342 | 46630;
+    expectedVerifier?: Address;
+    expectedOracle?: Address;
+    expectedHonkVerifier?: Address;
+  },
 ): Promise<LendingV2MarketSnapshot>;
 ```
 
@@ -98,7 +121,7 @@ Returns:
 }
 ```
 
-`state` is `"unconfigured" | "disconnected" | "wrong-network" | "checking" | "unavailable" | "read-error" | "ready"`. `readAvailable` means a compatible deployment snapshot was read. `writesAvailable` additionally requires a connected GIWA Sepolia wallet and compatible deployment. No writes can proceed when the pool is unset or fails deployment checks.
+`state` is `"unconfigured" | "disconnected" | "wrong-network" | "checking" | "unavailable" | "read-error" | "ready"`. `readAvailable` means a compatible deployment snapshot was read. `writesAvailable` additionally requires a connected Robinhood Testnet wallet, compatible deployment and market snapshot, and no pending transaction. No writes can proceed when the RH pool is unset or fails deployment checks.
 
 Proof-required supply, collateral activation, and borrowing require a fresh V2 proof and an active policy-3 credential from a currently authorized issuer. Repayment and safe exit operations do not require a fresh proof. Amounts are raw token units. Approvals are separate wallet transactions.
 
@@ -110,7 +133,7 @@ Returns `{ state, credentialLabel, credential, proof, verificationStatus, error,
 
 - `state`: `"unconfigured" | "disconnected" | "wrong-network" | "checking" | "unavailable" | "read-error" | "credential-required" | "credential-expired" | "credential-revoked" | "credential-not-yet-valid" | "issuer-untrusted" | "witness-required" | "witness-mismatch" | "ready-to-prove" | "generating" | "proof-ready" | "invalid"`.
 - `credentialLabel` is always `"Project Test Credential"`.
-- `proof` is present only after local verification and complete policy-3 / wallet / commitment / expiry / chain / pool context checks.
+- `proof` is present only after local verification and complete policy-3 / wallet / commitment / expiry / chain 46630 / pool context checks.
 - `verificationStatus` is `"not-generated" | "locally-verified"`. This reports local prover verification, not official Dojang verification or on-chain transaction success.
 - `generateProof(witnessOverride?)` returns `Promise<EligibilityProof>` or throws if the credential, witness, wallet, deployment, or proof is invalid.
 - `refetchCredential()` re-reads the current policy-3 registry record.
@@ -129,7 +152,7 @@ issueCredential(input: {
 }): Promise<DemoCredentialWitness>
 ```
 
-It is a **project test credential issuer** path, gated by the configured project registry's on-chain issuer role. It checks deployment, policy threshold, wallet/network, issuer authorization, expiry, and credential readback after the receipt. It must never be represented as official Dojang issuance. The returned witness includes private value and salt and is sensitive.
+It is a **project test credential issuer** path, gated by the configured Robinhood registry's on-chain issuer role. It checks deployment, policy threshold, wallet/network 46630, issuer authorization, expiry, and credential readback after the receipt. It must never be represented as official Dojang issuance. The returned RH witness includes private value and salt and is sensitive.
 
 ## Numeric units and display
 
@@ -142,17 +165,19 @@ It is a **project test credential issuer** path, gated by the configured project
 
 ## Transactions and errors
 
-The existing `TransactionLifecycle` states used by the hook are `idle`, `simulating`, `awaiting-signature`, `submitted`, `confirming`, `confirmed`, `reverted`, `rejected`, and `rpc-error`. A simulation or validation failure is reported before submission with no hash. A wallet rejection is `rejected`. `confirmed` is set only after a successful receipt and operation-specific event/state readback. GIWA transaction explorer links are attached only after a real wallet submission. Confirmed operations invalidate and refresh the market query.
+The existing `TransactionLifecycle` states used by the hook are `idle`, `simulating`, `awaiting-signature`, `submitted`, `confirming`, `confirmed`, `reverted`, `rejected`, and `rpc-error`. A simulation, chain/configuration, gas estimate, or fee-headroom failure is reported before submission with no hash. A wallet rejection is `rejected`. `confirmed` is set only after a successful receipt and operation-specific event/state readback. Robinhood explorer links are attached only after a real wallet submission. Confirmed operations invalidate and refresh the chain-46630 market query. Full repayment requests exact debt-plus-interest allowance headroom; each write also checks estimated gas at the current fee cap with a 20% native-balance margin before asking for a signature.
 
 `LendingV2Failure` is `{ category, code, message }`. Categories are `configuration`, `wallet`, `eligibility`, `oracle`, `cap`, `liquidity`, `health`, `reserve`, `allowance`, `balance`, `liquidation`, `paused`, `rpc`, and `unknown`. `mapLendingV2Error(error: unknown): LendingV2Failure` maps known contract errors and RPC/wallet failures. Preserve the category/state in UI; do not turn failures into success states.
 
 Query key helpers return BigInt-free serializable keys:
 
 ```ts
-lendingV2MarketQueryKey(pool?: Address, wallet?: Address)
-lendingV2DeploymentQueryKey(pool?: Address)
-lendingV2CredentialQueryKey(registry?: Address, wallet?: Address)
+robinhoodLendingV2QueryKey(pool?: Address, wallet?: Address)
+robinhoodLendingV2DeploymentQueryKey(pool?: Address)
+robinhoodLendingV2CredentialQueryKey(registry?: Address, wallet?: Address)
 ```
+
+The original `lendingV2*QueryKey` helpers remain GIWA-keyed for compatibility with existing local/GIWA adapters. The RH hooks use only the `robinhoodLendingV2*` variants.
 
 ## Suggested component integration points
 
@@ -169,4 +194,4 @@ Presentation code should format these values and render states. It must not reco
 
 ## Validation and limitations
 
-The local adapter tests, Foundry V2 tests, ZK conformance checks, and isolated Anvil journey exercise the interfaces against local-only contracts and generated proofs. These results do not establish GIWA Sepolia deployment or user wallet execution. Before enabling testnet UI use, deploy/configure the V2 pool and dependencies, assign project issuer roles, configure reserves/oracle prices, fund demo token liquidity, and set the deployed pool address. Official Dojang private balance witness availability and official Dojang-backed V2 authorization remain unresolved blockers.
+The local adapter tests, Foundry V2 tests, and isolated chain-46630 Anvil journey exercise the interfaces against local-only contracts and genuine generated proofs. These results do not establish public Robinhood deployment or a wallet transaction. Before enabling testnet UI writes, deploy/configure the RH V2 pool and dependencies, assign the project issuer role, configure reserves/oracle prices, fund demo token liquidity, and set the confirmed RH output addresses. Official Dojang private balance witness availability and official Dojang-backed V2 authorization remain unavailable; Robinhood V2 uses only a BOJOGAY project credential.

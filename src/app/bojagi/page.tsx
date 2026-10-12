@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ProofGenerationPanel } from "@/components/proof-generation-panel";
 import { ProtocolPage } from "@/components/protocol-page";
 import { WalletNetworkCard } from "@/components/wallet-network-card";
+import { GIWA_CHAIN_ID } from "@/lib/config/chain";
 
 export default function BojagiPage() {
   return (
@@ -15,7 +16,7 @@ export default function BojagiPage() {
       lead="Your device checks the issuer-backed witness against the current on-chain commitment, then proves that it meets the policy. The exact value stays hidden; the wallet and proof remain public."
     >
       <div className="protocol-stack protocol-section">
-        <WalletNetworkCard />
+        <WalletNetworkCard expectedChainId={GIWA_CHAIN_ID} />
         <div className="protocol-grid protocol-grid--stretch">
           <ProofGenerationPanel />
           <section className="panel panel--ticks protocol-panel" aria-labelledby="cloth-heading">

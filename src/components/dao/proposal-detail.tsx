@@ -6,6 +6,13 @@ import { ContentReference, VoteBar } from "@/components/dao/proposal-feed";
 import type { GovRunner, Governance } from "@/components/dao/types";
 import { useDaoProposalFeed } from "@/hooks/use-dao-proposal-feed";
 import type { GovernanceProposal, GovernanceVoteType } from "@/lib/protocol/types";
+import type { ProtocolChainId } from "@/hooks/use-wallet-network";
+import { GIWA_CHAIN_ID } from "@/lib/config/chain";
+import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
+
+function networkName(chainId: ProtocolChainId) {
+  return chainId === ROBINHOOD_TESTNET_CHAIN_ID ? "Robinhood Testnet" : "GIWA Sepolia";
+}
 
 const VOTES: readonly { vote: GovernanceVoteType; label: string; tone: "primary" | "secondary" }[] = [
   { vote: "for", label: "Vote For", tone: "primary" },
@@ -47,12 +54,10 @@ function Outcome({ proposal, current, quorum }: { proposal: GovernanceProposal; 
 }
 
 /**
- * One proposal, read fresh from the contract through the feed interface (an exclusive `beforeId` one above the ID,
- * a page of one). useDaoGovernance(id) is deliberately not used: it puts the bigint ID straight into its query key,
- * which React Query cannot hash, and that crashes the page.
+ * One proposal is refreshed from the selected governance contract through a one-item page read.
  */
-export function ProposalDetail({ gov, runner, selectedId, fallback }: {
-  gov: Governance; runner: GovRunner; selectedId?: bigint; fallback?: GovernanceProposal;
+export function ProposalDetail({ gov, runner, selectedId, fallback, chainId = GIWA_CHAIN_ID }: {
+  gov: Governance; runner: GovRunner; selectedId?: bigint; fallback?: GovernanceProposal; chainId?: ProtocolChainId;
 }) {
   if (selectedId === undefined) {
     return (
@@ -63,14 +68,14 @@ export function ProposalDetail({ gov, runner, selectedId, fallback }: {
       </section>
     );
   }
-  return <SelectedProposal key={selectedId.toString()} gov={gov} runner={runner} selectedId={selectedId} fallback={fallback} />;
+  return <SelectedProposal key={selectedId.toString()} gov={gov} runner={runner} selectedId={selectedId} fallback={fallback} chainId={chainId} />;
 }
 
-function SelectedProposal({ gov, runner, selectedId, fallback }: {
-  gov: Governance; runner: GovRunner; selectedId: bigint; fallback?: GovernanceProposal;
+function SelectedProposal({ gov, runner, selectedId, fallback, chainId }: {
+  gov: Governance; runner: GovRunner; selectedId: bigint; fallback?: GovernanceProposal; chainId: ProtocolChainId;
 }) {
   const now = useNowSeconds(5_000);
-  const one = useDaoProposalFeed({ beforeId: selectedId + 1n, pageSize: 1 });
+  const one = useDaoProposalFeed({ beforeId: selectedId + 1n, pageSize: 1, chainId });
   const fresh = one.proposals[0]?.id === selectedId ? one.proposals[0] : undefined;
   const proposal = fresh ?? (fallback && fallback.id === selectedId ? fallback : undefined);
   const snap = gov.snapshot;
@@ -80,7 +85,7 @@ function SelectedProposal({ gov, runner, selectedId, fallback }: {
       <section className="panel panel--ticks protocol-panel" aria-labelledby="dao-detail-heading">
         <div className="protocol-panel__head"><h2 id="dao-detail-heading">Proposal #{selectedId.toString()}</h2></div>
         {one.state === "read-error"
-          ? <p className="callout callout--caution" role="alert">This proposal could not be read from GIWA Sepolia. Try again in a moment.</p>
+          ? <p className="callout callout--caution" role="alert">This proposal could not be read from {networkName(chainId)}. Try again in a moment.</p>
           : <p className="protocol-empty" role="status">Reading this proposal from the chain…</p>}
         <LifecycleStrip />
       </section>
@@ -103,12 +108,13 @@ function SelectedProposal({ gov, runner, selectedId, fallback }: {
     : proposal.state === "pending" || proposal.state === "active" ? `Finalization opens after the voting deadline (${relativeTime(proposal.deadline, now)}).`
     : runner.block;
 
-  const canExecute = proposal.finalized && proposal.state === "succeeded";
+  const canExecute = proposal.finalized && proposal.state === "succeeded" && gov.snapshot?.paused !== true;
   const executeReason =
     proposal.state === "executed" ? "Already executed."
     : proposal.state === "rejected" ? "A rejected proposal cannot be executed."
     : proposal.state === "expired" ? "The execution window has closed."
     : !proposal.finalized ? "Finalize the proposal first."
+    : gov.snapshot?.paused ? "The Robinhood DAO is paused; execution is unavailable until it is unpaused."
     : runner.block;
 
   return (

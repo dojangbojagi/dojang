@@ -37,7 +37,7 @@ export function useLendingEligibilityProof(witness?: DemoCredentialWitness): {
   error?: string;
   generateProof: (witnessOverride?: DemoCredentialWitness) => Promise<EligibilityProof>;
 } {
-  const account = useWalletNetwork();
+  const account = useWalletNetwork(GIWA_CHAIN_ID);
   const credential = useLendingCredential();
   const [storedProof, setStoredProof] = useState<EligibilityProof>();
   const [generatedForWitness, setGeneratedForWitness] = useState<DemoCredentialWitness>();

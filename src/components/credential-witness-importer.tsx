@@ -7,9 +7,10 @@ import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import { parseDemoCredentialWitness } from "@/lib/credential/witness";
 import { explainProtocolError } from "@/lib/protocol/errors";
 import { StateChip } from "@/components/protocol-state";
+import { GIWA_CHAIN_ID } from "@/lib/config/chain";
 
 export function CredentialWitnessImporter() {
-  const wallet = useWalletNetwork();
+  const wallet = useWalletNetwork(GIWA_CHAIN_ID);
   const credential = useDemoCredential();
   const { witness, setWitness } = useDemoWitness();
   const [message, setMessage] = useState("");

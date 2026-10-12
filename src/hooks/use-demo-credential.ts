@@ -12,7 +12,7 @@ export const DEMO_POLICY_ID = BigInt(1);
 export const DEMO_POLICY_THRESHOLD = BigInt(1_000);
 
 export function useDemoCredential(walletOverride?: `0x${string}`) {
-  const account = useWalletNetwork();
+  const account = useWalletNetwork(GIWA_CHAIN_ID);
   const wallet = walletOverride ?? account.address;
   const address = projectContracts.credentialRegistry;
   const query = useReadContract({

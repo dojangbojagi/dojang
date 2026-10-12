@@ -39,6 +39,7 @@ export const robinhoodContracts = {
   lendingV2Asset: checkedAddress(appEnv.robinhoodContracts.lendingV2Asset),
   lendingV2Collateral: checkedAddress(appEnv.robinhoodContracts.lendingV2Collateral),
   lendingV2Pool: checkedAddress(appEnv.robinhoodContracts.lendingV2Pool),
+  governance: checkedAddress(appEnv.robinhoodContracts.governance),
 } as const;
 
 export const invalidContractConfig = Object.entries(appEnv.contracts)

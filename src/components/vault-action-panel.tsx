@@ -7,11 +7,12 @@ import { useEligibilityProof } from "@/hooks/use-eligibility-proof";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import { explainProtocolError } from "@/lib/protocol/errors";
 import { StateChip, TransactionSummary } from "@/components/protocol-state";
+import { GIWA_CHAIN_ID } from "@/lib/config/chain";
 
 export function VaultActionPanel() {
   const vault = useVaultAccess();
   const proof = useEligibilityProof();
-  const wallet = useWalletNetwork();
+  const wallet = useWalletNetwork(GIWA_CHAIN_ID);
   const [error, setError] = useState("");
 
   async function enter() {

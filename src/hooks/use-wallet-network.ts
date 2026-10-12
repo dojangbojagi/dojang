@@ -7,7 +7,7 @@ import type { WalletState } from "@/lib/protocol/types";
 
 export type ProtocolChainId = typeof GIWA_CHAIN_ID | typeof ROBINHOOD_TESTNET_CHAIN_ID;
 
-export function useWalletNetwork(expectedChainId: ProtocolChainId = GIWA_CHAIN_ID) {
+export function useWalletNetwork(expectedChainId: ProtocolChainId = ROBINHOOD_TESTNET_CHAIN_ID) {
   const account = useAccount();
   const switchChain = useSwitchChain();
   const state: WalletState = !account.isConnected

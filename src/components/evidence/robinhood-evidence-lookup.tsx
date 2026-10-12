@@ -23,6 +23,7 @@ const CONTRACT_LABELS: Record<RobinhoodCodeEvidence["name"], string> = {
   lendingV2Asset: "rUSD2 test token",
   lendingV2Collateral: "rCOL2 test token",
   lendingV2Pool: "LendingPoolV2",
+  governance: "RobinhoodGovernancePhase1",
 };
 
 function describeError(error: unknown): string {
@@ -65,7 +66,7 @@ export function RobinhoodEvidenceLookup() {
   const rangeError = from === "" && to === "" ? undefined
     : fromBlock === undefined || toBlock === undefined ? "Enter both block numbers as whole numbers."
     : toBlock < fromBlock ? "The last block must not be before the first."
-    : toBlock - fromBlock > 100_000n ? "At most 100,000 blocks may be scanned per request."
+    : toBlock - fromBlock + 1n > 100_000n ? "At most 100,000 blocks may be scanned per request."
     : undefined;
 
   async function inspectCode() {

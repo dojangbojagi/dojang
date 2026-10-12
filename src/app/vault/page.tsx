@@ -1,6 +1,7 @@
 import { PageGlyphFigure } from "@/components/page-glyph";
 import { VaultActionPanel } from "@/components/vault-action-panel";
 import { WalletNetworkCard } from "@/components/wallet-network-card";
+import { GIWA_CHAIN_ID } from "@/lib/config/chain";
 
 export default function VaultPage() {
   return (
@@ -11,7 +12,7 @@ export default function VaultPage() {
         <h1>Proof-gated access</h1>
         <p className="page-lead">The Vault is an on-chain access gate, not a deposit product. Access should change only after the contract verifies an eligibility proof.</p>
       </header>
-      <WalletNetworkCard />
+      <WalletNetworkCard expectedChainId={GIWA_CHAIN_ID} />
       <VaultActionPanel />
     </main>
   );

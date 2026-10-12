@@ -30,7 +30,9 @@ export function useLendingV2CredentialIssuance(): {
   const pool = robinhood.pool;
   const configuredRegistry = robinhood.credentialRegistry;
   const verifier = robinhood.verifierAdapter;
+  const honkVerifier = robinhood.verifierDependencies[2];
   const oracle = robinhood.oracle;
+  const incompleteRobinhoodConfig = robinhood.invalidConfigNames.length > 0 || robinhood.missingRequiredConfigNames.length > 0;
   const [transaction, setTransaction] = useState<TransactionLifecycle>({ state: "idle" });
 
   const issueCredential = useCallback(async (input: {
@@ -44,8 +46,8 @@ export function useLendingV2CredentialIssuance(): {
       setTransaction({ state: "simulating" });
       if (!account.address) throw new ProtocolError("WALLET_REQUIRED", "Connect the authorized project issuer wallet first.");
       if (!account.isRobinhoodTestnet) throw new ProtocolError("WRONG_NETWORK", "Switch the issuer wallet to Robinhood Chain Testnet.");
-      if (!client || !pool || !configuredRegistry) {
-        throw new ProtocolError("LENDING_NOT_CONFIGURED", "Configure a compatible V2 pool and its project credential registry first.");
+      if (!client || !pool || !configuredRegistry || incompleteRobinhoodConfig) {
+        throw new ProtocolError("LENDING_NOT_CONFIGURED", "Configure the confirmed Robinhood V2 pool and all required project dependency addresses first.");
       }
       if (!/^(0|[1-9][0-9]*)$/.test(input.privateValue)) {
         throw new ProtocolError("INVALID_CREDENTIAL", "The private eligibility value must be an unsigned decimal integer.");
@@ -57,7 +59,7 @@ export function useLendingV2CredentialIssuance(): {
       if (input.expiresAt <= now || input.expiresAt > (1n << 64n) - 1n || !Number.isSafeInteger(Number(input.expiresAt))) {
         throw new ProtocolError("INVALID_CREDENTIAL", "Expiry must be a future uint64 timestamp representable by the witness format.");
       }
-      const deployment = await readLendingV2Deployment(client, pool, configuredRegistry, undefined, ROBINHOOD_TESTNET_CHAIN_ID, verifier, oracle);
+      const deployment = await readLendingV2Deployment(client, pool, configuredRegistry, undefined, ROBINHOOD_TESTNET_CHAIN_ID, verifier, oracle, honkVerifier);
       const [role, current] = await Promise.all([
         client.readContract({ address: deployment.credentialRegistry, abi: credentialIssuerRoleAbi, functionName: "ISSUER_ROLE" }),
         client.readContract({ address: deployment.credentialRegistry, abi: credentialRegistryAbi, functionName: "getCredential", args: [input.wallet, LENDING_V2_POLICY_ID] }),
@@ -94,7 +96,10 @@ export function useLendingV2CredentialIssuance(): {
         args: [input.wallet, LENDING_V2_POLICY_ID, commitment, input.expiresAt, version],
       });
       setTransaction({ state: "awaiting-signature" });
-      hash = await writer.writeContractAsync(simulation.request as Parameters<typeof writer.writeContractAsync>[0]);
+      hash = await writer.writeContractAsync({
+        ...simulation.request,
+        chainId: ROBINHOOD_TESTNET_CHAIN_ID,
+      } as Parameters<typeof writer.writeContractAsync>[0]);
       explorerUrl = `${ROBINHOOD_TESTNET_EXPLORER_URL}/tx/${hash}`;
       setTransaction({ state: "submitted", hash, explorerUrl });
       setTransaction({ state: "confirming", hash, explorerUrl });
@@ -140,7 +145,7 @@ export function useLendingV2CredentialIssuance(): {
       setTransaction({ state: rejected ? "rejected" : hash ? "rpc-error" : "rpc-error", hash, explorerUrl, error: failure.message });
       throw error instanceof ProtocolError ? error : new ProtocolError("RPC_ERROR", failure.message, error);
     }
-  }, [account.address, account.isRobinhoodTestnet, client, configuredRegistry, oracle, pool, queryClient, verifier, writer]);
+  }, [account.address, account.isRobinhoodTestnet, client, configuredRegistry, honkVerifier, incompleteRobinhoodConfig, oracle, pool, queryClient, verifier, writer]);
 
   return {
     credentialLabel: "Project Test Credential",

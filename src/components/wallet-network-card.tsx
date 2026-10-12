@@ -4,9 +4,10 @@ import { WalletControl } from "@/components/wallet-control";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import type { ProtocolChainId } from "@/hooks/use-wallet-network";
 import { GIWA_CHAIN_ID } from "@/lib/config/chain";
+import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
 import { StateChip } from "@/components/protocol-state";
 
-export function WalletNetworkCard({ expectedChainId = GIWA_CHAIN_ID }: { expectedChainId?: ProtocolChainId }) {
+export function WalletNetworkCard({ expectedChainId = ROBINHOOD_TESTNET_CHAIN_ID }: { expectedChainId?: ProtocolChainId }) {
   const wallet = useWalletNetwork(expectedChainId);
   const expectedName = expectedChainId === GIWA_CHAIN_ID ? "GIWA Sepolia" : "Robinhood Chain Testnet";
   return (

@@ -9,12 +9,14 @@ import { explainGovernanceFailure } from "@/components/dao/errors";
 import { ProposalDetail } from "@/components/dao/proposal-detail";
 import { ProposalFeed } from "@/components/dao/proposal-feed";
 import type { GovRunner } from "@/components/dao/types";
-import { useProjectEvidence } from "@/components/evidence/use-project-evidence";
 import { TransactionPanel, type EvidenceEntry } from "@/components/lending/lending-panels";
 import { WalletNetworkCard } from "@/components/wallet-network-card";
 import { useDaoGovernance } from "@/hooks/use-dao-governance";
+import { useRobinhoodDaoGovernance } from "@/hooks/use-robinhood-dao-governance";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import { GIWA_CHAIN_ID } from "@/lib/config/chain";
+import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
+import type { ProtocolChainId } from "@/hooks/use-wallet-network";
 import type { GovernanceProposal } from "@/lib/protocol/types";
 
 /**
@@ -22,18 +24,29 @@ import type { GovernanceProposal } from "@/lib/protocol/types";
  * them; this component arranges them, gates the buttons from what the hooks report and shows what happened.
  */
 export function DaoWorkspace() {
-  const wallet = useWalletNetwork();
-  const evidence = useProjectEvidence();
+  const observedWallet = useWalletNetwork(GIWA_CHAIN_ID);
+  const [selectedChainId, setSelectedChainId] = useState<ProtocolChainId>(GIWA_CHAIN_ID);
   const [selectedId, setSelectedId] = useState<bigint | undefined>();
   const [fallback, setFallback] = useState<GovernanceProposal | undefined>(); /* the list's copy, shown while the detail is read */
+  useEffect(() => {
+    if (observedWallet.chainId === GIWA_CHAIN_ID || observedWallet.chainId === ROBINHOOD_TESTNET_CHAIN_ID) {
+      setSelectedChainId(observedWallet.chainId);
+      setSelectedId(undefined);
+      setFallback(undefined);
+    }
+  }, [observedWallet.chainId]);
+
+  const wallet = useWalletNetwork(selectedChainId);
   /* No proposal ID is passed to the hook: it would go into the hook's query key as a bigint, which cannot be hashed.
      One proposal is read through the feed interface instead (see ProposalDetail). */
-  const gov = useDaoGovernance();
+  const giwaGovernance = useDaoGovernance(undefined, selectedChainId === GIWA_CHAIN_ID);
+  const robinhoodGovernance = useRobinhoodDaoGovernance(selectedChainId === ROBINHOOD_TESTNET_CHAIN_ID);
+  const gov = selectedChainId === GIWA_CHAIN_ID ? giwaGovernance : robinhoodGovernance;
   const queryClient = useQueryClient();
   const gas = useBalance({
     address: wallet.address,
-    chainId: GIWA_CHAIN_ID,
-    query: { enabled: Boolean(wallet.address && wallet.isGiwaSepolia) },
+    chainId: selectedChainId,
+    query: { enabled: Boolean(wallet.address && wallet.isOnExpectedNetwork) },
   });
 
   const [action, setAction] = useState("");
@@ -52,21 +65,25 @@ export function DaoWorkspace() {
   }, [tx.state, tx.hash, tx.explorerUrl]);
 
   const gasBalance = gas.data?.value;
-  const codeState = evidence.contract("daoGovernance")?.codeState;
-
   let block: string | null = null;
-  if (gov.state === "unconfigured") block = "The DAO governance contract is not configured, so nothing can be submitted.";
-  else if (codeState === "no-code") block = "There is no contract code at the configured governance address.";
+  if (gov.state === "unconfigured") block = selectedChainId === ROBINHOOD_TESTNET_CHAIN_ID
+    ? "The Robinhood DAO or project credential registry is not configured, so nothing can be submitted."
+    : "The GIWA DAO governance contract is not configured, so nothing can be submitted.";
+  else if (gov.state === "no-code") block = `There is no contract code at the configured ${selectedChainId === ROBINHOOD_TESTNET_CHAIN_ID ? "Robinhood" : "GIWA"} governance address.`;
+  else if (gov.state === "dependency-mismatch") block = "The Robinhood DAO credential registry is missing or does not match its configured address.";
   else if (!wallet.address) block = "Connect a wallet first.";
-  else if (!wallet.isGiwaSepolia) block = "Switch to GIWA Sepolia first.";
+  else if (!wallet.isOnExpectedNetwork) block = `Switch to ${selectedChainId === ROBINHOOD_TESTNET_CHAIN_ID ? "Robinhood Chain Testnet" : "GIWA Sepolia"} first.`;
   else if (gov.state === "checking") block = "Reading the governance contract…";
   else if (gov.state === "read-error") block = "The governance contract could not be read. Refresh and try again.";
   else if (gov.isSubmitting) block = "A transaction is already in progress.";
-  else if (gasBalance === 0n) block = "This wallet has no GIWA Sepolia ETH to pay the network fee.";
+  else if (gasBalance === 0n) block = `This wallet has no ${selectedChainId === ROBINHOOD_TESTNET_CHAIN_ID ? "Robinhood Testnet" : "GIWA Sepolia"} ETH to pay the network fee.`;
 
   const memberBlock =
-    gov.isVerifiedMember === false ? "This wallet is not an official Dojang-verified member, so it cannot create proposals or vote."
-    : gov.isVerifiedMember === undefined ? "Checking whether this wallet is a member…"
+    gov.isVerifiedMember === false ? selectedChainId === ROBINHOOD_TESTNET_CHAIN_ID
+      ? "This wallet does not have a current project-issued policy-4 DAO credential, so it cannot create proposals or vote. This is not official Dojang verification."
+      : "This wallet is not an official Dojang-verified member, so it cannot create proposals or vote."
+    : selectedChainId === ROBINHOOD_TESTNET_CHAIN_ID && gov.snapshot?.paused ? "The Robinhood DAO is paused. Member-only actions are temporarily unavailable."
+    : gov.isVerifiedMember === undefined ? `Checking ${selectedChainId === ROBINHOOD_TESTNET_CHAIN_ID ? "project credential" : "Dojang membership"} with the governance contract…`
     : null;
 
   const runner: GovRunner = {
@@ -86,7 +103,7 @@ export function DaoWorkspace() {
         setBanner({ tone: "ok", text: success });
         return true;
       } catch (error) {
-        setBanner({ tone: "error", text: explainGovernanceFailure(error) });
+        setBanner({ tone: "error", text: explainGovernanceFailure(error, selectedChainId) });
         return false;
       }
     },
@@ -101,17 +118,22 @@ export function DaoWorkspace() {
 
   return (
     <div className="lend dao">
-      <GovernanceNotice />
-      <WalletNetworkCard />
+      <GovernanceNotice chainId={selectedChainId} />
+      <div className="protocol-actions" role="group" aria-label="Governance network">
+        <span className="small muted">Governance network</span>
+        <button className={`btn btn--${selectedChainId === GIWA_CHAIN_ID ? "primary" : "secondary"} btn--sm`} type="button" aria-pressed={selectedChainId === GIWA_CHAIN_ID} onClick={() => { setSelectedChainId(GIWA_CHAIN_ID); setSelectedId(undefined); setFallback(undefined); }}>GIWA Sepolia · official Dojang</button>
+        <button className={`btn btn--${selectedChainId === ROBINHOOD_TESTNET_CHAIN_ID ? "primary" : "secondary"} btn--sm`} type="button" aria-pressed={selectedChainId === ROBINHOOD_TESTNET_CHAIN_ID} onClick={() => { setSelectedChainId(ROBINHOOD_TESTNET_CHAIN_ID); setSelectedId(undefined); setFallback(undefined); }}>Robinhood Testnet · project credential</button>
+      </div>
+      <WalletNetworkCard expectedChainId={selectedChainId} />
       <div className="dao-banner-slot" aria-live="polite">
         {banner && <p className={`callout ${banner.tone === "ok" ? "callout--demo" : "callout--caution"} lend-banner`} role={banner.tone === "error" ? "alert" : "status"}>{banner.text}</p>}
       </div>
       <div className="lend-layout">
         <div className="lend-main">
-          <GovernanceOverview gov={gov} runner={runner} gasBalance={gasBalance} />
-          <ProposalFeed selectedId={selectedId} onSelect={select} />
+          <GovernanceOverview gov={gov} runner={runner} gasBalance={gasBalance} chainId={selectedChainId} />
+          <ProposalFeed key={selectedChainId} selectedId={selectedId} onSelect={select} chainId={selectedChainId} />
           <div ref={detailRef} className="dao-anchor">
-            <ProposalDetail gov={gov} runner={runner} selectedId={selectedId} fallback={fallback} />
+            <ProposalDetail gov={gov} runner={runner} selectedId={selectedId} fallback={fallback} chainId={selectedChainId} />
           </div>
           <CreateProposal gov={gov} runner={runner} onCreated={(id) => { setSelectedId(id); setFallback(undefined); }} />
         </div>
@@ -119,7 +141,7 @@ export function DaoWorkspace() {
         <aside className="lend-side" aria-label="Transaction status">
           <TransactionPanel transaction={gov.transaction} action={action} evidence={confirmed} />
           <div className="protocol-actions">
-            <button className="btn btn--secondary btn--sm" type="button" onClick={() => void Promise.all([gov.refetch(), queryClient.invalidateQueries({ queryKey: ["dao-proposal-feed"] }), queryClient.invalidateQueries({ queryKey: ["project-evidence"] })])} disabled={gov.state === "unconfigured"}>Refresh governance</button>
+            <button className="btn btn--secondary btn--sm" type="button" onClick={() => void Promise.all([gov.refetch(), queryClient.invalidateQueries({ queryKey: ["dao-proposal-feed", selectedChainId] }), ...(selectedChainId === GIWA_CHAIN_ID ? [queryClient.invalidateQueries({ queryKey: ["project-evidence"] })] : [])])} disabled={gov.state === "unconfigured"}>Refresh governance</button>
           </div>
         </aside>
       </div>

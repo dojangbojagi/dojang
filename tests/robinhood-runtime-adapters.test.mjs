@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { inspectRobinhoodContracts, readRobinhoodTransactionEvidence, scanRobinhoodProjectEvents } from "../src/lib/protocol/robinhood-chain-evidence.ts";
 import { robinhoodContracts } from "../src/lib/config/contracts.ts";
 import { requiredNativeGasBalance, repayAllowanceHeadroom } from "../src/lib/lending/v2-transaction-safety.ts";
+import { readLendingV2Deployment, readLendingV2Market, LendingV2UnavailableError, LendingV2WrongNetworkError } from "../src/lib/lending/v2-service.ts";
 
 const hash = `0x${"12".repeat(32)}`;
 const address = "0x000000000000000000000000000000000000abcd";
@@ -73,6 +74,92 @@ describe("Robinhood runtime evidence and transaction safety", () => {
 
     const rpcFailure = { ...client, getBlockNumber: async () => { throw new Error("RPC rate limited"); } };
     await expect(scanRobinhoodProjectEvents(rpcFailure, { fromBlock: 0n, toBlock: 1n })).rejects.toThrow("RPC rate limited");
+  });
+
+  test("deployment reads reject wrong chains and missing RH bytecode before ABI reads", async () => {
+    const pool = "0x000000000000000000000000000000000000beef";
+    const wrongChain = {
+      getBlock: async () => ({ number: 10n }),
+      getChainId: async () => 91_342,
+      getCode: async () => { throw new Error("must not read bytecode on the wrong chain"); },
+    };
+    await expect(readLendingV2Deployment(wrongChain, pool, undefined, undefined, 46_630)).rejects.toBeInstanceOf(LendingV2WrongNetworkError);
+
+    const noCode = {
+      getBlock: async () => ({ number: 10n }),
+      getChainId: async () => 46_630,
+      getCode: async () => "0x",
+    };
+    await expect(readLendingV2Deployment(noCode, pool, undefined, undefined, 46_630)).rejects.toBeInstanceOf(LendingV2UnavailableError);
+  });
+
+  test("deployment reads verify the adapter's configured HonkVerifier dependency", async () => {
+    const pool = "0x000000000000000000000000000000000000beef";
+    const registry = "0x000000000000000000000000000000000000c001";
+    const adapter = "0x000000000000000000000000000000000000c002";
+    const oracle = "0x000000000000000000000000000000000000c003";
+    const honkVerifier = "0x000000000000000000000000000000000000c004";
+    const client = {
+      getBlock: async () => ({ number: 10n }),
+      getChainId: async () => 46_630,
+      getCode: async () => "0x6000",
+      readContract: async ({ functionName }) => ({
+        POLICY_ID: 3n,
+        POLICY_VERSION: 1n,
+        ELIGIBILITY_THRESHOLD: 1_000n,
+        credentialRegistry: registry,
+        eligibilityVerifier: adapter,
+        priceOracle: oracle,
+        honkVerifier,
+      })[functionName],
+    };
+    const deployment = await readLendingV2Deployment(client, pool, registry, undefined, 46_630, adapter, oracle, honkVerifier);
+    expect(deployment.honkVerifier).toBe(honkVerifier);
+    await expect(readLendingV2Deployment(
+      client,
+      pool,
+      registry,
+      undefined,
+      46_630,
+      adapter,
+      oracle,
+      "0x000000000000000000000000000000000000c005",
+    )).rejects.toThrow("does not link to the configured HonkVerifier");
+  });
+
+  test("market reads reject reserve addresses that differ from configured Robinhood assets", async () => {
+    const pool = "0x000000000000000000000000000000000000beef";
+    const registry = "0x000000000000000000000000000000000000c001";
+    const adapter = "0x000000000000000000000000000000000000c002";
+    const oracle = "0x000000000000000000000000000000000000c003";
+    const honkVerifier = "0x000000000000000000000000000000000000c004";
+    const actualAsset = "0x000000000000000000000000000000000000c005";
+    const client = {
+      getBlock: async () => ({ number: 10n }),
+      getChainId: async () => 46_630,
+      getCode: async () => "0x6000",
+      readContract: async ({ functionName }) => ({
+        POLICY_ID: 3n,
+        POLICY_VERSION: 1n,
+        ELIGIBILITY_THRESHOLD: 1_000n,
+        credentialRegistry: registry,
+        eligibilityVerifier: adapter,
+        priceOracle: oracle,
+        honkVerifier,
+        getReserveAssets: [actualAsset],
+        paused: false,
+        reserveCount: 1n,
+      })[functionName],
+    };
+    await expect(readLendingV2Market(client, {
+      pool,
+      expectedRegistry: registry,
+      expectedChainId: 46_630,
+      expectedVerifier: adapter,
+      expectedOracle: oracle,
+      expectedHonkVerifier: honkVerifier,
+      expectedAssets: [],
+    })).rejects.toThrow("does not match the configured project test assets");
   });
 
   test("checks token repayment headroom and native transaction gas headroom", () => {

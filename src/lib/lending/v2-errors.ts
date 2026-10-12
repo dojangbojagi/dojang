@@ -83,6 +83,9 @@ const exactFailures: Array<[string[], LendingV2ErrorCategory, string]> = [
 export function mapLendingV2Error(error: unknown): LendingV2Failure {
   const text = errorText(error);
   const normalized = text.toLowerCase().replaceAll("_", "");
+  if (normalized.includes("estimated transaction fee") || normalized.includes("native balance covering")) {
+    return { category: "balance", code: "insufficient-native-gas", message: "The wallet does not have enough Robinhood Testnet ETH for the estimated fee plus transaction headroom." };
+  }
   if (normalized.includes("approve the lending v2 pool")) {
     return { category: "allowance", code: "insufficient-allowance", message: "Approve the V2 pool to spend the required token amount first." };
   }
