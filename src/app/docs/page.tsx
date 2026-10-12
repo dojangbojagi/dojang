@@ -1,4 +1,5 @@
 import "./docs.css";
+import { DocsToc } from "./docs-toc";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { PageGlyphFigure } from "@/components/page-glyph";
@@ -43,14 +44,7 @@ export default function DocsPage() {
 
       <div className="docs__layout">
         <aside className="docs__aside" aria-label="On this page">
-          <nav>
-            <p className="docs__aside-title">On this page</p>
-            <ol>
-              {TOC.map(([id, label], i) => (
-                <li key={id}><a href={`#${id}`}><span>{`0${i + 1}`}</span>{label}</a></li>
-              ))}
-            </ol>
-          </nav>
+          <DocsToc items={TOC} />
           <p className="docs__aside-cta"><Link className="btn btn--primary btn--sm" href="/app">Launch App</Link></p>
         </aside>
 
@@ -58,14 +52,47 @@ export default function DocsPage() {
           <section className="docs__sec" id="overview" aria-labelledby="overview-h">
             <h2 id="overview-h"><span>01</span>Overview</h2>
             <p className="docs__lead">
-              {name} has two building blocks and two applications built on them.
+              Everything starts from one project credential, issued through DOJANG. Two separate paths use it, and only one of them needs a
+              private proof.
             </p>
-            <ol className="docs__flow" aria-label="How the parts fit together">
-              <li><b>DOJANG</b><span>Issues and records project credentials</span></li>
-              <li><b>BOJAGI</b><span>Turns a credential into a private proof</span></li>
-              <li><b>DAO Governance</b><span>Credential holders propose and vote</span></li>
-              <li><b>Lending</b><span>Proof-gated supply and borrowing</span></li>
-            </ol>
+
+            <figure className="docs__arch">
+              <div className="docs__arch-grid">
+                <div className="docs__arch-root">
+                  <small>Origin</small>
+                  <b>DOJANG</b>
+                  <span>Project credential</span>
+                </div>
+                <div className="docs__arch-branches">
+                  <div className="docs__arch-branch" data-branch="dao">
+                    <span className="docs__arch-policy"><small>Policy 4</small></span>
+                    <span className="docs__arch-wire" aria-hidden="true" />
+                    <div className="docs__arch-node">
+                      <b>DAO Governance</b>
+                      <span>Propose and vote</span>
+                    </div>
+                    <span className="docs__arch-flag">No private proof</span>
+                  </div>
+                  <div className="docs__arch-branch" data-branch="lending">
+                    <span className="docs__arch-policy"><small>Policy 3</small></span>
+                    <span className="docs__arch-wire" aria-hidden="true" />
+                    <div className="docs__arch-node" data-private="true">
+                      <b>BOJAGI</b>
+                      <span>Private ZK proof</span>
+                    </div>
+                    <span className="docs__arch-wire" aria-hidden="true" />
+                    <div className="docs__arch-node">
+                      <b>Lending V2</b>
+                      <span>Proof-gated actions</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <figcaption>
+                <p><b>Path 1 · DAO.</b> A policy-4 credential makes a wallet eligible to propose and vote. No BOJAGI proof is involved.</p>
+                <p><b>Path 2 · Lending.</b> A policy-3 credential is turned into a private zero-knowledge proof by BOJAGI, which Lending V2 verifies on-chain.</p>
+              </figcaption>
+            </figure>
             <p>
               It runs on Robinhood Testnet (chain ID {ROBINHOOD_TESTNET_CHAIN_ID}) as a controlled testnet demonstration with test tokens.{" "}
               {name} is not operated, verified or endorsed by GIWA, Dojang or Upbit.
@@ -105,7 +132,7 @@ export default function DocsPage() {
           <section className="docs__sec" id="dao" aria-labelledby="dao-h">
             <h2 id="dao-h"><span>04</span>DAO Governance</h2>
             <dl className="docs__rows">
-              <div><dt>Who can take part</dt><dd>Wallets that hold an active policy-4 project credential.</dd></div>
+              <div><dt>Who can take part</dt><dd>Wallets that hold an active policy-4 project credential. The credential alone is enough: no BOJAGI proof is involved.</dd></div>
               <div><dt>What members do</dt><dd>Create proposals and vote For, Against or Abstain. Each eligible wallet votes once, and every vote is public.</dd></div>
               <div><dt>Lifecycle</dt><dd>Voting starts one minute after a proposal is created. Anyone can finalize it once voting closes, and anyone can execute a successful proposal before it expires.</dd></div>
               <div><dt>Scope</dt><dd>The first phase has one bounded action: the minimum remaining credential validity the DAO itself requires. It cannot change Lending settings or move funds.</dd></div>

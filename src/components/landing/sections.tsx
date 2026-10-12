@@ -156,57 +156,82 @@ export function LendingSection() {
 }
 
 /* ----------------------------------------------------------------- 05 */
-/* The roadmap states what exists and what does not, from the project's own status notes
-   (docs/LENDING_MVP_ARCHITECTURE.md, docs/FRONTEND_INTEGRATION_HANDOFF.md): no dates, no invented numbers,
-   and nothing is called deployed until its address and receipt exist. */
-const PHASES = [
+/* The roadmap states what exists, what is live and what is still to be done, in four plain words:
+   Completed, Live on Testnet, In Progress, Future Development. Statuses follow the project's evidence:
+   the stack is deployed and read back from chain 46630, prices are set, demo tokens are minted and policy-4
+   credentials are issued. Nothing is called complete that has no receipt: the real-wallet DAO and Lending
+   journeys, policy-3 issuance and explorer source verification are still in progress, and production
+   readiness (audit, production oracle, mainnet) is future development, not part of the testnet launch. */
+type PhaseStatus = "done" | "live" | "wip" | "future";
+const STATUS_LABEL: Record<PhaseStatus, string> = {
+  done: "Completed",
+  live: "Live on Testnet",
+  wip: "In Progress",
+  future: "Future Development",
+};
+
+const PHASES: readonly { n: string; name: string; status: PhaseStatus; items: readonly string[] }[] = [
   {
     n: "01",
-    name: "Foundation",
+    name: "Protocol foundation",
     status: "done",
-    chip: "Verified locally",
     items: [
-      "Read-only check of official Dojang Verified Address attestations",
-      "DAO governance gated by a project-issued policy-4 credential, with public votes",
-      "A demo credential registry holding issuer-signed commitments",
-      "A Noir circuit, proofs made in the browser and a generated Solidity verifier",
+      "Project credential registry: commitments, policies, expiry and revocation",
+      "A Noir eligibility circuit, proofs made in the browser and a generated Solidity verifier",
+      "DAO governance and Lending V2 contracts, tested locally with genuine proofs",
     ],
   },
   {
     n: "02",
-    name: "Lending demo",
+    name: "Robinhood Testnet deployment",
     status: "done",
-    chip: "Verified locally",
     items: [
-      "One proof-gated market with two controlled test tokens",
-      "Supply, collateral, borrow, repay and withdraw, accounted on-chain",
-      "A 50% loan-to-value cap, a fixed 1:1 price and zero interest",
-      "A full interface, run end to end on a local chain",
+      "Ten project contracts deployed and read back from chain 46630",
+      "Synthetic test prices set and controlled demo tokens minted",
+      "Two policy-4 DAO credentials issued",
     ],
   },
   {
     n: "03",
-    name: "Robinhood Testnet deployment",
-    status: "done",
-    chip: "Deployed · chain 46630",
+    name: "Live testnet demo",
+    status: "live",
     items: [
-      "Project-issued credential registry, HonkVerifier and verifier adapter",
-      "RobinhoodGovernancePhase1 for DAO participation (policy 4)",
-      "LendingPoolV2 with controlled demo tokens and a test oracle (policy 3 with a real proof)",
+      "Contract status and explorer links read live from the network",
+      "DAO and Lending screens connected to the deployed contracts",
+      "Demo tokens and test prices in place for the first journeys",
     ],
   },
   {
     n: "04",
-    name: "Beyond the demo",
-    status: "later",
-    chip: "Not started",
+    name: "Public testnet journeys",
+    status: "wip",
     items: [
-      "An independent audit before any production claim",
-      "A price oracle, interest, liquidation and bad-debt handling for lending",
-      "Native Bojagi private transfer, which this project does not claim today",
+      "A DAO proposal, vote, finalization and execution from real wallets, with receipts",
+      "Policy-3 credential issuance, then supply, borrow and repay with a genuine proof",
+      "Contract source published and verified on the explorer",
     ],
   },
-] as const;
+  {
+    n: "05",
+    name: "Production readiness",
+    status: "future",
+    items: [
+      "An independent security audit and review",
+      "Production-grade price oracle infrastructure",
+      "A mainnet launch decision, only once the work above is complete",
+    ],
+  },
+];
+
+/* the route through the five nodes: solid up to the last live one, dotted after it */
+const NODE_X = (i: number) => 100 + i * 200; /* 100 ... 900 of a 1000 wide drawing */
+const NODE_Y = (i: number) => (i % 2 ? 28 : 92);
+const route = (from: number, to: number) => {
+  let d = `M${NODE_X(from)} ${NODE_Y(from)}`;
+  for (let i = from; i < to; i++) d += ` C${NODE_X(i) + 100} ${NODE_Y(i)} ${NODE_X(i + 1) - 100} ${NODE_Y(i + 1)} ${NODE_X(i + 1)} ${NODE_Y(i + 1)}`;
+  return d;
+};
+const LAST_LIVE = PHASES.reduce((last, p, i) => (p.status === "done" || p.status === "live" ? i : last), 0);
 
 export function RoadmapSection() {
   return (
@@ -214,22 +239,23 @@ export function RoadmapSection() {
       <div className="lp-wrap">
         <Eyebrow n="05" ac="blue">Roadmap</Eyebrow>
         <h2 className="lp-h2" id="road-title" data-lp-reveal style={{ ["--i" as string]: 1 }}>
-          Robinhood contracts deployed. <em className="o">GIWA</em> deployment remains pending.
+          Live on testnet. <em className="o">Production</em> still ahead.
         </h2>
         <p className="lp-lead" data-lp-reveal style={{ ["--i" as string]: 2 }}>
-          The Robinhood Testnet contracts are deployed on chain {ROBINHOOD_TESTNET_CHAIN_ID}. A GIWA Sepolia deployment remains separate and is not claimed here.
+          The protocol is deployed and running on Robinhood Testnet (chain {ROBINHOOD_TESTNET_CHAIN_ID}). The full public wallet journeys
+          are still being confirmed, and production readiness is future development.
         </p>
 
-        {/* the route: solid where the work is done, dotted where it is not. Decorative; the list below says the same in words. */}
+        {/* the route: solid where the work is done or live, dotted where it is not. Decorative; the list below says the same in words. */}
         <div className="lp-road__map" data-lp-rail aria-hidden="true">
           <svg className="lp-road__svg lp-road__svg--todo" viewBox="0 0 1000 120" preserveAspectRatio="none" focusable="false">
-            <path d="M625 92 C750 92 750 28 875 28 L1000 28" />
+            <path d={`${route(LAST_LIVE, PHASES.length - 1)} L1000 ${NODE_Y(PHASES.length - 1)}`} />
           </svg>
           <svg className="lp-road__svg lp-road__svg--done" viewBox="0 0 1000 120" preserveAspectRatio="none" focusable="false">
-            <path d="M0 92 L125 92 C250 92 250 28 375 28 C500 28 500 92 625 92" />
+            <path d={`M0 ${NODE_Y(0)} L${NODE_X(0)} ${NODE_Y(0)} ${route(0, LAST_LIVE).replace(/^M[^C]*/, "")}`} />
           </svg>
           {PHASES.map((ph, i) => (
-            <span className="lp-road__node" data-status={ph.status} key={ph.n} style={{ ["--x" as string]: 12.5 + i * 25, ["--y" as string]: i % 2 ? 23.3 : 76.7 }}>
+            <span className="lp-road__node" data-status={ph.status} key={ph.n} style={{ ["--x" as string]: NODE_X(i) / 10, ["--y" as string]: (NODE_Y(i) / 120) * 100 }}>
               {ph.status === "done" ? "✓" : ph.n}
             </span>
           ))}
@@ -240,7 +266,7 @@ export function RoadmapSection() {
             <li className="lp-phase" data-status={ph.status} key={ph.n} data-spot data-lp-reveal style={{ ["--i" as string]: i + 1 }}>
               <p className="lp-phase__top">
                 <span className="lp-phase__n">Phase {ph.n}</span>
-                <span className="lp-chip" data-tone={ph.status === "done" ? "valid" : "neutral"}><i aria-hidden="true" />{ph.chip}</span>
+                <span className="lp-chip" data-tone={ph.status}><i aria-hidden="true" />{STATUS_LABEL[ph.status]}</span>
               </p>
               <h3>{ph.name}</h3>
               <ul>{ph.items.map((t) => <li key={t}>{t}</li>)}</ul>

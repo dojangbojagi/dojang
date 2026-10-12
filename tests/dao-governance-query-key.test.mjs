@@ -41,7 +41,7 @@ test("useDaoGovernance mounts with undefined, valid, zero, and changing proposal
   }
 
   const keys = queryClient.getQueryCache().getAll().map((query) => query.queryKey);
-  expect(keys.map((key) => key[3])).toEqual([undefined, "7", "0", "8"]);
+  expect(keys.map((key) => key[4])).toEqual([undefined, "7", "0", "8"]);
   expect(new Set(keys.map(hashKey)).size).toBe(4);
   queryClient.clear();
 });
@@ -54,18 +54,19 @@ test("DAO governance query keys hash, cache, switch IDs, and invalidate by contr
     daoGovernanceQueryKey(contractAddress, wallet, 8n),
   ];
 
-  expect(keys.map((key) => key[3])).toEqual([undefined, "7", "0", "8"]);
+  expect(keys.map((key) => key[4])).toEqual([undefined, "7", "0", "8"]);
   const hashes = keys.map(hashKey);
   expect(new Set(hashes).size).toBe(keys.length);
   expect(() => hashKey(["dao-governance", contractAddress, wallet, 7n])).toThrow(/BigInt/);
 
   const queryClient = new QueryClient();
-  keys.forEach((key) => queryClient.setQueryData(key, { cachedId: key[3] ?? "snapshot" }));
+  keys.forEach((key) => queryClient.setQueryData(key, { cachedId: key[4] ?? "snapshot" }));
   keys.forEach((key) => expect(queryClient.getQueryData(key)).toBeDefined());
 
-  await queryClient.invalidateQueries({ queryKey: ["dao-governance", contractAddress] });
+  const contractQueryPrefix = ["dao-governance", GIWA_CHAIN_ID, contractAddress];
+  await queryClient.invalidateQueries({ queryKey: contractQueryPrefix });
   const cachedQueries = queryClient.getQueryCache().findAll({
-    queryKey: ["dao-governance", contractAddress],
+    queryKey: contractQueryPrefix,
   });
   expect(cachedQueries).toHaveLength(keys.length);
   expect(cachedQueries.every((query) => query.state.isInvalidated)).toBe(true);
