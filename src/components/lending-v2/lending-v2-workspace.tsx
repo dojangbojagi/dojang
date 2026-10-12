@@ -19,7 +19,7 @@ import { WalletNetworkCard } from "@/components/wallet-network-card";
 import { useLendingMarketV2 } from "@/hooks/use-lending-market-v2";
 import { useLendingV2EligibilityProof } from "@/hooks/use-lending-v2-eligibility-proof";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
-import { GIWA_CHAIN_ID } from "@/lib/config/chain";
+import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
 import type { DemoCredentialWitness } from "@/lib/credential/witness";
 import { mapLendingV2Error } from "@/lib/lending/v2-errors";
 import { ProtocolError } from "@/lib/protocol/types";
@@ -62,14 +62,14 @@ function explain(error: unknown): string {
  * lending rules and never reports a transaction as done before the hook has confirmed it.
  */
 export function LendingV2Workspace() {
-  const wallet = useWalletNetwork();
+  const wallet = useWalletNetwork(ROBINHOOD_TESTNET_CHAIN_ID);
   const market = useLendingMarketV2();
   const [witness, setWitness] = useState<DemoCredentialWitness | null>(null);
   const proof = useLendingV2EligibilityProof(witness ?? undefined);
   const gas = useBalance({
     address: wallet.address,
-    chainId: GIWA_CHAIN_ID,
-    query: { enabled: Boolean(wallet.address && wallet.isGiwaSepolia) },
+    chainId: ROBINHOOD_TESTNET_CHAIN_ID,
+    query: { enabled: Boolean(wallet.address && wallet.isRobinhoodTestnet) },
   });
 
   const [tab, setTab] = useState<V2Tab>("markets");
@@ -103,12 +103,12 @@ export function LendingV2Workspace() {
   let block: string | null = null;
   if (market.state === "unconfigured") block = "Lending V2 is not configured, so no transaction can be prepared.";
   else if (market.state === "disconnected") block = "Connect a wallet first.";
-  else if (market.state === "wrong-network") block = "Switch to GIWA Sepolia first.";
+  else if (market.state === "wrong-network") block = "Switch to Robinhood Chain Testnet first.";
   else if (market.state === "checking") block = "Reading the V2 pool and your wallet…";
   else if (market.state === "unavailable") block = "The configured address is not a compatible Lending V2 deployment.";
   else if (market.state === "read-error") block = "The V2 market could not be read. Refresh and try again.";
   else if (market.isSubmitting) block = "A transaction is already in progress.";
-  else if (noGas) block = "This wallet has no GIWA Sepolia ETH to pay the network fee.";
+  else if (noGas) block = "This wallet has no Robinhood Testnet ETH to pay the network fee.";
   else if (!market.writesAvailable) block = "Transactions are not available right now.";
 
   const runner: ActionRunner = {
@@ -160,7 +160,7 @@ export function LendingV2Workspace() {
   return (
     <div className="lend lendv2">
       <V2LimitationsNotice configured={market.state !== "unconfigured"} />
-      <WalletNetworkCard />
+      <WalletNetworkCard expectedChainId={ROBINHOOD_TESTNET_CHAIN_ID} />
       <ContextBar market={market} walletAddress={wallet.address} eligibility={eligibility} />
 
       <div className="lend-layout">
@@ -238,7 +238,7 @@ export function LendingV2Workspace() {
               <Chip tone={gasBalance === undefined ? "neutral" : noGas ? "warn" : "valid"}>{gasBalance === undefined ? "Not read" : noGas ? "No ETH" : "ETH available"}</Chip>
             </div>
             <p className="small muted">
-              {gasBalance === undefined ? "Connect a wallet on GIWA Sepolia to read its ETH balance." : `${formatAmount(gasBalance, 18, 5)} ETH for network fees.`}
+              {gasBalance === undefined ? "Connect a wallet on Robinhood Chain Testnet to read its ETH balance." : `${formatAmount(gasBalance, 18, 5)} ETH for network fees.`}
             </p>
             <p className="xsmall muted">
               Activity here lists only transactions confirmed in this browser session. A protocol-wide event history is not exposed by the V2 hooks yet, so none is shown.

@@ -1,112 +1,178 @@
 import "./contracts.css";
 import { PageGlyphFigure } from "@/components/page-glyph";
-import { ChainEvidenceLookup } from "@/components/evidence/chain-evidence-lookup";
-import { GovernanceDependencies, ProjectContractRows, type ContractRow } from "@/components/evidence/project-contract-rows";
-import { LendingAssetRows } from "@/components/lending/lending-asset-rows";
-import { GIWA_CHAIN_ID, GIWA_EXPLORER_URL } from "@/lib/config/chain";
-import { invalidContractConfig, officialDojang, projectContracts } from "@/lib/config/contracts";
+import { appEnv } from "@/lib/config/env";
+import {
+  invalidRobinhoodContractConfig,
+  robinhoodContracts,
+} from "@/lib/config/contracts";
+import { ROBINHOOD_TESTNET_EXPLORER_URL } from "@/lib/config/robinhood-testnet";
+import { RobinhoodEvidenceLookup } from "@/components/evidence/robinhood-evidence-lookup";
 
-/* The contracts this project owns. Status comes from configuration only: a configured address is not proof of
-   a verified deployment, and an unset one is shown as unset, never filled in. */
 const PROJECT_CONTRACTS = [
   {
+    key: "zkTranscriptLib",
+    name: "ZKTranscriptLib",
+    type: "Project-owned verifier library",
+    role: "Linked library used by the generated Honk verifier.",
+    env: "NEXT_PUBLIC_ROBINHOOD_ZK_TRANSCRIPT_LIB_CONTRACT",
+  },
+  {
+    key: "relationsLib",
+    name: "RelationsLib",
+    type: "Project-owned verifier library",
+    role: "Linked library used by the generated Honk verifier.",
+    env: "NEXT_PUBLIC_ROBINHOOD_RELATIONS_LIB_CONTRACT",
+  },
+  {
+    key: "honkVerifier",
+    name: "HonkVerifier",
+    type: "Generated project verifier",
+    role: "Generated from this repository's eligibility circuit and linked to both verifier libraries.",
+    env: "NEXT_PUBLIC_ROBINHOOD_HONK_VERIFIER_CONTRACT",
+  },
+  {
     key: "credentialRegistry",
-    name: "DemoCredentialRegistry",
-    role: "Issuer-managed commitments for demo credentials: policy 1 for the vault, policy 2 for lending",
-    env: "NEXT_PUBLIC_DEMO_CREDENTIAL_REGISTRY_CONTRACT",
+    name: "RobinhoodDemoCredentialRegistry",
+    type: "Project-owned credential registry",
+    role: "Project-issued policy-3 test credentials. This is not an official Dojang credential system.",
+    env: "NEXT_PUBLIC_ROBINHOOD_CREDENTIAL_REGISTRY_CONTRACT",
   },
   {
-    key: "proofVerifier",
+    key: "verifierAdapter",
     name: "EligibilityVerifierAdapter",
-    role: "Adapter in front of the generated UltraHonk verifier; the vault and the pool are wired to it when they are deployed",
-    env: "NEXT_PUBLIC_PROOF_VERIFIER_CONTRACT",
+    type: "Project-owned verifier adapter",
+    role: "Connects LendingPoolV2 to the generated Honk verifier.",
+    env: "NEXT_PUBLIC_ROBINHOOD_VERIFIER_ADAPTER_CONTRACT",
   },
   {
-    key: "restrictedVault",
-    name: "RestrictedVault",
-    role: "Proof-gated access flag. It holds no funds",
-    env: "NEXT_PUBLIC_RESTRICTED_VAULT_CONTRACT",
+    key: "lendingV2Oracle",
+    name: "ControlledTestOracle",
+    type: "Project-owned test oracle",
+    role: "Operator-set, bounded synthetic prices for test assets; not market data.",
+    env: "NEXT_PUBLIC_ROBINHOOD_LENDING_V2_ORACLE_CONTRACT",
   },
   {
-    key: "lendingPool",
-    name: "LendingPool",
-    role: "The demo lending market: supplier principal, collateral and debt, with proof-gated borrowing",
-    env: "NEXT_PUBLIC_LENDING_POOL_CONTRACT",
+    key: "lendingV2Asset",
+    name: "ControlledTestToken · rUSD2",
+    type: "Project-owned test token / lending reserve",
+    role: "Controlled demo liquidity asset; not a real or bridged stablecoin.",
+    env: "NEXT_PUBLIC_ROBINHOOD_LENDING_V2_ASSET_CONTRACT",
   },
   {
-    key: "daoGovernance",
-    name: "GovernedDojangAccess (DAO governance)",
-    role: "Verified governance: official Dojang membership, public votes, and one policy it controls itself (minimum remaining credential validity). It does not govern the pool or the vault",
-    env: "NEXT_PUBLIC_DAO_GOVERNANCE_CONTRACT",
+    key: "lendingV2Collateral",
+    name: "ControlledTestToken · rCOL2",
+    type: "Project-owned test token / collateral reserve",
+    role: "Controlled demo collateral asset; not a real or bridged token.",
+    env: "NEXT_PUBLIC_ROBINHOOD_LENDING_V2_COLLATERAL_CONTRACT",
+  },
+  {
+    key: "lendingV2Pool",
+    name: "LendingPoolV2",
+    type: "Project-owned lending market",
+    role: "Multi-reserve test lending engine. The source allows up to eight configured reserves; this deployment plan seeds two demo reserves.",
+    env: "NEXT_PUBLIC_ROBINHOOD_LENDING_V2_POOL_CONTRACT",
   },
 ] as const;
 
+const LEGACY_CONTRACTS = [
+  {
+    name: "GovernedDojangAccess",
+    role: "DAO Phase 1 contract is hard-bound to GIWA Sepolia and official Dojang infrastructure; it is not a Robinhood governance deployment.",
+  },
+  {
+    name: "DemoCredentialRegistry / LendingPool V1",
+    role: "Legacy GIWA demo path. Robinhood V2 uses a separate RobinhoodDemoCredentialRegistry and LendingPoolV2 deployment.",
+  },
+  {
+    name: "RestrictedVault",
+    role: "Legacy technical access gate; it is not part of the Robinhood Lending V2 deployment script.",
+  },
+] as const;
+
+type InventoryKey = (typeof PROJECT_CONTRACTS)[number]["key"];
+
+function ContractAddressRow({ item }: { item: (typeof PROJECT_CONTRACTS)[number] }) {
+  const key = item.key as InventoryKey;
+  const rawAddress = appEnv.robinhoodContracts[key];
+  const address = robinhoodContracts[key];
+  const invalid = invalidRobinhoodContractConfig.includes(key);
+  const status = invalid
+    ? "Invalid address configuration"
+    : address
+      ? "Address configured · chain evidence not read"
+      : "Not configured";
+
+  return (
+    <div className="contract-row">
+      <dt>
+        <strong>{item.name}</strong>
+        <span className="xsmall muted">{item.type} · {item.role}</span>
+      </dt>
+      <dd>
+        <span className="status" data-state={invalid ? "invalid" : address ? "neutral" : "warn"}>
+          <i className="status__dot" aria-hidden="true" />{status}
+        </span>
+        {address && (
+          <a href={`${ROBINHOOD_TESTNET_EXPLORER_URL}/address/${address}`} target="_blank" rel="noopener noreferrer">
+            <code>{address}</code><span className="visually-hidden"> (opens in a new tab)</span>
+          </a>
+        )}
+        {invalid && <span className="xsmall muted">The configured value is not a valid EVM address.</span>}
+        {!rawAddress && <span className="xsmall muted">No Robinhood address is configured; no deployment is claimed.</span>}
+        <span className="contract-env">{item.env}</span>
+      </dd>
+    </div>
+  );
+}
+
 export default function ContractsPage() {
-  const rows: ContractRow[] = PROJECT_CONTRACTS.map((contract) => {
-    const address = projectContracts[contract.key];
-    const config = invalidContractConfig.includes(contract.key) ? "invalid" : address ? "configured" : "unset";
-    return { ...contract, config, address } as const;
-  });
-  const configured = rows.filter((row) => row.config === "configured").length;
+  const configured = PROJECT_CONTRACTS.filter(({ key }) => Boolean(robinhoodContracts[key])).length;
 
   return (
     <main className="page">
       <header className="page-head">
-        <PageGlyphFigure glyph={{ shape: "stack", label: "Four stacked slabs of characters: the project's contracts, each to be checked on the explorer.", caption: "Evidence, layer by layer", legend: ["public"] }} />
+        <PageGlyphFigure glyph={{ shape: "stack", label: "Project contract inventory and on-chain evidence status for Robinhood Chain Testnet.", caption: "Evidence, layer by layer", legend: ["public"] }} />
         <p className="eyebrow">Evidence · Project contracts and deployment status</p>
         <h1>Contract evidence</h1>
         <p className="page-lead">
-          Network: GIWA Sepolia · Chain ID {GIWA_CHAIN_ID}. These are the contracts this project owns, and whether an address is configured for each.
-          A configured address is not proof of a verified deployment: check it on the explorer.
+          Network: Robinhood Chain Testnet · Chain ID 46630. This inventory reads only Robinhood address configuration. An address setting is not proof of deployment, code, a successful receipt, or source verification.
         </p>
       </header>
 
       <section className="panel" aria-labelledby="project-contracts-heading">
-        <h2 id="project-contracts-heading">Project contracts</h2>
-        <p className="contract-summary">{configured} of {rows.length} addresses configured</p>
+        <h2 id="project-contracts-heading">Robinhood project contract inventory</h2>
+        <p className="contract-summary">{configured} of {PROJECT_CONTRACTS.length} Robinhood addresses configured</p>
         <dl className="contract-list">
-          <ProjectContractRows rows={rows.slice(0, 2)} />
-          <ProjectContractRows
-            rows={[{ key: "honkVerifier", name: "HonkVerifier (generated)", role: "The generated UltraHonk verifier behind the adapter, found on-chain from it, with two linked libraries (ZKTranscriptLib, RelationsLib) that are not configured separately" }]}
-          />
-          <ProjectContractRows rows={rows.slice(2)} />
-          <LendingAssetRows />
+          {PROJECT_CONTRACTS.map((item) => <ContractAddressRow key={item.key} item={item} />)}
         </dl>
         {configured === 0 ? (
           <p className="notice">
-            No GIWA Sepolia deployment or transaction evidence is configured for this project. Local Foundry tests and local Anvil runs exist; they
-            are not deployments, and no local address or transaction hash is shown here as if it were one.
+            No Robinhood project contract address is configured. The current project record contains no public Robinhood deployment receipt or deployed address; local Foundry and Anvil results are not public-chain evidence.
           </p>
         ) : (
           <p className="notice">
-            Addresses come from configuration. A chip says what the chain returned for each: code present, or no code. Code present is not source
-            verification, and source verification is not established for any project contract. Local Foundry and Anvil results are not GIWA Sepolia evidence.
+            Configured addresses link to the Robinhood Testnet explorer. Use the read-only evidence tools below to check deployed bytecode, receipts, and project events.
           </p>
         )}
         <p className="notice">
-          The vault tests use a local test-only verifier fixture, which is not a cryptographic ZK verifier. The lending pool is a demonstration market:
-          controlled test tokens, a fixed 1:1 price, zero interest, no liquidation and no oracle. Governance changes only its own policy; it does not
-          control the pool or the vault.
+          Evidence terms: “Not configured” means no address was supplied. “No code” and “Code present” come from Robinhood RPC bytecode reads. Receipt status and emitted project events come from the queried transaction receipt. Source verification status still requires a separate Blockscout verification lookup.
         </p>
-        <GovernanceDependencies />
       </section>
 
-      <ChainEvidenceLookup />
-
-      <section className="panel" aria-labelledby="official-heading">
-        <h2 id="official-heading">Official GIWA references (not project-owned)</h2>
-        <p className="muted">These belong to GIWA. The app only reads them, to show an official Dojang Verified Address record. Nothing here is deployed or controlled by this project.</p>
+      <section className="panel" aria-labelledby="legacy-heading">
+        <h2 id="legacy-heading">Legacy contracts outside the Robinhood V2 launch stack</h2>
         <dl className="contract-list">
-          <div className="contract-row">
-            <dt><strong>DojangScroll</strong><span className="xsmall muted">Official GIWA Dojang registry</span></dt>
-            <dd><a href={`${GIWA_EXPLORER_URL}/address/${officialDojang.dojangScroll}`} target="_blank" rel="noopener noreferrer"><code>{officialDojang.dojangScroll}</code><span className="visually-hidden"> (opens in a new tab)</span></a></dd>
-          </div>
-          <div className="contract-row">
-            <dt><strong>EAS</strong><span className="xsmall muted">Official GIWA attestation service</span></dt>
-            <dd><a href={`${GIWA_EXPLORER_URL}/address/${officialDojang.eas}`} target="_blank" rel="noopener noreferrer"><code>{officialDojang.eas}</code><span className="visually-hidden"> (opens in a new tab)</span></a></dd>
-          </div>
+          {LEGACY_CONTRACTS.map((contract) => (
+            <div className="contract-row" key={contract.name}>
+              <dt><strong>{contract.name}</strong><span className="xsmall muted">Existing project source</span></dt>
+              <dd><span className="status" data-state="warn"><i className="status__dot" aria-hidden="true" />Not configured for Robinhood</span><span className="xsmall muted">{contract.role}</span></dd>
+            </div>
+          ))}
         </dl>
+        <p className="muted">GIWA DojangScroll, DojangAttesterBook, EAS, and GIWA itself are external infrastructure. BOJOGAY-issued Robinhood test credentials are separate and must never be shown as official GIWA, Upbit, or third-party credentials.</p>
       </section>
+
+      <RobinhoodEvidenceLookup />
     </main>
   );
 }

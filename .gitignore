@@ -42,6 +42,7 @@ contracts/lib/
 !/docs/LENDING_V2_IMPLEMENTATION.md
 !/docs/LENDING_V2_FRONTEND_HANDOFF.md
 !/docs/ROBINHOOD_TESTNET_DEMO.md
+!/docs/BOJOGAY_ROBINHOOD_MASTER_HANDOFF.md
 
 # Playwright output
 playwright-report/

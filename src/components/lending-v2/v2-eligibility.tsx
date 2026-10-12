@@ -11,7 +11,7 @@ import { StateChip, TransactionSummary } from "@/components/protocol-state";
 import { useDojangVerification } from "@/hooks/use-dojang-verification";
 import { useLendingV2CredentialIssuance } from "@/hooks/use-lending-v2-credential-issuance";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
-import { GIWA_CHAIN_ID } from "@/lib/config/chain";
+import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
 import { credentialIssuerRoleAbi } from "@/lib/contracts/abis";
 import { parseDemoCredentialWitness, type DemoCredentialWitness } from "@/lib/credential/witness";
 import { LENDING_V2_ELIGIBILITY_THRESHOLD, LENDING_V2_POLICY_ID } from "@/lib/lending/v2-config";
@@ -21,7 +21,7 @@ import { explainProtocolError } from "@/lib/protocol/errors";
 const PROOF_COPY: Record<V2Proof["state"], { tone: Tone; label: string; text: string }> = {
   unconfigured: { tone: "warn", label: "Not available", text: "Lending V2 is not configured, so there is no policy-3 registry to check against." },
   disconnected: { tone: "neutral", label: "Wallet needed", text: "Connect a wallet to check its Project Test Credential." },
-  "wrong-network": { tone: "warn", label: "Wrong network", text: "Switch to GIWA Sepolia before checking or proving." },
+  "wrong-network": { tone: "warn", label: "Wrong network", text: "Switch to Robinhood Chain Testnet before checking or proving." },
   checking: { tone: "pending", label: "Checking", text: "Reading the policy-3 credential from the registry…" },
   unavailable: { tone: "warn", label: "Not available", text: "The configured address is not a compatible Lending V2 deployment." },
   "read-error": { tone: "invalid", label: "Unable to check", text: "The credential could not be read. This does not mean the wallet has none; try again in a moment." },
@@ -39,7 +39,7 @@ const PROOF_COPY: Record<V2Proof["state"], { tone: Tone; label: string; text: st
 };
 
 function IssuerTools({ market, onIssued }: { market: V2Market; onIssued: (witness: DemoCredentialWitness) => void }) {
-  const wallet = useWalletNetwork();
+  const wallet = useWalletNetwork(ROBINHOOD_TESTNET_CHAIN_ID);
   const issuance = useLendingV2CredentialIssuance();
   const [privateValue, setPrivateValue] = useState("1250");
   const [expiresAt, setExpiresAt] = useState(() => {
@@ -52,7 +52,7 @@ function IssuerTools({ market, onIssued }: { market: V2Market; onIssued: (witnes
   const validValue = /^(0|[1-9][0-9]*)$/.test(privateValue) && BigInt(privateValue || "0") >= LENDING_V2_ELIGIBILITY_THRESHOLD;
   const expiresMs = Date.parse(expiresAt);
   const validExpiry = Number.isFinite(expiresMs) && Math.floor(expiresMs / 1000) > Math.floor(Date.now() / 1000);
-  const canIssue = Boolean(wallet.address && wallet.isGiwaSepolia && market.readAvailable && validValue && validExpiry && !issuance.isSubmitting);
+  const canIssue = Boolean(wallet.address && wallet.isRobinhoodTestnet && market.readAvailable && validValue && validExpiry && !issuance.isSubmitting);
 
   async function issue(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -75,7 +75,7 @@ function IssuerTools({ market, onIssued }: { market: V2Market; onIssued: (witnes
       <div className="lend-issuer__body">
         <p className="small muted">
           Shown only because this wallet holds the project registry&apos;s issuer role. It issues a policy {LENDING_V2_POLICY_ID.toString()} <strong>Project Test Credential</strong>,
-          bound to the Lending V2 pool. It is not an official GIWA, Dojang or Upbit credential. The registry stores a commitment only; the private value and salt stay in this browser.
+          bound to the Robinhood Lending V2 pool. It is a BOJOGAY-issued test credential, not official GIWA, Dojang or Upbit verification. The registry stores a commitment only; the private value and salt stay in this browser.
         </p>
         <form className="protocol-form" onSubmit={(event) => void issue(event)}>
           <div className="protocol-form__grid">
@@ -109,21 +109,21 @@ export function EligibilityCard({ market, proof, witness, onWitness }: {
   witness: DemoCredentialWitness | null;
   onWitness: (witness: DemoCredentialWitness | null) => void;
 }) {
-  const wallet = useWalletNetwork();
+  const wallet = useWalletNetwork(ROBINHOOD_TESTNET_CHAIN_ID);
   const dojang = useDojangVerification(wallet.address);
   const [importMessage, setImportMessage] = useState("");
   const [proofMessage, setProofMessage] = useState("");
   const registry = market.snapshot?.credentialRegistry;
   const role = useReadContract({
     address: registry,
-    chainId: GIWA_CHAIN_ID,
+    chainId: ROBINHOOD_TESTNET_CHAIN_ID,
     abi: credentialIssuerRoleAbi,
     functionName: "ISSUER_ROLE",
     query: { enabled: Boolean(registry && wallet.address), retry: 1 },
   });
   const isIssuer = useReadContract({
     address: registry,
-    chainId: GIWA_CHAIN_ID,
+    chainId: ROBINHOOD_TESTNET_CHAIN_ID,
     abi: credentialIssuerRoleAbi,
     functionName: "hasRole",
     args: role.data && wallet.address ? [role.data, wallet.address] : undefined,

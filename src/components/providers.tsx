@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RainbowKitProvider, darkTheme } from "@rainbow-me/rainbowkit";
 import { createConfig, http, WagmiProvider, injected } from "wagmi";
 import { walletConnect } from "wagmi/connectors";
-import { giwaSepolia } from "@/lib/config/chain";
+import { supportedProtocolChains } from "@/lib/config/network-registry";
 import { appEnv } from "@/lib/config/env";
 import { DemoWitnessProvider } from "@/components/witness-context";
 
@@ -17,9 +17,12 @@ const connectors = [
 ];
 
 const wagmiConfig = createConfig({
-  chains: [giwaSepolia],
+  chains: supportedProtocolChains,
   connectors,
-  transports: { [giwaSepolia.id]: http(appEnv.giwaRpcUrl) },
+  transports: {
+    [supportedProtocolChains[0].id]: http(appEnv.robinhoodRpcUrl),
+    [supportedProtocolChains[1].id]: http(appEnv.giwaRpcUrl),
+  },
   ssr: true,
 });
 

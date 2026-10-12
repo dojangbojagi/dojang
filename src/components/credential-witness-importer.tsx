@@ -19,6 +19,9 @@ export function CredentialWitnessImporter() {
     setMessage("");
     try {
       const candidate = parseDemoCredentialWitness(JSON.parse(await file.text()));
+      if (candidate.format !== "giwa-demo-credential-v1") {
+        throw new Error("This is a Robinhood project test witness. This credential importer is for the separate GIWA demo flow.");
+      }
       if (!wallet.address || candidate.wallet.toLowerCase() !== wallet.address.toLowerCase()) {
         throw new Error("This witness is not bound to the connected wallet.");
       }

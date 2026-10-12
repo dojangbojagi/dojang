@@ -7,7 +7,7 @@ import { appEnv } from "@/lib/config/env";
 import { BrandMark } from "@/components/brand-mark";
 import { WalletControl } from "@/components/wallet-control";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
-import { GIWA_CHAIN_ID } from "@/lib/config/chain";
+import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
 
 const LINKS = [
   ["home", "Home", "/"], ["dojang", "Dojang", "/dojang"], ["dao", "DAO", "/dao"], ["bojagi", "Bojagi", "/bojagi"],
@@ -16,7 +16,7 @@ const LINKS = [
 
 export function SiteHeader() {
   const pathname = usePathname();
-  const wallet = useWalletNetwork();
+  const wallet = useWalletNetwork(ROBINHOOD_TESTNET_CHAIN_ID);
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -40,7 +40,7 @@ export function SiteHeader() {
 
   if (pathname === "/") return null;
   const walletState = wallet.state;
-  const networkText = walletState === "wrong-network" ? "Wrong network" : "GIWA Sepolia";
+  const networkText = walletState === "wrong-network" ? "Wrong network" : "Robinhood Testnet";
 
   return (
     <header className="site-header" data-scrolled={scrolled}>
@@ -58,11 +58,11 @@ export function SiteHeader() {
         </nav>
         <div className="site-header__actions">
           <span className="site-header__net">
-            <span className="net-pill" title={`${networkText}, expected chain ID ${GIWA_CHAIN_ID}`}>
+            <span className="net-pill" title={`${networkText}, expected chain ID ${ROBINHOOD_TESTNET_CHAIN_ID}`}>
               <i className="net-pill__dot" aria-hidden="true" /><b>{networkText}</b><i>Testnet</i>
             </span>
           </span>
-          <WalletControl />
+          <WalletControl expectedChainId={ROBINHOOD_TESTNET_CHAIN_ID} />
           <button
             className="menu-toggle"
             type="button"

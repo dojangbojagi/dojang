@@ -66,7 +66,7 @@ export function BorrowView({ market, proof, runner, borrowAsset, onBorrowAsset, 
 
   const borrowPrecondition =
     borrowBlocked ??
-    (!debtPos || !walletPosition ? "Connect a wallet on GIWA Sepolia to borrow." : null) ??
+    (!debtPos || !walletPosition ? "Connect a wallet on Robinhood Chain Testnet to borrow." : null) ??
     (debtReserve.oracle.state !== "fresh" ? `The ${debtSymbol} oracle price is ${oracleLabel(debtReserve.oracle.state).toLowerCase()}. Borrowing is blocked until it is fresh.` : null) ??
     (walletPosition?.riskMetricsState === "blocked-by-oracle" ? "A price your position depends on is not fresh, so the pool cannot compute your risk. Borrowing is blocked." : null) ??
     (account && account.ltvCapacityWad === 0n ? "No collateral is enabled yet. Deposit collateral, then enable it with a proof." : null) ??
@@ -154,7 +154,7 @@ export function BorrowView({ market, proof, runner, borrowAsset, onBorrowAsset, 
                 allowance={collPos?.allowance}
                 max={collPos?.walletBalance}
                 hint="The pool needs your approval for this exact amount before it can take the tokens."
-                precondition={collateralBlocked ?? (!collPos ? "Connect a wallet on GIWA Sepolia to deposit." : null)}
+                precondition={collateralBlocked ?? (!collPos ? "Connect a wallet on Robinhood Chain Testnet to deposit." : null)}
                 onApprove={(amount) => market.approveToken(collReserve.asset, amount)}
                 onSubmit={(amount) => market.depositCollateral(collReserve.asset, amount)}
                 review={(amount) => (

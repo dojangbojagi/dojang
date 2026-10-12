@@ -2,9 +2,10 @@
 
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
+import type { ProtocolChainId } from "@/hooks/use-wallet-network";
 
-export function WalletControl() {
-  const wallet = useWalletNetwork();
+export function WalletControl({ expectedChainId }: { expectedChainId?: ProtocolChainId }) {
+  const wallet = useWalletNetwork(expectedChainId);
   return (
     <ConnectButton.Custom>
       {({ account, chain, openAccountModal, openChainModal, openConnectModal, mounted }) => {

@@ -1,19 +1,17 @@
-Copyright (c) 2021, Kil Hyung-jin (https://github.com/orioncactus/pretendard),
-with Reserved Font Name 'Pretendard'.
+NOTE ON THE FONT FILES IN THIS FOLDER (quicksand-latin-*.woff2)
+Derived from Quicksand (https://github.com/andrew-paglinawan/QuicksandFamily), used and modified under the
+SIL Open Font License 1.1 reproduced below. Modifications: static instances at weights 400/500/600/700,
+Latin subset, overlapping contours merged (so outlined text renders cleanly), and the font family renamed
+to "Bojogay Sans" because the original has a Reserved Font Name. The outlines themselves are unchanged.
+No proprietary font (including GiwaSans) is used or derived from.
 
-Copyright 2014-2021 Adobe (http://www.adobe.com/),
-with Reserved Font Name 'Source'.
-Source is a trademark of Adobe in the United States and/or other countries.
+=====================================================================================================
 
-Copyright (c) 2016 The Inter Project Authors (https://github.com/rsms/inter),
-with Reserved Font Name 'Inter'.
-
-Copyright 2021 The M+ FONTS Project Authors (https://github.com/coz-m/MPLUS_FONTS),
-with Reserved Font Name 'M PLUS 1'.
+Copyright 2011 The Quicksand Project Authors (https://github.com/andrew-paglinawan/QuicksandFamily), with Reserved Font Name “Quicksand”.
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:
-https://scripts.sil.org/OFL
+http://scripts.sil.org/OFL
 
 
 -----------------------------------------------------------
