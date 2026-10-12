@@ -290,7 +290,7 @@ export function CoverReveal({ tagline }: Props) {
                     BOJAGI builds a zero-knowledge proof in your browser. The private value stays on your device.
                   </span>
                   <span className="lp-story__t lp-story__t--over" data-story-i={3} data-story-kind="lede" aria-hidden="true">
-                    Eligible wallets join DAO governance. Private proofs unlock protected Lending actions on Robinhood Testnet.
+                    Eligible wallets join DAO governance. Private proofs unlock protected Lending actions.
                   </span>
                 </p>
                 <div className="lp-actions">

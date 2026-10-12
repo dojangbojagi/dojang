@@ -1154,7 +1154,7 @@
   .lp-box { position: relative; clip-path: none; min-height: 100svh; }
   .lp-field { transform: none; opacity: 1; }
   .lp-cipher, .lp-dot, .lp-hint, .lp-light { display: none; }
-  .lp-story__t--over { display: none; }
+  .lp-story__t--over, .lp-h .lp-story__t--over { display: none; }
   .lp-story__t { opacity: 1; translate: none; }
   .lp-hero { min-height: 100svh; height: auto; }
   .lp-hero__col { transform: none; will-change: auto; }
