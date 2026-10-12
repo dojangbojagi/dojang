@@ -12,6 +12,7 @@ import "./theme.css";
 export const metadata: Metadata = {
   title: appEnv.appName,
   description: appEnv.description,
+  icons: { icon: "/logo.svg" },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

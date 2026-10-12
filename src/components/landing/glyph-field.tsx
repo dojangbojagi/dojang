@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { buildLattice, buildTopology, type HeroForm } from "./hero-forms";
 
 /* The hero's picture: one object made of the same hex characters as the idea scene's, turning slowly
-   in 3D on the right of the headline (behind it on narrow screens). It has two forms and the scroll decides
+   in 3D on the right of the headline (behind it on narrow screens). It has four forms and the scroll decides
    which one you see:
 
      A  "Knot"   a woven tube of white and silver characters, with a few wine-red flecks: verified,
@@ -11,9 +12,15 @@ import { useEffect, useRef } from "react";
      B  "Gyro"   three tilting rings around a wine-red core: the private proof and the action it unlocks
                  (Bojagi -> Lending). The knot unspools into it while the camera pushes in.
 
+     C  "Lattice"  a skewed crystal with a cell and a core turning inside it (hero-forms.ts): complex inside,
+                 plain outside, the shape of a proof.
+     D  "Topology" right-angled pathways on stacked layers, ending in gates, one route lit (hero-forms.ts):
+                 what the proof unlocks.
+
    The form is a pure function of numbers the scroll code already writes on the stage, so it runs in reverse on
-   its own: --h (0 -> 1 across the hold, while the hero stands still) turns the knot into the gyro, so the second
-   form is complete before the camera starts to push in; --q (0 -> 1, the push-in itself) only keeps it turning.
+   its own: --h (0 -> 1 across the first hold, while the hero stands still) turns the knot into the gyro; --k
+   (0 -> 1 across the extra forms that follow) turns the gyro into the lattice and then the lattice into the
+   topology, each with a rest before it; --q (0 -> 1, the push-in itself) only keeps it turning.
    The zoom (scale, fade) is the CSS on .lp-field, unchanged.
 
    Mouse: grab the hero and drag to turn the form (the automatic drift keeps its own clock, the hand adds
@@ -44,6 +51,11 @@ const CAMERA = 5; /* distance for the perspective; larger = flatter */
 const H_FROM = 0.22; /* form A stays fully formed and readable through the first fifth of the hold, then the morph begins */
 const H_TO = 0.90; /* form B is complete here, a little before the push-in begins */
 const SPREAD = 0.24; /* how far apart in time the points leave */
+/* the extra forms, as fractions of --k: form B rests, turns into C, C rests, turns into D, D rests until the zoom */
+const K_BC_FROM = 0.14;
+const K_BC_TO = 0.38;
+const K_CD_FROM = 0.58;
+const K_CD_TO = 0.82;
 const TAU = Math.PI * 2;
 
 const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
@@ -65,6 +77,12 @@ interface Model {
   glyph: Uint8Array;
   delay: Float32Array;
   jit: Float32Array;
+  lat: HeroForm; /* form C */
+  topo: HeroForm; /* form D */
+  pairBC: Uint16Array; /* the point of form C that point i of form B turns into */
+  pairCD: Uint16Array; /* the point of form D that point i of form C turns into */
+  delayC: Float32Array;
+  delayD: Float32Array;
 }
 
 function buildModel(): Model {
@@ -150,6 +168,21 @@ function buildModel(): Model {
   const pair = new Uint16Array(COUNT);
   for (let n = 0; n < COUNT; n++) pair[byA[n]] = byB[n];
 
+  /* the same pairing, by place, for B -> C and C -> D (all three measured at t = 0) */
+  const lat = buildLattice(COUNT);
+  const topo = buildTopology(COUNT);
+  const pairOf = (from: (i: number, out: Float32Array) => void, to: (i: number, out: Float32Array) => void) => {
+    const kf = Float32Array.from({ length: COUNT }, (_, i) => { from(i, tmp); return keyOf(tmp[0], tmp[1], tmp[2]); });
+    const kt = Float32Array.from({ length: COUNT }, (_, i) => { to(i, tmp); return keyOf(tmp[0], tmp[1], tmp[2]); });
+    const sf = Array.from({ length: COUNT }, (_, i) => i).sort((p, q) => kf[p] - kf[q]);
+    const st = Array.from({ length: COUNT }, (_, i) => i).sort((p, q) => kt[p] - kt[q]);
+    const out = new Uint16Array(COUNT);
+    for (let n = 0; n < COUNT; n++) out[sf[n]] = st[n];
+    return out;
+  };
+  const pairBC = pairOf((i, o) => posB({ th0, rad, off }, i, 0, o), (i, o) => lat.pos(i, 0, o));
+  const pairCD = pairOf((i, o) => lat.pos(i, 0, o), (i, o) => topo.pos(i, 0, o));
+
   return {
     a,
     palA,
@@ -161,6 +194,12 @@ function buildModel(): Model {
     glyph: Uint8Array.from({ length: COUNT }, (_, i) => (i * 7 + 3) % NG),
     delay: Float32Array.from({ length: COUNT }, (_, i) => rnd(i + 0.5) * SPREAD),
     jit: Float32Array.from({ length: COUNT * 3 }, (_, n) => (rnd(n * 1.7 + 9) - 0.5) * 0.4),
+    lat,
+    topo,
+    pairBC,
+    pairCD,
+    delayC: Float32Array.from({ length: COUNT }, (_, i) => rnd(i * 1.3 + 41.5) * SPREAD),
+    delayD: Float32Array.from({ length: COUNT }, (_, i) => rnd(i * 1.9 + 77.5) * SPREAD),
   };
 }
 
@@ -216,6 +255,7 @@ export function GlyphField() {
 
     const M = buildModel();
     const cur = new Float32Array(3);
+    const cur2 = new Float32Array(3);
     const sx = new Float32Array(COUNT);
     const sy = new Float32Array(COUNT);
     const sz = new Float32Array(COUNT);
@@ -232,6 +272,7 @@ export function GlyphField() {
     let lastDraw = 0;
     let lastQ = -1;
     let lastH = -1;
+    let lastK = -1;
     /* Turning by hand. The automatic motion keeps its own clock and the hand adds an offset on top, so letting
        go never changes how the form drifts; it just carries on from where it was left. */
     let clock = 0;
@@ -252,6 +293,7 @@ export function GlyphField() {
 
     const readQ = () => parseFloat(stage.style.getPropertyValue("--q")) || 0;
     const readH = () => parseFloat(stage.style.getPropertyValue("--h")) || 0;
+    const readK = () => parseFloat(stage.style.getPropertyValue("--k")) || 0;
 
     function readFont() {
       const probe = document.createElement("span");
@@ -322,11 +364,15 @@ export function GlyphField() {
 
       const q = live ? readQ() : 0;
       const hp = live ? readH() : 0;
+      const kp = live ? readK() : 0;
       lastQ = q;
       lastH = hp;
+      lastK = kp;
       const m = live ? clamp01((hp - H_FROM) / (H_TO - H_FROM)) : 0;
+      const mC = clamp01((kp - K_BC_FROM) / (K_BC_TO - K_BC_FROM));
+      const mD = clamp01((kp - K_CD_FROM) / (K_CD_TO - K_CD_FROM));
       const t = live ? clock : 0.6;
-      const yaw = 0.35 + (live ? autoYaw + hp * 1.1 + q * 2.4 : 0) + userYaw + leanX * 0.45;
+      const yaw = 0.35 + (live ? autoYaw + hp * 1.1 + kp * 0.9 + q * 2.4 : 0) + userYaw + leanX * 0.45;
       const pitch = 0.42 + (live ? Math.sin(clock * 0.35) * 0.05 : 0) + userPitch + leanY * 0.25;
       const cy = Math.cos(yaw), sy_ = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
       const minDim = Math.min(w, h);
@@ -341,7 +387,42 @@ export function GlyphField() {
         let x = M.a[o], y = M.a[o + 1], z = M.a[o + 2];
         let pal = M.palA[i];
         const lp = clamp01((m - M.delay[i]) / (1 - SPREAD));
-        if (lp > 0) {
+        if (mC > 0) {
+          /* forms C and D: the point is already form B's (pair), and goes on to C's, then D's */
+          const iB = M.pair[i];
+          const iC = M.pairBC[iB];
+          let fromPal: number;
+          let toPal: number;
+          let ld: number;
+          if (mD > 0) {
+            const iD = M.pairCD[iC];
+            M.lat.pos(iC, t, cur);
+            M.topo.pos(iD, t, cur2);
+            fromPal = M.lat.pal(iC, t);
+            toPal = M.topo.pal(iD, t);
+            ld = clamp01((mD - M.delayD[i]) / (1 - SPREAD));
+          } else {
+            posB(M, iB, t, cur);
+            M.lat.pos(iC, t, cur2);
+            fromPal = M.palB[iB];
+            toPal = M.lat.pal(iC, t);
+            ld = clamp01((mC - M.delayC[i]) / (1 - SPREAD));
+          }
+          if (ld >= 1) {
+            x = cur2[0]; y = cur2[1]; z = cur2[2];
+            pal = toPal;
+          } else if (ld <= 0) {
+            x = cur[0]; y = cur[1]; z = cur[2];
+            pal = fromPal;
+          } else {
+            const e = ease(ld);
+            const arc = Math.sin(Math.PI * e);
+            x = cur[0] + (cur2[0] - cur[0]) * e + M.jit[o] * arc;
+            y = cur[1] + (cur2[1] - cur[1]) * e + M.jit[o + 1] * arc;
+            z = cur[2] + (cur2[2] - cur[2]) * e + M.jit[o + 2] * arc;
+            pal = e >= 0.5 ? toPal : fromPal;
+          }
+        } else if (lp > 0) {
           const bi = M.pair[i];
           posB(M, bi, t, cur);
           if (lp >= 1) {
@@ -407,12 +488,12 @@ export function GlyphField() {
       }
     };
 
-    /* While --h or --q move, draw right after cover-reveal has written them (a microtask after its frame callback),
+    /* While --h, --k or --q move, draw right after cover-reveal has written them (a microtask after its frame callback),
        so the form is always in step with the zoom and never a frame behind. */
     const qWatch = live
       ? new MutationObserver(() => {
           if (!canRun() || !atlas) return;
-          if (Math.abs(readQ() - lastQ) > 0.0004 || Math.abs(readH() - lastH) > 0.0004) draw(performance.now());
+          if (Math.abs(readQ() - lastQ) > 0.0004 || Math.abs(readH() - lastH) > 0.0004 || Math.abs(readK() - lastK) > 0.0004) draw(performance.now());
         })
       : null;
     qWatch?.observe(stage, { attributes: true, attributeFilter: ["style"] });

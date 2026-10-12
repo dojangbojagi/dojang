@@ -24,12 +24,17 @@ function splitTagline(tagline: string): [string, string] {
   return m ? [m[1], m[2]] : [tagline.trim(), ""];
 }
 
-/* The runway, as fractions of its length: the opening grows, the hero holds, then the camera
-   pushes in. (--lp-run is 237svh on desktop: about a screen to open, half a screen to hold while
-   the hero's picture turns from its first form into its second, and nine tenths of a screen to zoom.
-   The opening and the zoom take the same distance as before; only the hold got longer.) */
-const OPEN = 0.4165;
-const HOLD = 0.211;
+/* The runway, as fractions of its length: the opening grows, the hero holds while its picture turns from
+   its first form into its second, the picture goes on through two more forms (SHOW), then the camera pushes in.
+   The opening, the first hold and the zoom each take the same distance as they always did (237svh of runway:
+   about a screen to open, half a screen to hold, nine tenths to zoom); only SHOW is new, and it sits between
+   the hold and the zoom, so adding forms never moves what was already approved. */
+const BASE_RUN = 237; /* svh the opening + first hold + zoom have always taken */
+const SHOW_RUN = 100; /* svh for the third and fourth forms; keep in step with --lp-run in landing.css */
+const RUN = BASE_RUN + SHOW_RUN;
+const OPEN = (0.4165 * BASE_RUN) / RUN;
+const HOLD = (0.211 * BASE_RUN) / RUN;
+const SHOW = SHOW_RUN / RUN;
 const NAV_H = 76;
 
 const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
@@ -125,8 +130,9 @@ export function CoverReveal({ tagline }: Props) {
       const scrolled = -r.top;
       const p = clamp01(scrolled / (run * OPEN));
       const h = clamp01((scrolled - run * OPEN) / (run * HOLD)); /* how far through the hold: the picture changes form now */
-      const q = clamp01((scrolled - run * (OPEN + HOLD)) / (run * (1 - OPEN - HOLD)));
-      const key = p + h + q * 2;
+      const ex = clamp01((scrolled - run * (OPEN + HOLD)) / (run * SHOW)); /* how far through the extra forms */
+      const q = clamp01((scrolled - run * (OPEN + HOLD + SHOW)) / (run * (1 - OPEN - HOLD - SHOW)));
+      const key = p + h + ex + q * 2;
       if (Math.abs(key - last) < 0.0005) return;
       last = key;
 
@@ -153,6 +159,7 @@ export function CoverReveal({ tagline }: Props) {
       s.setProperty("--e", e.toFixed(4));
       s.setProperty("--c", clamp01((e - 0.6) / 0.34).toFixed(4));
       s.setProperty("--h", h.toFixed(4));
+      s.setProperty("--k", ex.toFixed(4));
       s.setProperty("--q", q.toFixed(4));
       s.setProperty("--clip", windowPath ?? `inset(${t.toFixed(1)}px ${ri.toFixed(1)}px ${b.toFixed(1)}px ${l.toFixed(1)}px round ${radius.toFixed(1)}px)`);
 

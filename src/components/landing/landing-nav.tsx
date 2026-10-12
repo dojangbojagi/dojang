@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { BrandMark } from "@/components/brand-mark";
 
 /* Same destinations as the app header. Light over the white cover, dark glass after it. */
 const LINKS = [
@@ -19,19 +19,44 @@ const LINKS = [
 function WalletPill() {
   return (
     <ConnectButton.Custom>
-      {({ account, chain, openAccountModal, openChainModal, openConnectModal, mounted }) => {
+      {({
+        account,
+        chain,
+        openAccountModal,
+        openChainModal,
+        openConnectModal,
+        mounted,
+      }) => {
         const connected = mounted && account && chain;
         return (
-          <div className="lp-wallet" data-pending={!mounted} aria-hidden={!mounted}>
+          <div
+            className="lp-wallet"
+            data-pending={!mounted}
+            aria-hidden={!mounted}
+          >
             {!connected ? (
-              <button type="button" className="lp-pill" onClick={openConnectModal}>
+              <button
+                type="button"
+                className="lp-pill"
+                onClick={openConnectModal}
+              >
                 <span className="lp-pill__long">Connect wallet</span>
                 <span className="lp-pill__short">Connect</span>
               </button>
             ) : chain.unsupported ? (
-              <button type="button" className="lp-pill lp-pill--warn" onClick={openChainModal}>Wrong network</button>
+              <button
+                type="button"
+                className="lp-pill lp-pill--warn"
+                onClick={openChainModal}
+              >
+                Wrong network
+              </button>
             ) : (
-              <button type="button" className="lp-pill lp-pill--ok" onClick={openAccountModal}>
+              <button
+                type="button"
+                className="lp-pill lp-pill--ok"
+                onClick={openAccountModal}
+              >
                 <i aria-hidden="true" />
                 {account.displayName}
               </button>
@@ -80,7 +105,7 @@ export function LandingNav({ appName }: { appName: string }) {
     <>
       <header className="lp-nav" data-open={open}>
         <Link className="lp-brand" href="/" aria-label={`${appName} home`}>
-          <BrandMark />
+          <Image src="/logo.svg" alt="" width={38} height={38} priority />
           <span>{appName}</span>
         </Link>
 
@@ -95,7 +120,13 @@ export function LandingNav({ appName }: { appName: string }) {
         >
           <i className="lp-bead" aria-hidden="true" />
           {LINKS.map(([label, href]) => (
-            <Link href={href} key={href} data-flagship={href === "/dao" ? "" : undefined}>{label}</Link>
+            <Link
+              href={href}
+              key={href}
+              data-flagship={href === "/dao" ? "" : undefined}
+            >
+              {label}
+            </Link>
           ))}
         </nav>
 
@@ -114,9 +145,17 @@ export function LandingNav({ appName }: { appName: string }) {
         </div>
       </header>
 
-      <nav className="lp-menu" id="lp-menu" data-open={open} aria-label="Mobile navigation" hidden={!open}>
+      <nav
+        className="lp-menu"
+        id="lp-menu"
+        data-open={open}
+        aria-label="Mobile navigation"
+        hidden={!open}
+      >
         {LINKS.map(([label, href]) => (
-          <Link href={href} key={href} onClick={() => setOpen(false)}>{label}</Link>
+          <Link href={href} key={href} onClick={() => setOpen(false)}>
+            {label}
+          </Link>
         ))}
       </nav>
     </>

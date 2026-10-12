@@ -16,7 +16,9 @@
      a few numbers written on the stage by cover-reveal.tsx:
        --e  how far the opening has grown (the dot, cut into slabs that turn and settle as the screen)
        --c  how far the hero has come in (starts once the opening nearly fills the screen)
-       --q  how far the camera has pushed into the hero (after a short hold): the hero zooms
+       --h  how far through the first hold (the picture turns from form 1 into form 2)
+       --k  how far through the extra forms that follow it (form 3, then form 4)
+       --q  how far the camera has pushed into the hero (after the last form): the hero zooms
             and fades, and the next section rises in behind it
      plus the clip of the opening (--clip): the union of the slabs' faces, drawn by cipher-sculpture.ts.
      All motion below is CSS reading those values, so it also runs in reverse when the visitor
@@ -46,7 +48,7 @@
   --lp-max: 1240px;
   --lp-nav-h: 76px;
   --lp-ease: cubic-bezier(0.16, 1, 0.3, 1);
-  --lp-run: 237svh;
+  --lp-run: 337svh; /* 237 for the opening, first hold and zoom, plus 100 for the third and fourth forms (cover-reveal.tsx) */
   --lp-veil: url("/landing/veil.svg");
 
   position: relative;
@@ -196,8 +198,11 @@
 .lp .lp-pill--ok:hover { background: #1A1215; box-shadow: none; }
 .lp[data-phase="dark"] .lp-pill--ok:hover { background: rgba(255, 255, 255, .14); }
 .lp-pill--ok i { width: .5rem; height: .5rem; border-radius: 50%; background: var(--lp-public); box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2); }
-.lp .lp-pill--warn { background: rgba(184, 26, 52, .18); color: #fff; border-color: var(--lp-wine); text-shadow: none; }
-.lp .lp-pill--warn:hover { background: rgba(184, 26, 52, .14); box-shadow: none; }
+/* "Wrong network": on the white cover the tinted ground vanished, so it is solid black there; the tint returns with the dark hero */
+.lp .lp-pill--warn { background: var(--lp-ink); color: #fff; border-color: var(--lp-wine); text-shadow: none; }
+.lp[data-phase="dark"] .lp-pill--warn { background: rgba(184, 26, 52, .18); }
+.lp .lp-pill--warn:hover { background: #1A1215; box-shadow: none; }
+.lp[data-phase="dark"] .lp-pill--warn:hover { background: rgba(184, 26, 52, .14); }
 .lp-pill__short { display: none; }
 .lp-wallet[data-pending="true"] { opacity: 0; pointer-events: none; user-select: none; }
 
