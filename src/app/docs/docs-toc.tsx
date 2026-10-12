@@ -71,12 +71,20 @@ export function DocsToc({ items }: { items: readonly (readonly [string, string])
 
     compute();
     onHash();
-    /* arriving on a #hash: once fonts and layout have settled, put the heading exactly where a click would */
+    /* arriving on a #hash: once fonts and layout have settled, put the heading exactly where a click would
+       (twice, because the figure above the article sizes itself a moment later), unless the reader has moved on */
     const arrival = window.location.hash.slice(1);
+    let moved = false;
+    const mark = () => { moved = true; };
     if (arrival && items.some(([i]) => i === arrival)) {
-      void document.fonts?.ready.then(() => {
-        requestAnimationFrame(() => document.getElementById(arrival)?.scrollIntoView({ behavior: "auto", block: "start" }));
-      });
+      const settleArrival = () => {
+        if (!moved) document.getElementById(arrival)?.scrollIntoView({ behavior: "auto", block: "start" });
+      };
+      window.addEventListener("wheel", mark, { passive: true, once: true });
+      window.addEventListener("touchstart", mark, { passive: true, once: true });
+      window.addEventListener("keydown", mark, { once: true });
+      void document.fonts?.ready.then(() => requestAnimationFrame(settleArrival));
+      window.setTimeout(settleArrival, 900);
     }
     window.addEventListener("scroll", schedule, { passive: true });
     window.addEventListener("resize", schedule);

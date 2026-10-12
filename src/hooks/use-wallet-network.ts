@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useAccount, useSwitchChain } from "wagmi";
+import { useAccount, useConfig, useSwitchChain } from "wagmi";
+import { getAccount, watchAccount } from "wagmi/actions";
 import { GIWA_CHAIN_ID } from "@/lib/config/chain";
 import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
 import { supportedProtocolChains } from "@/lib/config/network-registry";
@@ -34,6 +35,38 @@ function getErrorMetadata(error: unknown): Pick<WalletNetworkDiagnostics, "error
     pending.push(item.cause, item.data?.originalError);
   }
   return { errorName, errorCode };
+}
+
+function waitForWagmiChain(config: ReturnType<typeof useConfig>, connectorUid: string, chainId: number) {
+  const readAccount = () => {
+    const current = getAccount(config);
+    return { isConnected: current.isConnected, chainId: current.chainId, connectorUid: current.connector?.uid };
+  };
+  const initial = readAccount();
+  if (initial.isConnected && initial.connectorUid === connectorUid && initial.chainId === chainId) {
+    return Promise.resolve(initial);
+  }
+
+  return new Promise<typeof initial>((resolve) => {
+    let stopWatching: (() => void) | undefined;
+    let settled = false;
+    const finish = (value = readAccount()) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      stopWatching?.();
+      resolve(value);
+    };
+    const timeout = setTimeout(() => finish(), 1_500);
+    stopWatching = watchAccount(config, {
+      onChange(current) {
+        if (current.isConnected && current.connector?.uid === connectorUid && current.chainId === chainId) {
+          finish({ isConnected: current.isConnected, chainId: current.chainId, connectorUid: current.connector.uid });
+        }
+      },
+    });
+    if (settled) stopWatching();
+  });
 }
 
 function describeSwitchError(error: unknown, chainId: number, connectorName?: string): string {
@@ -74,6 +107,13 @@ function describeSwitchError(error: unknown, chainId: number, connectorName?: st
   if (detail.includes("switchchainnotsupported") || detail.includes("switch chain not supported") || detail.includes("does not support switching") || detail.includes("method not found") || codes.some((code) => code === 4200 || code === -32601)) {
     return `${connectorName ?? "This wallet"} cannot switch networks from the app. Select chain ${chainId} in the wallet, or disconnect and choose another EVM wallet that supports this chain.`;
   }
+  if (detail.includes("selected wallet connector changed")) {
+    return "The connected wallet changed during the request. Reconnect the intended wallet and retry.";
+  }
+  const accountDesync = detail.match(/wagmi account remained on chain ([\d\w]+) while provider reports chain ([\d\w]+)/);
+  if (accountDesync) {
+    return `${connectorName ?? "The selected wallet"} reports chain ${accountDesync[2]}, but the app account still reports chain ${accountDesync[1]}. Reconnect this wallet or choose another provider; app actions remain disabled until both agree.`;
+  }
   const remainedOnChain = detail.match(/wallet stayed on chain (\d+)/);
   if (remainedOnChain) {
     return `${connectorName ?? "The selected wallet"} remained on chain ${remainedOnChain[1]}; this app requires chain ${chainId}. Choose another EVM wallet and confirm it supports this chain.`;
@@ -83,6 +123,7 @@ function describeSwitchError(error: unknown, chainId: number, connectorName?: st
 
 export function useWalletNetwork(expectedChainId: ProtocolChainId = ROBINHOOD_TESTNET_CHAIN_ID) {
   const account = useAccount();
+  const config = useConfig();
   const switchChain = useSwitchChain();
   const [switchError, setSwitchError] = useState<string>();
   const [switchDiagnostics, setSwitchDiagnostics] = useState<WalletNetworkDiagnostics>();
@@ -123,12 +164,18 @@ export function useWalletNetwork(expectedChainId: ProtocolChainId = ROBINHOOD_TE
   const switchTo = useCallback(async (chainId: ProtocolChainId): Promise<boolean> => {
     setSwitchError(undefined);
     const target = supportedProtocolChains.find((chain) => chain.id === chainId);
+    const connector = account.connector;
     if (!target) {
       setSwitchError(`Chain ${chainId} is not configured in this application.`);
       return false;
     }
-    if (!account.isConnected || !account.connector) {
+    if (!account.isConnected || !connector) {
       setSwitchError(`Connect an EVM wallet before switching to ${target.name} (chain ${chainId}).`);
+      return false;
+    }
+    const selectedAccount = getAccount(config);
+    if (!selectedAccount.isConnected || selectedAccount.connector?.uid !== connector.uid) {
+      setSwitchError("The selected wallet changed before the network request began. Reconnect and retry.");
       return false;
     }
     if (switchChain.isPending) {
@@ -147,37 +194,59 @@ export function useWalletNetwork(expectedChainId: ProtocolChainId = ROBINHOOD_TE
             : undefined,
         },
       });
-      const activeChainId = await account.connector?.getChainId();
+      const activeAccount = getAccount(config);
+      if (!activeAccount.isConnected || activeAccount.connector?.uid !== connector.uid) {
+        throw new Error("Selected wallet connector changed during switch.");
+      }
+      const activeChainId = await connector.getChainId();
       if (activeChainId !== undefined && activeChainId !== chainId) {
         throw new Error(`Wallet stayed on chain ${activeChainId} after the switch request.`);
       }
+      const accountReadback = await waitForWagmiChain(config, connector.uid, chainId);
+      if (!accountReadback.isConnected || accountReadback.connectorUid !== connector.uid || accountReadback.chainId !== chainId) {
+        throw new Error(`Wagmi account remained on chain ${accountReadback.chainId ?? "unknown"} while provider reports chain ${activeChainId ?? "unknown"}.`);
+      }
       setSwitchDiagnostics({
-        connectorName: account.connector.name,
-        accountChainId: account.chainId,
+        connectorName: connector.name,
+        accountChainId: accountReadback.chainId,
         providerChainId: activeChainId,
         requiredChainId: chainId,
       });
       return true;
     } catch (error) {
-      setSwitchError(describeSwitchError(error, chainId, account.connector.name));
+      setSwitchError(describeSwitchError(error, chainId, connector.name));
       let providerChainId: number | undefined;
       let providerReadErrorName: string | undefined;
       try {
-        providerChainId = await account.connector.getChainId();
+        providerChainId = await connector.getChainId();
       } catch (readError) {
         providerReadErrorName = getErrorMetadata(readError).errorName;
       }
-      setSwitchDiagnostics({
-        connectorName: account.connector.name,
-        accountChainId: account.chainId,
+      const activeWagmiAccount = getAccount(config);
+      const diagnostics = {
+        connectorName: connector.name,
+        accountChainId: activeWagmiAccount.chainId,
         providerChainId,
         providerReadErrorName,
         ...getErrorMetadata(error),
         requiredChainId: chainId,
-      });
+      } satisfies WalletNetworkDiagnostics;
+      setSwitchDiagnostics(diagnostics);
+      if (process.env.NODE_ENV === "production") {
+        // Safe diagnostic fields only: never log the account address, raw error, or witness data.
+        console.warn("[GYEVO wallet switch diagnostics]", {
+          connectorName: diagnostics.connectorName,
+          wagmiChainId: diagnostics.accountChainId,
+          providerChainId: diagnostics.providerChainId,
+          requiredChainId: diagnostics.requiredChainId,
+          errorName: diagnostics.errorName,
+          errorCode: diagnostics.errorCode,
+          providerReadErrorName: diagnostics.providerReadErrorName,
+        });
+      }
       return false;
     }
-  }, [account.connector, account.isConnected, switchChain.isPending, switchChain.switchChainAsync]);
+  }, [account.connector, account.isConnected, config, switchChain.isPending, switchChain.switchChainAsync]);
 
   return {
     ...account,

@@ -96,7 +96,7 @@
 
 @media (max-width: 980px) {
   .docs__layout { grid-template-columns: minmax(0, 1fr); gap: var(--space-5, 1.6rem); }
-  .docs__aside { grid-template-columns: minmax(0, 1fr); min-width: 0; position: sticky; top: var(--header-h, 76px); z-index: 6; margin-inline: calc(var(--gutter, 1.25rem) * -1); padding: 0.55rem var(--gutter, 1.25rem); background: rgba(6, 4, 5, 0.94); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
+  .docs__aside { grid-template-columns: minmax(0, 1fr); min-width: 0; position: sticky; top: var(--header-h, 76px); z-index: 6; margin-inline: calc(var(--gutter, 1.25rem) * -1); padding: 0.55rem var(--gutter, 1.25rem); background: rgba(6, 4, 5, 0.985); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
   .docs__toc-title, .docs__aside-cta { display: none; }
   .docs__toc ol { display: flex; gap: 0.4rem; border-left: 0; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
   .docs__toc ol::-webkit-scrollbar { display: none; }
