@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import { Arrow } from "./arrow";
 import { ProjectTokenCa } from "./project-token-ca";
 import { createCipherSculpture } from "./cipher-sculpture";
+import { createGlobeSculpture } from "./globe-sculpture";
 import { FORM_TIMELINE, GlyphField } from "./glyph-field";
 import { scrollToId } from "./smooth-scroll";
 
@@ -12,6 +13,10 @@ import { scrollToId } from "./smooth-scroll";
    scrolling cuts it into a row of slabs that turn, fly and settle as the strips of the screen (see
    cipher-sculpture.ts), and phase 2, the hero, was behind them all along. After a short hold the camera
    pushes into the headline: it zooms in until the hero is gone, and the next section rises in behind it.
+
+   Behind the claim a wireframe network globe turns slowly (globe-sculpture.ts) with the dot at its core; the
+   same scroll that cuts the dot into slabs is a camera move toward it, so the white and the hero are one
+   space, not two screens.
 
    The cover is a tall runway with a sticky stage. Scroll position becomes a handful of
    numbers written on the stage (see the header of landing.css), and every animated value
@@ -74,6 +79,7 @@ export function CoverReveal({ tagline }: Props) {
   const boxRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
   const cipherRef = useRef<HTMLCanvasElement>(null);
+  const globeRef = useRef<HTMLCanvasElement>(null);
   const [wordA, wordB] = splitTagline(tagline);
 
   useEffect(() => {
@@ -87,6 +93,9 @@ export function CoverReveal({ tagline }: Props) {
     const root = cover.closest<HTMLElement>(".lp");
     const motion = motionQuery();
     const cipher = createCipherSculpture(cipherCanvas);
+    const globeCanvas = globeRef.current;
+    const globe = globeCanvas ? createGlobeSculpture(globeCanvas) : null;
+    globe?.setReduced(motion.matches);
 
     let geo = { sw: 0, sh: 0, x: 0, y: 0, w: 0, h: 0 };
     let raf = 0;
@@ -120,12 +129,14 @@ export function CoverReveal({ tagline }: Props) {
       stage.style.setProperty("--ox", `${(geo.x + geo.w / 2).toFixed(1)}px`);
       stage.style.setProperty("--oy", `${(geo.y + geo.h / 2).toFixed(1)}px`);
       cipher.resize(geo.sw, geo.sh);
+      globe?.resize(slot);
       last = -1;
     };
 
     const paint = () => {
       raf = 0;
 
+      globe?.setReduced(motion.matches);
       if (motion.matches) {
         /* stacked layout: the nav turns dark once the hero reaches it */
         setHero(true);
@@ -146,6 +157,8 @@ export function CoverReveal({ tagline }: Props) {
       const key = p + h + ex + q * 2;
       if (Math.abs(key - last) < 0.0005) return;
       last = key;
+
+      globe?.setProgress(p);
 
       const e = openness(p);
       const k = 1 - e;
@@ -222,6 +235,7 @@ export function CoverReveal({ tagline }: Props) {
       ro.disconnect();
       motion.removeEventListener("change", remeasure);
       cipher.clear();
+      globe?.destroy();
     };
   }, []);
 
@@ -230,6 +244,7 @@ export function CoverReveal({ tagline }: Props) {
       <div className="lp-stage" ref={stageRef}>
         {/* ---- Phase 1: the claim ---- */}
         <div className="lp-p1">
+          <canvas className="lp-globe" ref={globeRef} aria-hidden="true" />
           <h1 className="lp-words" id="lp-title">
             <span className="lp-word lp-word--a">{wordA}<span className="lp-sr">.</span></span>
             <span className="lp-slot" ref={slotRef} aria-hidden="true" />

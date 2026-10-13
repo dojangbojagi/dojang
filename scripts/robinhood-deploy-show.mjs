@@ -20,6 +20,12 @@ import {
   robinhoodGovernanceAbi,
 } from "../src/lib/contracts/abis.ts";
 import { validateGovernanceReadback } from "./robinhood-deploy-show-core.mjs";
+import {
+  presentationColorDepth,
+  renderPresentationFailure,
+  runPresentation,
+  safePresentationError,
+} from "./robinhood-deploy-presentation.mjs";
 
 const ROOT = process.cwd();
 const CHAIN_ID = 46_630;
@@ -44,10 +50,12 @@ const tokenSymbolAbi = parseAbi(["function symbol() view returns (string)"]);
 
 const argv = new Set(process.argv.slice(2));
 for (const arg of argv) {
-  assert.ok(arg === "--verbose" || arg === "--plain", `Unknown option: ${arg}`);
+  assert.ok(arg === "--verbose" || arg === "--plain" || arg === "--presentation", `Unknown option: ${arg}`);
 }
 const verbose = argv.has("--verbose");
 const plain = argv.has("--plain");
+const presentation = argv.has("--presentation");
+assert.ok(!(presentation && verbose), "Use --presentation by itself; --verbose remains available for diagnostics");
 const supportsColor = !plain && process.stdout.isTTY && process.env.NO_COLOR === undefined && process.env.TERM !== "dumb";
 const checks = [];
 
@@ -86,7 +94,15 @@ function cleanAscii(value) {
 }
 
 function paint(value, code) {
-  return supportsColor ? `\u001b[${code}m${value}\u001b[0m` : value;
+  if (!supportsColor) return value;
+  const depth = presentationColorDepth();
+  const burgundy = depth === "truecolor"
+    ? "38;2;198;56;96"
+    : depth === "256"
+      ? "38;5;168"
+      : "91";
+  const resolvedCode = code.replace("38;5;160", burgundy);
+  return `\u001b[${resolvedCode}m${value}\u001b[0m`;
 }
 
 function shortHash(hash) {
@@ -576,10 +592,47 @@ async function main() {
     assertAddress(rpcTransaction.to, entry.transaction.to, `Initialization target for ${entry.hash}`);
     initReceipts.push({ entry, receipt: rpcReceipt });
   }
-  renderReport({ chainId, head, verified, verificationByName, calls, initReceipts, oracleStates, demoReadiness });
+  const report = {
+    chainId,
+    head,
+    verified,
+    verificationByName,
+    calls,
+    initReceipts,
+    oracleStates,
+    demoReadiness,
+    deploymentReceiptCount: txRecords.length,
+    governance: {
+      proposalOneExecuted: proposalOne?.executed === true && Number(proposalOneState) === 6,
+      proposalOneState: proposalOneState === undefined ? "NOT FOUND" : `STATE ${proposalOneState}`,
+      minimumRemainingValidity: minimumRemainingValidity.toString(),
+    },
+  };
+
+  if (presentation) {
+    const playback = await runPresentation(report, {
+      tty: Boolean(process.stdout.isTTY) && !plain && process.env.TERM !== "dumb",
+      color: supportsColor,
+      colorDepth: presentationColorDepth(),
+      columns: process.stdout.columns || 100,
+    });
+    if (playback.interrupted) process.exitCode = 130;
+  } else {
+    renderReport(report);
+  }
 }
 
 main().catch((error) => {
-  console.error(cleanAscii(`Robinhood deployment readback failed: ${error instanceof Error ? error.message : String(error)}`));
+  const message = safePresentationError(error instanceof Error ? error.message : String(error));
+  if (presentation) {
+    const frame = renderPresentationFailure(message, {
+      columns: process.stdout.columns || 100,
+      color: supportsColor,
+      colorDepth: presentationColorDepth(),
+    });
+    console.error(frame);
+  } else {
+    console.error(cleanAscii(`Robinhood deployment readback failed: ${message}`));
+  }
   process.exitCode = 1;
 });

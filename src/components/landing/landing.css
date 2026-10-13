@@ -305,11 +305,19 @@
 
 /* Phase 1: the claim, on white. The period after "more" is the dot that opens. */
 .lp-p1 {
-  position: absolute; inset: 0;
+  position: absolute; inset: 0; isolation: isolate;
   display: grid; place-content: center; justify-items: center; gap: clamp(1.1rem, 2.6svh, 1.9rem);
   padding: var(--lp-nav-h) var(--lp-gutter) 7.5rem;
   text-align: center; color: var(--lp-ink);
 }
+/* The globe: a network sphere drawn by globe-sculpture.ts, centred on the dot. It sits under the claim (a negative
+   z-index inside .lp-p1, which is its own stacking context), and the small copy gets a white halo that knocks the
+   lines out. The words stay unpositioned: the dot's offsets are measured against .lp-p1. */
+.lp-globe {
+  position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; pointer-events: none;
+  opacity: 0; transition: opacity 1.3s ease;
+}
+.lp-globe[data-ready="1"] { opacity: 1; }
 .lp-words {
   display: flex; align-items: baseline; justify-content: center;
   font: 700 clamp(1.9rem, 5.9vw, 7.4rem) / 1 var(--lp-font-display);
@@ -330,6 +338,7 @@
 .lp-sub {
   max-width: 54ch;
   font-size: clamp(1rem, .92rem + .45vw, 1.28rem); line-height: 1.55; color: var(--lp-ink-soft);
+  text-shadow: 0 0 .55em #fff, 0 0 1.2em #fff, 0 0 .2em #fff;
   opacity: calc(1 - var(--e) * 9);
 }
 .lp-hint {

@@ -60,6 +60,56 @@ function makeBlades(n: number): Blade[] {
 
 export type CipherRect = { x: number; y: number; w: number; h: number };
 
+/* The faces carry the same fine triangulated mesh and node dots as the globe behind them (globe-sculpture.ts),
+   so the slabs read as the same material as the network, not as foreign blocks laid over it. */
+const CELL = 44; /* px between mesh lines on a face */
+const MAX_NODES = 120; /* a face with more lattice points than this is drawn without node dots */
+function drawMesh(ctx: CanvasRenderingContext2D, p: number[], key: number) {
+  const lu = Math.hypot(p[2] - p[0], p[3] - p[1]);
+  const lv = Math.hypot(p[6] - p[0], p[7] - p[1]);
+  const du = Math.max(1, Math.min(8, Math.round(lu / CELL)));
+  const dv = Math.max(1, Math.min(24, Math.round(lv / CELL)));
+  /* bilinear point on the quad: p0 -> p1 is u, p0 -> p3 is v */
+  const at = (u: number, v: number, o: number) => {
+    const tx = p[0] + (p[2] - p[0]) * u;
+    const ty = p[1] + (p[3] - p[1]) * u;
+    const bx = p[6] + (p[4] - p[6]) * u;
+    const by = p[7] + (p[5] - p[7]) * u;
+    return o === 0 ? tx + (bx - tx) * v : ty + (by - ty) * v;
+  };
+  ctx.lineWidth = 0.6;
+  ctx.strokeStyle = `rgba(255,255,255,${(0.05 + key * 0.17).toFixed(3)})`;
+  ctx.beginPath();
+  for (let i = 1; i < du; i++) {
+    ctx.moveTo(at(i / du, 0, 0), at(i / du, 0, 1));
+    ctx.lineTo(at(i / du, 1, 0), at(i / du, 1, 1));
+  }
+  for (let j = 1; j < dv; j++) {
+    ctx.moveTo(at(0, j / dv, 0), at(0, j / dv, 1));
+    ctx.lineTo(at(1, j / dv, 0), at(1, j / dv, 1));
+  }
+  if (du * dv <= 70) {
+    for (let i = 0; i < du; i++) {
+      for (let j = 0; j < dv; j++) {
+        const flip = (i + j) & 1;
+        const u0 = (i + flip) / du;
+        const u1 = (i + 1 - flip) / du;
+        ctx.moveTo(at(u0, j / dv, 0), at(u0, j / dv, 1));
+        ctx.lineTo(at(u1, (j + 1) / dv, 0), at(u1, (j + 1) / dv, 1));
+      }
+    }
+  }
+  ctx.stroke();
+  if ((du + 1) * (dv + 1) <= MAX_NODES) {
+    ctx.fillStyle = `rgba(255,255,255,${(0.16 + key * 0.3).toFixed(3)})`;
+    ctx.beginPath();
+    for (let i = 0; i <= du; i++) {
+      for (let j = 0; j <= dv; j++) ctx.rect(at(i / du, j / dv, 0) - 0.9, at(i / du, j / dv, 1) - 0.9, 1.8, 1.8);
+    }
+    ctx.fill();
+  }
+}
+
 export function createCipherSculpture(canvas: HTMLCanvasElement) {
   const ctx = canvas.getContext("2d");
   let W = 0;
@@ -113,7 +163,7 @@ export function createCipherSculpture(canvas: HTMLCanvasElement) {
     dirty = true;
     ctx.lineJoin = "round";
 
-    type Face = { pts: number[]; depth: number; top: Rgb; edge: string; area: number };
+    type Face = { pts: number[]; depth: number; top: Rgb; edge: string; area: number; key: number };
     const drawList: { z: number; alpha: number; faces: Face[] }[] = [];
     const windowPieces: string[] = [];
 
@@ -208,6 +258,7 @@ export function createCipherSculpture(canvas: HTMLCanvasElement) {
             depth: cZ,
             area: Math.abs(area) / 2,
             top: [r, gg, bb],
+            key,
             edge: `rgba(255,255,255,${(0.14 + key * 0.38).toFixed(3)})`,
           });
         }
@@ -244,8 +295,9 @@ export function createCipherSculpture(canvas: HTMLCanvasElement) {
         ctx.fillStyle = grad;
         ctx.fill();
         ctx.strokeStyle = f.edge;
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 0.9;
         ctx.stroke();
+        drawMesh(ctx, p, f.key);
       }
     }
     ctx.globalAlpha = 1;
