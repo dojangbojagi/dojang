@@ -76,8 +76,9 @@ const wagmiConfig = createConfig({
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
 
+  // Avoid silently restoring a stale, possibly incompatible injected wallet on page reload.
   return (
-    <WagmiProvider config={wagmiConfig}>
+    <WagmiProvider config={wagmiConfig} reconnectOnMount={false}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider theme={darkTheme()}>
           <DemoWitnessProvider>{children}</DemoWitnessProvider>

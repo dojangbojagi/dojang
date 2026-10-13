@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { TestAssetAddresses } from "@/components/test-asset-addresses";
 import { WalletNetworkCard } from "@/components/wallet-network-card";
 import { appEnv } from "@/lib/config/env";
 import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
@@ -65,6 +66,8 @@ export default function AppHomePage() {
           </Link>
         ))}
       </section>
+
+      <TestAssetAddresses />
 
       <WalletNetworkCard expectedChainId={ROBINHOOD_TESTNET_CHAIN_ID} />
 

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { Arrow } from "./arrow";
+import { ProjectTokenCa } from "./project-token-ca";
 import { createCipherSculpture } from "./cipher-sculpture";
 import { FORM_TIMELINE, GlyphField } from "./glyph-field";
 import { scrollToId } from "./smooth-scroll";
@@ -308,6 +309,7 @@ export function CoverReveal({ tagline }: Props) {
                   >
                     How it works
                   </a>
+                  <ProjectTokenCa />
                 </div>
               </div>
             </div>

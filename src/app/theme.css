@@ -131,6 +131,20 @@ h4 { font-weight: 600; }
 }
 .site-header[data-scrolled="true"] { background: rgba(6, 4, 5, 0.95); border-bottom-color: var(--line); }
 .site-header__inner { position: relative; }
+.site-header__social {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 2.9rem;
+  height: 2.9rem;
+  padding: 0;
+  color: var(--text-muted);
+  background: rgba(21, 15, 18, 0.5);
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+}
+.site-header__social svg { width: 1rem; height: 1rem; }
+.site-header__social:disabled { cursor: not-allowed; opacity: 0.72; }
 
 .brand { gap: 0.7rem; }
 .brand__mark, .brand svg { flex: none; transition: transform 0.6s var(--ease-out); }
@@ -202,6 +216,7 @@ h4 { font-weight: 600; }
   .brand { gap: 0.55rem; min-width: 0; }
   .brand__name { font-size: 0.66rem; line-height: 1.1; letter-spacing: 0.04em; white-space: normal; max-width: 8.2em; }
   .site-header__actions { gap: 0.45rem; }
+  .site-header__social { width: 2.6rem; height: 2.6rem; }
   .menu-toggle { width: 2.6rem; height: 2.6rem; }
 }
 

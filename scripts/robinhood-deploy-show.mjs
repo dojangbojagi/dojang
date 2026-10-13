@@ -40,6 +40,15 @@ const poolRoleAbi = parseAbi([
 const governanceRoleAbi = parseAbi(["function PAUSER_ROLE() view returns (bytes32)"]);
 const tokenSymbolAbi = parseAbi(["function symbol() view returns (string)"]);
 
+const argv = new Set(process.argv.slice(2));
+for (const arg of argv) {
+  assert.ok(arg === "--verbose" || arg === "--plain", `Unknown option: ${arg}`);
+}
+const verbose = argv.has("--verbose");
+const plain = argv.has("--plain");
+const supportsColor = !plain && process.stdout.isTTY && process.env.NO_COLOR === undefined && process.env.TERM !== "dumb";
+const checks = [];
+
 const contractOrder = [
   "ZKTranscriptLib",
   "RelationsLib",
@@ -67,7 +76,117 @@ const envNames = {
 };
 
 function pass(label, detail = "") {
-  console.log(`PASS ${label}${detail ? ` · ${detail}` : ""}`);
+  checks.push({ label, detail });
+}
+
+function cleanAscii(value) {
+  return String(value).replace(/[^\x09\x0A\x0D\x20-\x7E]/g, "");
+}
+
+function paint(value, code) {
+  return supportsColor ? `\u001b[${code}m${value}\u001b[0m` : value;
+}
+
+function shortHash(hash) {
+  return `${hash.slice(0, 10)}...${hash.slice(-8)}`;
+}
+
+function shortAddress(address) {
+  return `${address.slice(0, 8)}...${address.slice(-6)}`;
+}
+
+function formatWad(value) {
+  const wad = 10n ** 18n;
+  const whole = value / wad;
+  const hundredths = ((value % wad) * 100n + wad / 2n) / wad;
+  return hundredths === 100n
+    ? `${whole + 1n}.00 WAD`
+    : `${whole}.${hundredths.toString().padStart(2, "0")} WAD`;
+}
+
+function sourceLabel(value) {
+  if (value === "source verified") return "VERIFIED";
+  if (value.startsWith("source not verified")) return "NOT VERIFIED";
+  return "UNAVAILABLE";
+}
+
+function renderReport({ chainId, head, verified, verificationByName, calls, initReceipts, oracleStates }) {
+  const lines = [];
+  const rule = "+----------------------------------------------------------------------------+";
+  const line = (value = "") => lines.push(cleanAscii(value));
+  const section = (value) => line(paint(value, "97;1"));
+  const good = (value) => paint(value, "97;1");
+  const warning = (value) => paint(value, "38;5;160;1");
+  const sourceStatuses = [...verificationByName.values()];
+  const sourceVerifiedCount = sourceStatuses.filter((value) => value === "source verified").length;
+  const sourceNotVerifiedCount = sourceStatuses.filter((value) => value === "source not verified").length;
+  const sourceUnavailableCount = sourceStatuses.length - sourceVerifiedCount - sourceNotVerifiedCount;
+  const ready = oracleStates.every((state) => state.state === "fresh");
+
+  line(paint(rule, "38;5;160"));
+  line(`${paint("| G Y E V O", "38;5;160;1")} | ${paint("ROBINHOOD TESTNET DEPLOYMENT", "97;1")}`);
+  line(`| CHAIN ${chainId} | RPC REACHABLE | CURRENT BLOCK ${head}`);
+  line(paint(rule, "38;5;160"));
+  line();
+  section("DEPLOYMENT SUMMARY");
+  line(`Contracts deployed: ${good(`${verified.length}/10`)}`);
+  line(`Deployment receipts confirmed: ${good(`${verified.length}/10`)} | initialization receipts: ${good(`${initReceipts.length}/${calls.length}`)}`);
+  line(`Runtime bytecode verified present on RPC: ${good(`${verified.length}/10`)}`);
+  line(`Explorer source: ${sourceVerifiedCount} verified | ${sourceNotVerifiedCount} not verified | ${sourceUnavailableCount} unavailable`);
+  line();
+
+  const categories = [
+    ["ZK PROOF INFRASTRUCTURE", ["ZKTranscriptLib", "RelationsLib", "HonkVerifier", "EligibilityVerifierAdapter"]],
+    ["CREDENTIAL INFRASTRUCTURE", ["RobinhoodDemoCredentialRegistry"]],
+    ["LENDING", ["ControlledTestOracle", "rUSD2", "rCOL2", "LendingPoolV2"]],
+    ["GOVERNANCE", ["RobinhoodGovernancePhase1"]],
+  ];
+  const byName = new Map(verified.map((record) => [record.name, record]));
+  for (const [category, names] of categories) {
+    section(category);
+    for (const name of names) {
+      const item = byName.get(name);
+      const source = verificationByName.get(name);
+      const tx = verbose ? item.hash : shortHash(item.hash);
+      line(`${name.padEnd(35)} ${verbose ? item.address : shortAddress(item.address)}`);
+      line(`  deployed YES | receipt CONFIRMED ${tx}`);
+      line(`  runtime bytecode PRESENT ON RPC | explorer source ${sourceLabel(source)}`);
+      if (verbose) {
+        line(`  block ${item.block} | gas used ${item.gasUsed} | runtime code hash ${item.runtimeCodeHash}`);
+        line(`  ${EXPLORER}/address/${item.address}`);
+        if (source !== "source verified" && source !== "source not verified") line(`  source detail: ${source}`);
+      }
+    }
+    line();
+  }
+
+  section("LENDING ORACLE READINESS");
+  if (ready) line(`Oracle freshness: ${good("READY")} | all configured prices are within max age`);
+  else line(`Oracle freshness: ${warning("WARNING")} | Lending readiness only; deployment remains verified`);
+  for (const state of oracleStates) {
+    const status = state.state.toUpperCase();
+    const detail = state.state === "missing"
+      ? "price not initialized"
+      : `${formatWad(state.priceWad)} | age ${state.ageSeconds}s / max ${state.maxAge}s`;
+    line(`  ${state.name}: ${state.state === "fresh" ? good(status) : warning(status)} | ${detail}`);
+  }
+
+  if (verbose) {
+    line();
+    section("INITIALIZATION RECEIPTS");
+    for (const { entry, receipt } of initReceipts) {
+      line(`${entry.function} | ${entry.hash} | block ${receipt.blockNumber} | ${receipt.status}`);
+    }
+    line();
+    section("READ-ONLY VERIFICATION CHECKS");
+    for (const check of checks) line(`PASS ${check.label}${check.detail ? ` | ${check.detail}` : ""}`);
+  }
+
+  line();
+  line("On-chain bytecode, deployment receipts, dependencies, roles, and reserve settings were checked through Robinhood RPC.");
+  line("Explorer source status is independent; bytecode presence does not imply verified source.");
+  line("READ-ONLY: no transaction was signed or broadcast; no price, token, or credential state was changed.");
+  console.log(lines.join("\n"));
 }
 
 function sameAddress(left, right) {
@@ -220,7 +339,7 @@ async function main() {
   ]);
   assert.equal(deployed.size, 10);
   assert.deepEqual([...deployed.keys()], contractOrder);
-  pass("Foundry artifact", "chain 46630 · 10 creates · 5 init calls · all 15 artifact receipts successful");
+  pass("Foundry artifact", "chain 46630 | 10 creates | 5 init calls | all 15 artifact receipts successful");
   pass("HonkVerifier artifact identity", "creation bytecode matches generated artifact linked to both deployed libraries");
 
   const verified = [];
@@ -248,7 +367,7 @@ async function main() {
     }
     verified.push({ name, address, hash: entry.hash, block: receipt.blockNumber, gasUsed: receipt.gasUsed, runtimeCodeHash });
   }
-  pass("Robinhood RPC", `chain ${chainId} · head ${head} · 10 deployment receipts and runtime bytecodes verified`);
+  pass("Robinhood RPC", `chain ${chainId} | head ${head} | 10 deployment receipts and runtime bytecodes verified present`);
   pass("Frontend registry", "all 10 NEXT_PUBLIC address values match the confirmed creation receipts");
 
   const getAddressByName = (name) => deployed.get(name).entry.contractAddress
@@ -371,24 +490,10 @@ async function main() {
     assert.deepEqual(priceReadbacks[index], [state.priceWad, state.updatedAt], `${state.name} oracle getter mismatch`);
   });
   pass("Oracle and reserves", "two approved reserve configs and price bounds confirmed; current oracle state follows");
-  for (const state of oracleStates) {
-    if (state.state === "missing") {
-      console.log(`BLOCKED ${state.name} oracle price missing · risk-increasing Lending actions cannot proceed`);
-    } else {
-      console.log(`${state.state === "fresh" ? "PASS" : "BLOCKED"} ${state.name} approved synthetic price ${state.priceWad} WAD · updated ${state.updatedAt} · age ${state.ageSeconds}s / ${state.maxAge}s${state.state === "stale" ? " · Lending risk-increasing actions require a guarded refresh" : ""}`);
-    }
-  }
 
   const verification = await Promise.all(verified.map(async (record) => [record.name, await sourceVerification(record.address)]));
   const verificationByName = new Map(verification);
-  console.log(`\nRobinhood Testnet deployment · chain ${CHAIN_ID} · RPC head ${head}`);
-  console.log("On-chain code and receipts are verified independently. Blockscout source status is reported separately.");
-  console.log("\nContract registry:");
-  for (const item of verified) {
-    console.log(`${item.name}\t${item.address}\t${item.hash}\tblock ${item.block}\t${verificationByName.get(item.name)}`);
-    console.log(`  runtime code hash ${item.runtimeCodeHash} · ${EXPLORER}/address/${item.address}`);
-  }
-  console.log("\nInitialization receipts:");
+  const initReceipts = [];
   for (const { entry, receipt } of calls) {
     const [rpcReceipt, rpcTransaction] = await Promise.all([
       client.getTransactionReceipt({ hash: entry.hash }),
@@ -398,15 +503,12 @@ async function main() {
     assertAddress(rpcTransaction.from, ADMIN, `Initialization sender for ${entry.hash}`);
     assert.equal(rpcTransaction.chainId, CHAIN_ID, `Initialization chain ID mismatch for ${entry.hash}`);
     assertAddress(rpcTransaction.to, entry.transaction.to, `Initialization target for ${entry.hash}`);
-    console.log(`${entry.function}\t${entry.hash}\tblock ${rpcReceipt.blockNumber}\t${rpcReceipt.status}`);
+    initReceipts.push({ entry, receipt: rpcReceipt });
   }
-  console.log("\nReadbacks: adapter → HonkVerifier; pool → registry/adapter/oracle; governance → registry.");
-  console.log(`Roles: admin ${ADMIN}; issuer ${ISSUER}. rUSD2 and rCOL2 identities match their deployed token bytecode and metadata.`);
-  console.log("Read-only display only: this command did not write oracle prices, token supplies, or credentials.");
-  console.log("READ-ONLY: this command performs RPC/explorer reads only; it has no signer, transaction, or broadcast path.");
+  renderReport({ chainId, head, verified, verificationByName, calls, initReceipts, oracleStates });
 }
 
 main().catch((error) => {
-  console.error(`Robinhood deployment readback failed: ${error instanceof Error ? error.message : String(error)}`);
+  console.error(cleanAscii(`Robinhood deployment readback failed: ${error instanceof Error ? error.message : String(error)}`));
   process.exitCode = 1;
 });

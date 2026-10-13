@@ -61,6 +61,17 @@ export function SiteHeader() {
           </ul>
         </nav>
         <div className="site-header__actions">
+          <button
+            className="site-header__social"
+            type="button"
+            disabled
+            title="The official GYEVO X URL has not been configured."
+            aria-label="GYEVO X account unavailable until the official URL is configured"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path fill="currentColor" d="M18.9 2H22l-6.8 7.8L23.2 22h-6.3L12 14.6 5.6 22H2.4l7.3-8.4L1.9 2h6.5l4.5 6.9L18.9 2Zm-1.1 18h1.7L7.4 3.9H5.6L17.8 20Z" />
+            </svg>
+          </button>
           <span className="site-header__net">
             <span className="net-pill" title={`${networkText}, expected chain ID ${ROBINHOOD_TESTNET_CHAIN_ID}`}>
               <i className="net-pill__dot" aria-hidden="true" /><b>{networkText}</b><i>Testnet</i>
