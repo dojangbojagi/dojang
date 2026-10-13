@@ -24,16 +24,20 @@ export function ProjectTokenCa() {
     configuredAddress !== "0x0000000000000000000000000000000000000000",
   );
 
-  useEffect(() => () => {
-    if (resetTimer.current) clearTimeout(resetTimer.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (resetTimer.current) clearTimeout(resetTimer.current);
+    },
+    [],
+  );
 
   async function copyAddress() {
     if (!isConfigured || !configuredAddress) return;
     if (resetTimer.current) clearTimeout(resetTimer.current);
 
     try {
-      if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
+      if (!navigator.clipboard?.writeText)
+        throw new Error("Clipboard unavailable");
       await navigator.clipboard.writeText(configuredAddress);
       setCopyState("copied");
     } catch {
@@ -44,8 +48,12 @@ export function ProjectTokenCa() {
   }
 
   return (
-    <div className="lp-ca" role="group" aria-label="GYEVO project token contract address">
-      <span className="lp-ca__label">CA</span>
+    <div
+      className="lp-ca"
+      role="group"
+      aria-label="GYEVO project token contract address"
+    >
+      <span className="hidden! lp-ca__label"></span>
       {isConfigured && configuredAddress && chainId ? (
         <>
           <span className="lp-ca__address" title={configuredAddress}>
@@ -58,14 +66,22 @@ export function ProjectTokenCa() {
             onClick={copyAddress}
             aria-label="Copy full GYEVO project token contract address"
           >
-            {copyState === "copied" ? "Copied!" : copyState === "failed" ? "Copy failed" : "Copy"}
+            {copyState === "copied"
+              ? "Copied!"
+              : copyState === "failed"
+                ? "Copy failed"
+                : "Copy"}
           </button>
           <span className="lp-sr" aria-live="polite">
-            {copyState === "copied" ? "GYEVO contract address copied" : copyState === "failed" ? "Could not copy contract address" : ""}
+            {copyState === "copied"
+              ? "GYEVO contract address copied"
+              : copyState === "failed"
+                ? "Could not copy contract address"
+                : ""}
           </span>
         </>
       ) : (
-        <span className="lp-ca__pending">CA coming soon</span>
+        <span className="lp-ca__pending"></span>
       )}
     </div>
   );
