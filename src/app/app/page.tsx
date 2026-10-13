@@ -12,16 +12,16 @@ export const metadata: Metadata = { title: `App · ${appEnv.appName}` };
    Web3 logic: the wallet card, the chain check and every action live in the routes it links to. */
 const SECTIONS = [
   {
-    href: "/lending",
-    name: "Lending",
-    tag: "Private proof · Policy 3",
-    text: "Prove eligibility with a private proof built in your browser, then supply and borrow test assets in Lending V2.",
-  },
-  {
     href: "/dao",
     name: "DAO Governance",
-    tag: "DAO Governance · Policy 4",
-    text: "Hold an active project credential to create proposals and vote on Robinhood Testnet. Votes are public.",
+    tag: "Policy 4 · No private proof",
+    text: "An active GYEVO project credential lets an eligible wallet create proposals and vote. Every vote is public.",
+  },
+  {
+    href: "/lending",
+    name: "Lending",
+    tag: "Policy 3 · BOJAGI proof",
+    text: "Use a matching private witness to prove eligibility in your browser, then interact with test assets in Lending V2.",
   },
   {
     href: "/docs",
@@ -44,8 +44,7 @@ export default function AppHomePage() {
         <p className="eyebrow">Application · Robinhood Testnet · chain {ROBINHOOD_TESTNET_CHAIN_ID}</p>
         <h1>{appEnv.appName} app</h1>
         <p className="page-lead">
-          Use project-issued credentials and private proofs on a test network. Connect a wallet when you are ready;
-          nothing is connected for you, and no real funds are involved.
+          GYEVO uses project-issued credentials to gate two paths: Policy 4 for public DAO governance, and Policy 3 plus a private BOJAGI proof for lending. The proof hides the private eligibility value; it does not hide public transactions or amounts.
         </p>
         <p className="app-home__back">
           <Link className="protocol-inline-link" href="/">← Back to the website</Link>
@@ -54,6 +53,23 @@ export default function AppHomePage() {
           <Link className="protocol-inline-link" href="/bojagi">BOJAGI</Link>
         </p>
       </header>
+
+      <section className="app-home__grid" aria-label="Choose how to begin">
+        <Link className="app-card" href="/contracts#verified-history">
+          <span className="app-card__idx" aria-hidden="true">00</span>
+          <span className="app-card__tag">Read-only · No wallet needed</span>
+          <strong className="app-card__name">Explore Verified Demo</strong>
+          <span className="app-card__text">Review confirmed Robinhood Testnet receipts and current contract readbacks. Historical transactions are not active positions.</span>
+          <span className="app-card__go" aria-hidden="true">Explore history →</span>
+        </Link>
+        <Link className="app-card" href="/dojang">
+          <span className="app-card__idx" aria-hidden="true">01</span>
+          <span className="app-card__tag">Connect wallet · Robinhood Testnet</span>
+          <strong className="app-card__name">Use GYEVO</strong>
+          <span className="app-card__text">Check your project credential first. The authorized project issuer must issue it; Policy 3 also needs a matching private witness.</span>
+          <span className="app-card__go" aria-hidden="true">Check credential →</span>
+        </Link>
+      </section>
 
       <section className="app-home__grid" aria-label="Application sections">
         {SECTIONS.map((section, index) => (

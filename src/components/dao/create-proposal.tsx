@@ -55,6 +55,7 @@ export function CreateProposal({ gov, runner, onCreated }: { gov: Governance; ru
         Available action: <b>change the minimum remaining credential validity</b>, the policy the protected action reads
         {current !== undefined ? ` (now ${formatDuration(current)})` : ""}. Nothing else can be proposed.
       </p>
+      <p className="small muted">Creating a proposal publishes its text and requests a wallet transaction. It requires an active Policy 4 GYEVO project credential and test ETH for gas. Eligible wallets can then vote; the contract enforces the full voting period before finalization. This DAO cannot change Lending settings or move funds.</p>
       <form className="protocol-form" onSubmit={(event) => void submit(event)} noValidate>
         <label className="protocol-field" htmlFor="dao-reference"><span>What and why (public text or a link)</span>
           <textarea id="dao-reference" rows={3} value={reference} onChange={(event) => setReference(event.currentTarget.value)} aria-describedby="dao-reference-help" disabled={runner.busy} />

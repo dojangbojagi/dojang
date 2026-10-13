@@ -35,7 +35,7 @@ export function useDojangVerification(wallet?: `0x${string}`) {
     abi: dojangAttesterBookAbi,
     functionName: "getAttester",
     args: [officialDojang.upbitKoreaAttesterId],
-    query: { retry: 1 },
+    query: { enabled, retry: 1 },
   });
   const uid = uidQuery.data;
   const attestationQuery = useReadContract({

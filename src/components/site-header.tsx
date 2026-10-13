@@ -42,7 +42,7 @@ export function SiteHeader() {
 
   if (pathname === "/") return null;
   const walletState = wallet.state;
-  const networkText = walletState === "wrong-network" ? "Wrong network" : "Robinhood Testnet";
+  const networkText = walletState === "wrong-network" ? "Switch to Robinhood Testnet" : "Robinhood Testnet";
 
   return (
     <header className="site-header site-header--app" data-scrolled={scrolled}>

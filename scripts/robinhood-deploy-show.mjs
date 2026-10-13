@@ -19,6 +19,7 @@ import {
   lendingPoolV2Abi,
   robinhoodGovernanceAbi,
 } from "../src/lib/contracts/abis.ts";
+import { validateGovernanceReadback } from "./robinhood-deploy-show-core.mjs";
 
 const ROOT = process.cwd();
 const CHAIN_ID = 46_630;
@@ -145,7 +146,7 @@ function renderReport({ chainId, head, verified, verificationByName, calls, init
   line(`BLOCKED: ${demoReadiness.lendingReady
     ? "Lending V2 prerequisites currently pass read-only checks; wallet transactions still require participant approval"
     : `Lending risk-increasing actions unavailable until ${demoReadiness.lendingBlockers.join("; ")}`}`);
-  line(`NOT VERIFIED: Blockscout source ${sourceVerifiedCount}/10 verified`);
+  line(`BLOCKSCOUT SOURCE: ${sourceVerifiedCount}/10 verified | ${sourceNotVerifiedCount} not verified | ${sourceUnavailableCount} unavailable`);
   line();
 
   const categories = [
@@ -437,13 +438,32 @@ async function main() {
   await requireRole(client, governanceAddress, governancePauserRole, ADMIN, "Governance pauser");
   pass("Admin, issuer and minter roles", "deployer roles and separate issuer role are present on chain");
 
-  const governanceParams = await Promise.all([
+  const [votingPeriod, quorum, executionWindow, minimumRemainingValidity, nextProposalId] = await Promise.all([
     read(client, governanceAddress, robinhoodGovernanceAbi, "votingPeriod"),
     read(client, governanceAddress, robinhoodGovernanceAbi, "quorum"),
     read(client, governanceAddress, robinhoodGovernanceAbi, "executionWindow"),
     read(client, governanceAddress, robinhoodGovernanceAbi, "minimumRemainingValidity"),
+    read(client, governanceAddress, robinhoodGovernanceAbi, "nextProposalId"),
   ]);
-  assert.deepEqual(governanceParams, [3600n, 2n, 604800n, 0n], "Governance constructor settings do not match approved values");
+  const proposalOne = nextProposalId > 1n
+    ? await read(client, governanceAddress, robinhoodGovernanceAbi, "getProposal", [1n])
+    : undefined;
+  const proposalOneState = proposalOne
+    ? await read(client, governanceAddress, robinhoodGovernanceAbi, "proposalState", [1n])
+    : undefined;
+  assertAddress(governance.entry.arguments?.[0], registryAddress, "Governance constructor registry");
+  assertAddress(governance.entry.arguments?.[1], ADMIN, "Governance constructor admin");
+  const governanceReadback = validateGovernanceReadback({
+    constructorArguments: governance.entry.arguments,
+    votingPeriod,
+    quorum,
+    executionWindow,
+    minimumRemainingValidity,
+    nextProposalId,
+    proposalOne,
+    proposalOneState,
+  });
+  pass("Governance parameters and Proposal #1", governanceReadback);
 
   const reserveAssets = await read(client, poolAddress, lendingPoolV2Abi, "getReserveAssets");
   assert.equal(reserveAssets.length, 2, "Expected exactly two configured lending reserves");
@@ -518,12 +538,7 @@ async function main() {
     };
   })));
   const activeCredential = (label, policyId) => participantCredentials.find((item) => item.label === label && item.policyId === policyId)?.active === true;
-  const [nextProposalId, quorum, votingPeriod, loanLiquidity] = await Promise.all([
-    read(client, governanceAddress, robinhoodGovernanceAbi, "nextProposalId"),
-    read(client, governanceAddress, robinhoodGovernanceAbi, "quorum"),
-    read(client, governanceAddress, robinhoodGovernanceAbi, "votingPeriod"),
-    read(client, poolAddress, lendingPoolV2Abi, "availableLiquidity", [loanAddress]),
-  ]);
+  const loanLiquidity = await read(client, poolAddress, lendingPoolV2Abi, "availableLiquidity", [loanAddress]);
   const daoReady = activeCredential("Wallet A", 4n) && activeCredential("Wallet B", 4n);
   const policy3Ready = activeCredential("Wallet A", 3n) && activeCredential("Wallet B", 3n);
   const oracleReady = oracleStates.every((state) => state.state === "fresh");

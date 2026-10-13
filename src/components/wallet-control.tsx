@@ -44,7 +44,7 @@ export function WalletControl({ expectedChainId, showRecoveryAction = false }: {
               : "connected";
         const label = state === "connecting" ? "Connecting…"
           : state === "disconnected" ? "Connect Wallet"
-            : state === "wrong-network" ? wallet.isSwitching ? "Switching…" : wallet.switchError ? "Switch failed" : "Wrong Network"
+            : state === "wrong-network" ? wallet.isSwitching ? "Switching…" : wallet.switchError ? "Try Network Switch Again" : `Switch to ${requiredChain?.name ?? "Required Network"}`
               : account?.displayName ?? "Connected";
         const accessibleLabel = networkDescription ? `${label}. ${networkDescription}` : label;
         const openWallet = () => {

@@ -89,8 +89,8 @@ export function FinalReveal({ appName }: { appName: string }) {
             See what your wallet can <em>prove.</em>
           </h2>
           <p className="lp-final__lead">
-            Verify with Dojang and take part in the DAO, or prove privately and
-            borrow in the lending demo.
+            Check your GYEVO project credential for DAO governance, or prove
+            eligibility privately with BOJAGI for Lending.
           </p>
           <div className="lp-actions">
             <Link className="lp-btn lp-btn--primary" href="/dojang">

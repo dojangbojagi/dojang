@@ -46,7 +46,7 @@ export function GovernanceNotice({ chainId = GIWA_CHAIN_ID }: { chainId?: Protoc
       </ul>
       <p className="small muted">
         Using Lending does not require any governance step, and governance does not require a ZK proof.{" "}
-        <Link href="/lending">Lending</Link> · <Link href="/dojang">{isRobinhood ? "Credential tools" : "Check your Dojang credential"}</Link>
+        <Link href="/lending">Lending</Link> · <Link href="/dojang">{isRobinhood ? "Credential tools" : "Check your Dojang credential"}</Link> · <Link href="/contracts#verified-history">Explore verified demo history</Link>
       </p>
     </section>
   );
@@ -114,7 +114,7 @@ function GiwaDeploymentStatus() {
         <p className="small"><a className="addr" href={found?.explorerUrl ?? `${GIWA_EXPLORER_URL}/address/${address}`} target="_blank" rel="noopener noreferrer">{address}<span className="visually-hidden"> (opens in a new tab)</span></a></p>
       )}
       {address && found?.codeState === "present" && <GovernanceDependencies />}
-      <p className="small muted">Source verification is not established for any project contract. Local Foundry and Anvil results are not GIWA Sepolia evidence.</p>
+      <p className="small muted">This is the legacy GIWA contract set, separate from the Robinhood Testnet deployment. Local Foundry and Anvil results are not GIWA Sepolia evidence.</p>
     </div>
   );
 }

@@ -19,36 +19,36 @@ function Eyebrow({ n, children, ac }: { n: string; children: string; ac?: "blue"
 /* ----------------------------------------------------------------- 02 */
 const STEPS = [
   {
-    name: "Trusted state",
+    name: "Project credential",
     lane: "private",
-    where: "On your device",
-    text: "A trusted issuer vouches for a fact about your wallet. You receive the private details and they stay with you.",
+    where: "Issued to you",
+    text: "An authorized issuer records a credential for a GYEVO policy. Policy 3 also needs a matching private witness; Policy 4 does not. These are separate from official GIWA Dojang credentials.",
     pub: ["Your wallet address"],
     priv: ["The value and a random salt", "Known to you and the issuer only"],
   },
   {
-    name: "Attestation",
+    name: "Credential record",
     lane: "public",
     where: "On-chain",
-    text: "The issuer registers a sealed fingerprint of the fact, called a commitment. The value itself is never published.",
+    text: "The project registry binds your wallet to a policy and sealed commitment. Policy 4 is for DAO governance; Policy 3 is for Lending.",
     pub: ["The commitment", "The wallet it is bound to", "Expiry and revocation status"],
     priv: ["The value", "The salt"],
   },
   {
-    name: "Private proof",
+    name: "BOJAGI proof",
     lane: "private",
-    where: "On your device",
-    text: "Your device proves that the sealed fact meets the policy and matches the on-chain commitment, without sending the value anywhere.",
+    where: "In your browser",
+    text: "For Policy 3 Lending, BOJAGI uses the matching witness to prove eligibility without revealing its private value. DAO governance needs no proof.",
     pub: ["The policy and its threshold", "The proof itself"],
     priv: ["The value", "The salt"],
   },
   {
-    name: "Verified execution",
+    name: "Choose a path",
     lane: "public",
     where: "On-chain",
-    text: "A contract checks the sender, the commitment, the policy and the proof in one transaction, then unlocks the action: a governance vote, or a loan in the Lending V2 market.",
-    pub: ["The proof and public inputs", "Your wallet address", "The access result and transaction"],
-    priv: ["The value stays unpublished"],
+    text: "Policy 4 opens public proposal and voting actions. Policy 3 plus a proof opens eligible Lending actions; repayment and safe withdrawals do not need a proof.",
+    pub: ["DAO proposals and votes", "Lending transactions and amounts", "The proof and public inputs"],
+    priv: ["The eligibility value and salt stay unpublished"],
   },
 ] as const;
 
@@ -61,7 +61,7 @@ export function PathSection() {
           From a trusted fact to a <em className="o">verified</em> action.
         </h2>
         <p className="lp-lead" data-lp-reveal style={{ ["--i" as string]: 2 }}>
-          Four steps. The path crosses the privacy boundary three times, and the value never does.
+          DOJANG project credentials lead to two clear paths: Policy 4 → DAO, or Policy 3 → BOJAGI → Lending.
         </p>
         <p className="lp-legend" data-lp-reveal style={{ ["--i" as string]: 3 }}>
           <span className="pv"><i aria-hidden="true" />Private: stays on your device</span>
@@ -101,10 +101,10 @@ export function PathSection() {
    the tokens are test tokens; this is a credential-gated lending demonstration, not an exchange. */
 const ACTIONS = [
   { name: "Supply", note: "Lend rUSD2 to the pool", proof: true },
-  { name: "Collateral", note: "Post rCOL2 as collateral", proof: true },
+  { name: "Deposit", note: "Post rCOL2 as collateral", proof: false },
+  { name: "Enable collateral", note: "Count deposited rCOL2 toward borrowing", proof: true },
   { name: "Borrow", note: "Draw rUSD2 against it", proof: true },
-  { name: "Repay", note: "Return what was borrowed", proof: false },
-  { name: "Withdraw", note: "Take back what is safe", proof: false },
+  { name: "Repay & withdraw", note: "Return debt and take back safe assets", proof: false },
 ] as const;
 
 export function LendingSection() {
@@ -126,7 +126,7 @@ export function LendingSection() {
           </p>
           <div className="lp-lend__cta" data-lp-reveal style={{ ["--i" as string]: 4 }}>
             <Link className="lp-btn lp-btn--primary" href="/lending">Open Lending <Arrow /></Link>
-            <Link className="lp-btn lp-btn--ghost" href="/app">Launch App</Link>
+            <Link className="lp-btn lp-btn--ghost" href="/contracts#verified-history">Explore Verified Demo</Link>
           </div>
         </div>
 
@@ -148,7 +148,7 @@ export function LendingSection() {
               </li>
             ))}
           </ol>
-          <p className="lp-lend__foot"><span>Policy 3</span>Three of five actions are gated by a private proof.</p>
+          <p className="lp-lend__foot"><span>Policy 3</span>Supply, collateral activation and borrowing need a private proof.</p>
         </figure>
       </div>
     </section>
@@ -156,12 +156,8 @@ export function LendingSection() {
 }
 
 /* ----------------------------------------------------------------- 05 */
-/* The roadmap states what exists, what is live and what is still to be done, in four plain words:
-   Completed, Live on Testnet, In Progress, Future Development. Statuses follow the project's evidence:
-   the stack is deployed and read back from chain 46630, prices are set, demo tokens are minted and policy-4
-   credentials are issued. Nothing is called complete that has no receipt: the real-wallet DAO and Lending
-   journeys, policy-3 issuance and explorer source verification are still in progress, and production
-   readiness (audit, production oracle, mainnet) is future development, not part of the testnet launch. */
+/* Testnet stages reflect the confirmed deployment, Blockscout source checks and public DAO/Lending receipts.
+   Production controls, an independent audit and a production price oracle remain future work. */
 type PhaseStatus = "done" | "live" | "wip" | "future";
 const STATUS_LABEL: Record<PhaseStatus, string> = {
   done: "Completed",
@@ -188,27 +184,27 @@ const PHASES: readonly { n: string; name: string; status: PhaseStatus; items: re
     items: [
       "Ten project contracts deployed and read back from chain 46630",
       "Synthetic test prices set and controlled demo tokens minted",
-      "Two policy-4 DAO credentials issued",
+      "Policy 3 Lending and Policy 4 DAO credentials issued by the authorized project issuer",
     ],
   },
   {
     n: "03",
     name: "Live testnet demo",
-    status: "live",
+    status: "done",
     items: [
-      "Contract status and explorer links read live from the network",
-      "DAO and Lending screens connected to the deployed contracts",
-      "Demo tokens and test prices in place for the first journeys",
+      "Live contract addresses and status are read from Robinhood Testnet",
+      "The app separates Policy 4 governance from Policy 3 private Lending proofs",
+      "Confirmed demo activity is explorable without a connected wallet",
     ],
   },
   {
     n: "04",
     name: "Public testnet journeys",
-    status: "wip",
+    status: "done",
     items: [
-      "A DAO proposal, vote, finalization and execution from real wallets, with receipts",
-      "Policy-3 credential issuance, then supply, borrow and repay with a genuine proof",
-      "Contract source published and verified on the explorer",
+      "DAO Proposal 1 received two For votes, was finalized and executed at 3,600 seconds",
+      "Two demo wallets completed proof-gated Lending actions; the loan was repaid and assets withdrawn",
+      "All ten deployed project contracts have source verified on Robinhood Testnet Blockscout",
     ],
   },
   {
@@ -242,8 +238,7 @@ export function RoadmapSection() {
           Live on testnet. <em className="o">Production</em> still ahead.
         </h2>
         <p className="lp-lead" data-lp-reveal style={{ ["--i" as string]: 2 }}>
-          The protocol is deployed and running on Robinhood Testnet (chain {ROBINHOOD_TESTNET_CHAIN_ID}). The full public wallet journeys
-          are still being confirmed, and production readiness is future development.
+          The protocol and public demo journeys are confirmed on Robinhood Testnet (chain {ROBINHOOD_TESTNET_CHAIN_ID}). Production readiness is future development.
         </p>
 
         {/* the route: solid where the work is done or live, dotted where it is not. Decorative; the list below says the same in words. */}

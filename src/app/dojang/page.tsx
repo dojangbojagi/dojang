@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { CredentialWitnessImporter } from "@/components/credential-witness-importer";
 import { DemoCredentialTools } from "@/components/demo-credential-tools";
@@ -18,8 +17,8 @@ function dateLabel(value: bigint) {
 
 export default function DojangPage() {
   const wallet = useWalletNetwork(GIWA_CHAIN_ID);
-  const dojang = useDojangVerification(wallet.address);
   const [readRequested, setReadRequested] = useState(false);
+  const dojang = useDojangVerification(readRequested ? wallet.address : undefined);
 
   return (
     <ProtocolPage
@@ -34,6 +33,8 @@ export default function DojangPage() {
       <div className="protocol-stack protocol-section">
         <RobinhoodProjectCredentialStatus />
 
+        <details className="protocol-section">
+          <summary className="protocol-inline-link">Optional read-only reference: Official GIWA Dojang</summary>
         <section className="protocol-section" aria-labelledby="external-dojang-heading">
           <header className="protocol-section__head">
             <p className="stub__num">EXTERNAL REFERENCE · GIWA SEPOLIA</p>
@@ -46,13 +47,14 @@ export default function DojangPage() {
               <h2 id="official-dojang-heading">Official GIWA Dojang</h2>
               <StateChip state={dojang.state} />
             </div>
-            <p className="protocol-copy">Read-only query for the UPBIT KOREA Verified Address attester. A missing record is a valid result; a read failure is kept separate.</p>
+            <p className="protocol-copy">This optional read checks GIWA&apos;s UPBIT KOREA Verified Address attestation. It does not issue a credential and does not authorize GYEVO contracts on Robinhood Testnet.</p>
 
-            {!wallet.address && <p className="protocol-empty">Connect a wallet to check its official status.</p>}
+            {!wallet.address && <p className="protocol-empty">Connect a wallet to check its official GIWA status. This is separate from the project credential used by GYEVO.</p>}
+            {wallet.address && !readRequested && <p className="protocol-empty">No official GIWA lookup has been requested. The Robinhood project credential above is the credential used by GYEVO.</p>}
             {wallet.address && dojang.state === "checking" && <p className="callout callout--demo" role="status" aria-live="polite">Reading Dojang and EAS attestation details from GIWA Sepolia…</p>}
             {wallet.address && dojang.state === "read-error" && <p className="callout callout--caution" role="alert">The official record could not be validated. This result does not mean the wallet lacks a credential.{dojang.error ? ` ${dojang.error.message}` : ""}</p>}
-            {wallet.address && dojang.state === "no-official-credential" && <p className="protocol-empty">No official Verified Address credential was found for this wallet and attester.</p>}
-            {dojang.credential && (
+            {wallet.address && dojang.state === "no-official-credential" && <p className="protocol-empty"><strong>No Official GIWA Credential Found.</strong> Official GIWA credentials are separate from GYEVO project credentials. You can still explore GYEVO&apos;s verified testnet activity.</p>}
+            {readRequested && dojang.credential && (
               <>
                 <div className="protocol-panel__head"><h3>Attestation details</h3><StateChip state={dojang.credential.state} /></div>
                 <dl className="kv protocol-kv">
@@ -70,25 +72,25 @@ export default function DojangPage() {
             )}
 
             <div className="protocol-actions">
-              <Link className="btn btn--secondary" href="/dao">Use it in DAO governance ↗</Link>
-              <button className="btn btn--secondary" type="button" onClick={() => { setReadRequested(true); void dojang.refetch(); }} disabled={!wallet.address || dojang.isLoading}>
-                {dojang.isLoading ? "Checking…" : "Refresh official status"}
+              <button className="btn btn--secondary" type="button" onClick={() => { setReadRequested(true); if (readRequested) void dojang.refetch(); }} disabled={!wallet.address || dojang.isLoading}>
+                {dojang.isLoading ? "Checking…" : readRequested ? "Check Official GIWA Status Again" : "Check Official GIWA Status"}
               </button>
               {readRequested && !dojang.isLoading && dojang.state !== "read-error" && <span className="small muted" role="status">Read complete: {dojang.state.replaceAll("-", " ")}.</span>}
             </div>
           </section>
 
           <section className="panel panel--ticks protocol-panel" aria-labelledby="dojang-source-heading">
-            <div className="protocol-panel__head"><h2 id="dojang-source-heading">Verified source</h2><StateChip state="connected">GIWA Sepolia</StateChip></div>
+            <div className="protocol-panel__head"><h2 id="dojang-source-heading">Official infrastructure references</h2><StateChip state="connected">GIWA Sepolia</StateChip></div>
             <dl className="kv protocol-kv">
               <div className="kv__row"><dt>DojangScroll</dt><dd><a className="addr" href={`${GIWA_EXPLORER_URL}/address/${officialDojang.dojangScroll}`} target="_blank" rel="noopener noreferrer">{officialDojang.dojangScroll}<span className="visually-hidden"> (opens in a new tab)</span></a></dd></div>
-              <div className="kv__row"><dt>Attester</dt><dd className="addr">{dojang.trustedAttester ?? (dojang.isTrustedAttesterLoading ? "Resolving from DojangAttesterBook…" : "Unavailable (read failed)")}</dd></div>
+              <div className="kv__row"><dt>Trusted attester</dt><dd className="addr">{!readRequested ? "Not checked yet" : dojang.trustedAttester ?? (dojang.isTrustedAttesterLoading ? "Resolving from DojangAttesterBook…" : dojang.trustedAttesterError ? "Could not read from DojangAttesterBook" : "No attester address returned")}</dd></div>
               <div className="kv__row"><dt>Attester ID</dt><dd className="addr">{officialDojang.upbitKoreaAttesterId}</dd></div>
               <div className="kv__row"><dt>Schema</dt><dd className="addr">{officialDojang.verifiedAddressSchemaUid}</dd></div>
             </dl>
           </section>
         </div>
         </section>
+        </details>
 
         <details className="protocol-section">
           <summary className="protocol-inline-link">Earlier GIWA prototype credential tools</summary>

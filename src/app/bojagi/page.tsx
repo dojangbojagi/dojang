@@ -54,7 +54,7 @@ export default function BojagiPage() {
         </section>
 
         <div className="protocol-actions">
-          <Link className="btn btn--secondary" href="/dojang">Check credential ↗</Link>
+          <Link className="btn btn--secondary" href="/dojang">Check project credential ↗</Link>
           <Link className="btn btn--secondary" href="/lending">Use it for lending ↗</Link>
         </div>
       </div>

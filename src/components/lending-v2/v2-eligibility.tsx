@@ -8,8 +8,7 @@ import { Chip, type Tone } from "@/components/lending-v2/v2-parts";
 import { dateTimeText } from "@/components/lending-v2/v2-format";
 import type { V2Market, V2Proof } from "@/components/lending-v2/v2-types";
 import { WitnessUpload } from "@/components/lending-v2/v2-witness-upload";
-import { StateChip, TransactionSummary } from "@/components/protocol-state";
-import { useDojangVerification } from "@/hooks/use-dojang-verification";
+import { TransactionSummary } from "@/components/protocol-state";
 import { useLendingV2CredentialIssuance } from "@/hooks/use-lending-v2-credential-issuance";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
@@ -22,11 +21,11 @@ import { explainProtocolError } from "@/lib/protocol/errors";
 const PROOF_COPY: Record<V2Proof["state"], { tone: Tone; label: string; text: string }> = {
   unconfigured: { tone: "warn", label: "Not available", text: "Lending V2 is not configured, so there is no policy-3 registry to check against." },
   disconnected: { tone: "neutral", label: "Wallet needed", text: "Connect a wallet to check its Project Test Credential." },
-  "wrong-network": { tone: "warn", label: "Wrong network", text: "Switch to Robinhood Chain Testnet before checking or proving." },
+  "wrong-network": { tone: "warn", label: "Switch network", text: "This action requires Robinhood Chain Testnet (chain 46630). Switch networks to continue." },
   checking: { tone: "pending", label: "Checking", text: "Reading the policy-3 credential from the registry…" },
   unavailable: { tone: "warn", label: "Not available", text: "The configured address is not a compatible Lending V2 deployment." },
   "read-error": { tone: "invalid", label: "Unable to check", text: "The credential could not be read. This does not mean the wallet has none; try again in a moment." },
-  "credential-required": { tone: "neutral", label: "Credential not found", text: "No policy-3 Project Test Credential is registered for this wallet. The project issuer must issue one and deliver its private witness." },
+  "credential-required": { tone: "neutral", label: "Credential not found", text: "No active Policy 3 Project Test Credential is registered for this wallet. The authorized project issuer must issue one and provide its matching private witness." },
   "credential-expired": { tone: "warn", label: "Expired", text: "The credential has expired. New supply, collateral activation and borrowing are blocked. Repaying and withdrawing stay available." },
   "credential-revoked": { tone: "invalid", label: "Revoked", text: "The project issuer revoked this credential. New supply, collateral activation and borrowing are blocked. Repaying and withdrawing stay available." },
   "credential-not-yet-valid": { tone: "warn", label: "Not yet valid", text: "The credential's start time has not been reached." },
@@ -101,8 +100,8 @@ function IssuerTools({ market, onIssued }: { market: V2Market; onIssued: (witnes
 }
 
 /**
- * Eligibility, kept honest: official Dojang status and the Project Test Credential are separate rows; a proof is
- * "verified locally" until the pool verifies it again inside a transaction.
+ * Eligibility, kept honest: Robinhood Lending uses a project-issued Policy 3 credential, not official GIWA Dojang.
+ * A proof is "verified locally" until the pool verifies it again inside a transaction.
  */
 export function EligibilityCard({ market, proof, witness, onWitness }: {
   market: V2Market;
@@ -111,7 +110,6 @@ export function EligibilityCard({ market, proof, witness, onWitness }: {
   onWitness: (witness: DemoCredentialWitness | null) => void;
 }) {
   const wallet = useWalletNetwork(ROBINHOOD_TESTNET_CHAIN_ID);
-  const dojang = useDojangVerification(wallet.address);
   const [importMessage, setImportMessage] = useState("");
   const [importFailed, setImportFailed] = useState(false); /* presentation only: the picker shows the last attempt */
   const [witnessFile, setWitnessFile] = useState("");
@@ -194,12 +192,8 @@ export function EligibilityCard({ market, proof, witness, onWitness }: {
 
       <dl className="kv protocol-kv">
         <div className="kv__row">
-          <dt>Official Dojang status</dt>
-          <dd><StateChip state={dojang.state} /> <Link className="protocol-inline-link" href="/dojang">Dojang ↗</Link></dd>
-        </div>
-        <div className="kv__row">
           <dt>Lending V2 authorization</dt>
-          <dd>Project Test Credential, policy {LENDING_V2_POLICY_ID.toString()}. <span className="muted">Official Dojang does not authorize this pool.</span></dd>
+          <dd>GYEVO Project Test Credential, Policy {LENDING_V2_POLICY_ID.toString()}. Official GIWA Dojang credentials do not authorize this pool.</dd>
         </div>
         <div className="kv__row"><dt>Policy and threshold</dt><dd>Policy {LENDING_V2_POLICY_ID.toString()} · private value of at least {formatAmount(LENDING_V2_ELIGIBILITY_THRESHOLD, 0)} test units</dd></div>
         {record ? (
@@ -227,6 +221,7 @@ export function EligibilityCard({ market, proof, witness, onWitness }: {
         A locally verified proof is not an on-chain verification. The pool verifies the proof again inside each supply, collateral activation and borrow transaction;
         the contract is the final authority. Repaying, withdrawing and liquidation never need a current credential.
       </p>
+      <p className="xsmall muted">Generate an eligibility proof to show the lending rule is met without revealing the private test value. This requires an active Policy 3 project credential and its matching witness. <Link className="protocol-inline-link" href="/dojang">Check project credential status</Link>.</p>
 
       <WitnessUpload
         disabled={!record || proof.state === "generating" || importing}
@@ -242,11 +237,12 @@ export function EligibilityCard({ market, proof, witness, onWitness }: {
 
       <div className="protocol-actions">
         <button className="btn btn--primary" type="button" onClick={() => void generate()} disabled={!canProve}>
-          {proof.state === "generating" ? "Generating proof…" : proof.state === "proof-ready" ? "Generate a new proof" : "Generate private proof"}
+          {proof.state === "generating" ? "Generating proof…" : proof.state === "proof-ready" ? "Generate a New Eligibility Proof" : "Generate Eligibility Proof"}
         </button>
         <button className="btn btn--secondary" type="button" onClick={() => { onWitness(null); setImportFailed(false); setWitnessFile(""); setImportMessage("Witness cleared from memory."); }} disabled={!witness}>Clear witness</button>
-        <button className="btn btn--secondary" type="button" onClick={() => void proof.refetchCredential()} disabled={!record && proof.state !== "credential-required"}>Re-check credential</button>
+        <button className="btn btn--secondary" type="button" onClick={() => void proof.refetchCredential()} disabled={!record && proof.state !== "credential-required"}>Check Credential Again</button>
       </div>
+      <p className="xsmall muted">Checking again refreshes this wallet&apos;s credential status from the blockchain. It does not issue or renew a credential.</p>
       {proofMessage && proof.state !== "invalid" && <p className="small" role="status" aria-live="polite">{proofMessage}</p>}
 
       <details className="lendv2-privacy">

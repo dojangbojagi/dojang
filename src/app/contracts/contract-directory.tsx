@@ -94,7 +94,7 @@ export function ContractDirectory({ rows }: { rows: DirectoryRow[] }) {
       <dl className="cdir__stats" aria-live="polite">
         <div><dt>Contracts</dt><dd>{rows.length}</dd><small>Robinhood Testnet</small></div>
         <div><dt>Deployed</dt><dd>{state === "ready" ? deployed : "…"}</dd><small>{state === "checking" ? "Checking the network" : state === "unavailable" ? "Network status unavailable" : "Code found at the address"}</small></div>
-        <div><dt>Source verified</dt><dd>{state === "ready" ? verified : "…"}</dd><small>{state === "ready" && verified === 0 ? "Not yet published on the explorer" : "Published on the explorer"}</small></div>
+        <div><dt>Source verified</dt><dd>{state === "ready" ? `${verified}/${rows.length}` : "…"}</dd><small>{state === "ready" ? "Blockscout source status checked" : "Checking Blockscout"}</small></div>
       </dl>
 
       {groups.map((group) => (
@@ -147,8 +147,7 @@ export function ContractDirectory({ rows }: { rows: DirectoryRow[] }) {
       ))}
 
       <p className="cdir__note">
-        <b>Deployed</b> means the network returned contract code at the address. <b>Source Not Verified</b> means the source code has not been
-        published on the explorer yet; it does not change whether the contract exists.
+        <b>Deployed</b> means the network returned contract code at the address. <b>Source Not Verified</b> means Blockscout does not currently report published source for that contract; code presence alone is not source verification.
       </p>
     </div>
   );

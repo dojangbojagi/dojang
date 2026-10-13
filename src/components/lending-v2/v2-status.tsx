@@ -23,6 +23,7 @@ export function V2LimitationsNotice({ configured }: { configured: boolean }) {
             ? <li><strong>Check the address.</strong> A configured pool address is not an audit. Verify the pool and its tokens on the explorer before using it.</li>
             : <li><strong>Not yet deployed.</strong> Controls stay off until a real Lending V2 pool is configured for Robinhood Chain Testnet.</li>}
         </ul>
+        {configured && <p className="small"><Link className="protocol-inline-link" href="/contracts#verified-history">Explore confirmed demo activity</Link></p>}
       </div>
     </aside>
   );
@@ -35,7 +36,7 @@ const STATE_COPY: Record<V2Market["state"], { tone: Tone; label: string; text: s
     text: "Lending V2 is not available here: no pool address is configured, so every V2 control is off and no balance, rate, price or position is shown. Nothing is simulated.",
   },
   disconnected: { tone: "neutral", label: "Wallet needed", text: "Connect a wallet to use the market and see your position. Market data below is read without a wallet." },
-  "wrong-network": { tone: "warn", label: "Wrong network", text: "Switch your wallet to Robinhood Chain Testnet to continue. Transactions are disabled until you do." },
+  "wrong-network": { tone: "warn", label: "Switch network", text: "This action requires Robinhood Chain Testnet (chain 46630). Switch networks to continue." },
   checking: { tone: "pending", label: "Checking", text: "Reading the Lending V2 pool and your wallet from Robinhood Chain Testnet…" },
   unavailable: { tone: "warn", label: "Unavailable", text: "The configured address is not a compatible Lending V2 deployment (missing code, mismatched policy, registry, verifier or oracle). Controls stay off." },
   "read-error": { tone: "invalid", label: "Read failed", text: "A pool or wallet read failed. This is not an empty position. Refresh to try again; nothing is shown in its place." },

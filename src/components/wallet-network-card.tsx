@@ -43,7 +43,7 @@ export function WalletNetworkCard({ expectedChainId = ROBINHOOD_TESTNET_CHAIN_ID
         )}
       </div>
       {wallet.switchError && <p className="callout callout--caution protocol-notice" role="alert">{wallet.switchError}</p>}
-      {wallet.state === "wrong-network" && <p className="callout callout--caution protocol-notice" role="status">Change networks before generating a proof or submitting a transaction.</p>}
+      {wallet.state === "wrong-network" && <p className="callout callout--caution protocol-notice" role="status">This action requires {expectedName} (chain {expectedChainId}). Switch networks to continue.</p>}
       {wallet.state === "wrong-network" && expectedChain && (
         <details className="protocol-notice">
           <summary>Manual network setup</summary>

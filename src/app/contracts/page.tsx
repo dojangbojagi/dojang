@@ -5,6 +5,7 @@ import { appEnv } from "@/lib/config/env";
 import { invalidRobinhoodContractConfig, robinhoodContracts } from "@/lib/config/contracts";
 import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
 import { RobinhoodEvidenceLookup } from "@/components/evidence/robinhood-evidence-lookup";
+import { VerifiedDemoHistory } from "@/components/evidence/verified-demo-history";
 import { ContractDirectory, type DirectoryRow } from "./contract-directory";
 import { LazyDetails } from "./lazy-details";
 
@@ -47,6 +48,8 @@ export default function ContractsPage() {
       <section className="panel cdir__panel" aria-labelledby="contracts-heading">
         <ContractDirectory rows={rows} />
       </section>
+
+      <VerifiedDemoHistory />
 
       <section className="panel" aria-labelledby="legacy-heading">
         <details className="cdir__more">

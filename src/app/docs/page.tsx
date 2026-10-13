@@ -52,8 +52,7 @@ export default function DocsPage() {
           <section className="docs__sec" id="overview" aria-labelledby="overview-h">
             <h2 id="overview-h"><span>01</span>Overview</h2>
             <p className="docs__lead">
-              Everything starts from one project credential, issued through DOJANG. Two separate paths use it, and only one of them needs a
-              private proof.
+              Everything starts with a GYEVO project credential, recorded by the project&apos;s DOJANG layer. It is separate from official GIWA Dojang credentials. Policy 4 leads to DAO governance; Policy 3 plus a private BOJAGI proof leads to Lending.
             </p>
 
             <figure className="docs__arch">
@@ -157,12 +156,11 @@ export default function DocsPage() {
             <ol className="docs__steps docs__steps--tall">
               <li><b>Launch the app</b><p>Connect a wallet from the header. Nothing connects automatically.</p></li>
               <li><b>Switch to Robinhood Testnet</b><p>The app prompts you when the network is wrong. You need a little test ETH for gas from the Robinhood Testnet faucet.</p></li>
-              <li><b>Check your credential</b><p>Open the DOJANG page. Credentials are issued by the project issuer; self-service issuance is not available yet.</p></li>
+              <li><b>Check your project credential</b><p>Open DOJANG. The authorized GYEVO project issuer must issue your credential. Policy 4 is for DAO governance; Policy 3 is for Lending and also needs its matching private witness.</p></li>
               <li><b>Take part</b><p>With a policy-4 credential, use DAO Governance. With a policy-3 credential and its witness, use Lending.</p></li>
             </ol>
             <p className="docs__note">
-              The contracts are deployed and the demo tokens and test prices are configured. Credential issuance for Lending and end-to-end wallet
-              journeys are still being completed, so some actions may not be available yet.
+              You can explore confirmed historical Robinhood Testnet activity without a wallet, test ETH or a credential on the <Link href="/contracts#verified-history">Explore Verified Demo</Link> section. Historical transactions are not active positions.
             </p>
           </section>
 
@@ -185,7 +183,7 @@ export default function DocsPage() {
               <div><dt>What privacy covers</dt><dd>A proof hides the private eligibility value. Wallet addresses, transactions, amounts and votes are public, and so is the fact that a gated action happened.</dd></div>
               <div><dt>Trusted issuer</dt><dd>The project issuer decides who receives a credential. A proof shows that a holder meets a rule; it does not remove trust in the issuer.</dd></div>
               <div><dt>Not official</dt><dd>Project credentials are separate from official GIWA Dojang and Upbit credentials.</dd></div>
-              <div><dt>Source verification</dt><dd>Contract source publication on the explorer is pending; the Contracts page shows the current status.</dd></div>
+              <div><dt>Source verification</dt><dd>The ten deployed GYEVO contracts have source verified on Robinhood Testnet Blockscout. The Contracts page reads the current explorer status.</dd></div>
             </dl>
 
             <details className="docs__tech">

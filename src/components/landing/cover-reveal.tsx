@@ -268,7 +268,7 @@ export function CoverReveal({ tagline }: Props) {
                 </span>
                 <span className="lp-story__t lp-story__t--over" data-story-i={1} data-story-kind="head" aria-hidden="true">
                   <span className="lp-h__line lp-h__l1"><span className="lp-h__in">Dojang.</span></span>
-                  <span className="lp-h__line lp-h__l2"><span className="lp-h__in">Access with <b className="lp-h__private">proof.</b></span></span>
+                  <span className="lp-h__line lp-h__l2"><span className="lp-h__in">Project <b className="lp-h__private">credential.</b></span></span>
                 </span>
                 <span className="lp-story__t lp-story__t--over" data-story-i={2} data-story-kind="head" aria-hidden="true">
                   <span className="lp-h__line lp-h__l1"><span className="lp-h__in">Prove the rule.</span></span>
@@ -282,16 +282,16 @@ export function CoverReveal({ tagline }: Props) {
               <div className="lp-cta">
                 <p className="lp-lede">
                   <span className="lp-story__t" data-story-i={0} data-story-kind="lede">
-                    The exact value stays on your device. Only a proof that it met the rule is checked <span style={{ whiteSpace: "nowrap" }}>on-chain</span>.
+                    A Policy 3 proof can show that an eligibility rule is met without revealing the private value.
                   </span>
                   <span className="lp-story__t lp-story__t--over" data-story-i={1} data-story-kind="lede" aria-hidden="true">
-                    Project-issued credentials establish wallet eligibility for on-chain participation.
+                    An authorized GYEVO issuer records a project credential. Policy 4 is for DAO governance; Policy 3 is for Lending.
                   </span>
                   <span className="lp-story__t lp-story__t--over" data-story-i={2} data-story-kind="lede" aria-hidden="true">
-                    BOJAGI builds a zero-knowledge proof in your browser. The private value stays on your device.
+                    BOJAGI builds a zero-knowledge proof in your browser. Your Policy 3 witness and private value stay on your device.
                   </span>
                   <span className="lp-story__t lp-story__t--over" data-story-i={3} data-story-kind="lede" aria-hidden="true">
-                    Eligible wallets join DAO governance. Private proofs unlock protected Lending actions.
+                    Policy 4 enables public DAO governance. Policy 3 proofs unlock protected Lending actions.
                   </span>
                 </p>
                 <div className="lp-actions">

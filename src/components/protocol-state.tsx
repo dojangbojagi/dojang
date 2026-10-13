@@ -10,8 +10,8 @@ type ProtocolUiState =
   | "ready" | "issuer-untrusted" | "witness-required" | "proof-ready" | "checking-credential" | "credential-expired" | "credential-revoked";
 
 const LABELS: Record<ProtocolUiState, string> = {
-  disconnected: "Disconnected", connecting: "Connecting", connected: "Connected", "wrong-network": "Wrong Network",
-  idle: "Not checked", checking: "Checking", "official-verified": "Official Verified", "no-official-credential": "No Official Credential",
+  disconnected: "Disconnected", connecting: "Connecting", connected: "Connected", "wrong-network": "Switch network",
+  idle: "Not checked", checking: "Checking", "official-verified": "Official GIWA Credential Verified", "no-official-credential": "No Official GIWA Credential Found",
   invalid: "Invalid", expired: "Expired", revoked: "Revoked", "read-error": "Read Error",
   unconfigured: "Contracts Not Configured", missing: "No Demo Credential", active: "Demo Credential Ready",
   "credential-required": "Credential Required", "ready-to-prove": "Ready to Prove", generating: "Generating Proof",

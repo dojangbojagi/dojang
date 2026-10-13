@@ -41,7 +41,7 @@
     "video:render:governance": "remotion render remotion/index.ts GyevoGovernance out/videos/gyevo-trust-governance.mp4 --concurrency=2",
     "video:render:lending": "remotion render remotion/index.ts GyevoLending out/videos/gyevo-private-lending.mp4 --concurrency=2",
     "video:render": "bun run video:render:protocol && bun run video:render:governance && bun run video:render:lending && bun run video:covers",
-    "video:covers": "remotion still remotion/index.ts GyevoProtocol out/videos/gyevo-protocol-cover.jpg --frame=905 && remotion still remotion/index.ts GyevoGovernance out/videos/gyevo-trust-governance-cover.jpg --frame=470 && remotion still remotion/index.ts GyevoLending out/videos/gyevo-private-lending-cover.jpg --frame=66"
+    "video:covers": "remotion still remotion/index.ts GyevoProtocol out/videos/gyevo-protocol-cover.jpg --frame=410 && remotion still remotion/index.ts GyevoGovernance out/videos/gyevo-trust-governance-cover.jpg --frame=510 && remotion still remotion/index.ts GyevoLending out/videos/gyevo-private-lending-cover.jpg --frame=360"
   },
   "dependencies": {
     "@aztec/bb.js": "^5.2.1",

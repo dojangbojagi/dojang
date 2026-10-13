@@ -24,18 +24,9 @@ import type { GovernanceProposal } from "@/lib/protocol/types";
  * them; this component arranges them, gates the buttons from what the hooks report and shows what happened.
  */
 export function DaoWorkspace() {
-  const observedWallet = useWalletNetwork(GIWA_CHAIN_ID);
   const [selectedChainId, setSelectedChainId] = useState<ProtocolChainId>(ROBINHOOD_TESTNET_CHAIN_ID);
   const [selectedId, setSelectedId] = useState<bigint | undefined>();
   const [fallback, setFallback] = useState<GovernanceProposal | undefined>(); /* the list's copy, shown while the detail is read */
-  useEffect(() => {
-    if (observedWallet.chainId === GIWA_CHAIN_ID || observedWallet.chainId === ROBINHOOD_TESTNET_CHAIN_ID) {
-      setSelectedChainId(observedWallet.chainId);
-      setSelectedId(undefined);
-      setFallback(undefined);
-    }
-  }, [observedWallet.chainId]);
-
   const wallet = useWalletNetwork(selectedChainId);
   /* No proposal ID is passed to the hook: it would go into the hook's query key as a bigint, which cannot be hashed.
      One proposal is read through the feed interface instead (see ProposalDetail). */
@@ -75,6 +66,8 @@ export function DaoWorkspace() {
   else if (!wallet.isOnExpectedNetwork) block = `Switch to ${selectedChainId === ROBINHOOD_TESTNET_CHAIN_ID ? "Robinhood Chain Testnet" : "GIWA Sepolia"} first.`;
   else if (gov.state === "checking") block = "Reading the governance contract…";
   else if (gov.state === "read-error") block = "The governance contract could not be read. Refresh and try again.";
+  else if (wallet.address && wallet.isOnExpectedNetwork && gas.isPending) block = "Checking this wallet's ETH balance for the network fee.";
+  else if (wallet.address && gas.isError) block = "The wallet's ETH balance could not be read. Refresh before submitting a governance transaction.";
   else if (gov.isSubmitting) block = "A transaction is already in progress.";
   else if (gasBalance === 0n) block = `This wallet has no ${selectedChainId === ROBINHOOD_TESTNET_CHAIN_ID ? "Robinhood Testnet" : "GIWA Sepolia"} ETH to pay the network fee.`;
 
@@ -120,9 +113,9 @@ export function DaoWorkspace() {
     <div className="lend dao">
       <GovernanceNotice chainId={selectedChainId} />
       <div className="protocol-actions" role="group" aria-label="Governance network">
-        <span className="small muted">Governance network</span>
-        <button className={`btn btn--${selectedChainId === GIWA_CHAIN_ID ? "primary" : "secondary"} btn--sm`} type="button" aria-pressed={selectedChainId === GIWA_CHAIN_ID} onClick={() => { setSelectedChainId(GIWA_CHAIN_ID); setSelectedId(undefined); setFallback(undefined); }}>GIWA Sepolia · official Dojang</button>
-        <button className={`btn btn--${selectedChainId === ROBINHOOD_TESTNET_CHAIN_ID ? "primary" : "secondary"} btn--sm`} type="button" aria-pressed={selectedChainId === ROBINHOOD_TESTNET_CHAIN_ID} onClick={() => { setSelectedChainId(ROBINHOOD_TESTNET_CHAIN_ID); setSelectedId(undefined); setFallback(undefined); }}>Robinhood Testnet · project credential</button>
+        <span className="small muted">GYEVO governance runs on Robinhood Testnet. GIWA Sepolia is a separate legacy DAO; use it only if you intend to interact with those contracts.</span>
+        <button className={`btn btn--${selectedChainId === ROBINHOOD_TESTNET_CHAIN_ID ? "primary" : "secondary"} btn--sm`} type="button" aria-pressed={selectedChainId === ROBINHOOD_TESTNET_CHAIN_ID} onClick={() => { setSelectedChainId(ROBINHOOD_TESTNET_CHAIN_ID); setSelectedId(undefined); setFallback(undefined); }}>GYEVO DAO · Robinhood Testnet</button>
+        <button className={`btn btn--${selectedChainId === GIWA_CHAIN_ID ? "primary" : "secondary"} btn--sm`} type="button" aria-pressed={selectedChainId === GIWA_CHAIN_ID} onClick={() => { setSelectedChainId(GIWA_CHAIN_ID); setSelectedId(undefined); setFallback(undefined); }}>Legacy GIWA Sepolia governance</button>
       </div>
       <WalletNetworkCard expectedChainId={selectedChainId} />
       <div className="dao-banner-slot" aria-live="polite">

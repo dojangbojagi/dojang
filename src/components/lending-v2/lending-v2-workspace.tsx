@@ -46,7 +46,7 @@ const ELIGIBILITY_TONE: Record<string, { tone: Tone; label: string }> = {
   "read-error": { tone: "invalid", label: "Unable to check" },
   invalid: { tone: "invalid", label: "Proof failed" },
   disconnected: { tone: "neutral", label: "Wallet needed" },
-  "wrong-network": { tone: "warn", label: "Wrong network" },
+  "wrong-network": { tone: "warn", label: "Switch network" },
   unconfigured: { tone: "neutral", label: "Not available" },
   unavailable: { tone: "neutral", label: "Not available" },
 };
@@ -108,6 +108,8 @@ export function LendingV2Workspace() {
   else if (market.state === "unavailable") block = "The configured address is not a compatible Lending V2 deployment.";
   else if (market.state === "read-error") block = "The V2 market could not be read. Refresh and try again.";
   else if (market.isSubmitting) block = "A transaction is already in progress.";
+  else if (wallet.address && wallet.isRobinhoodTestnet && gas.isPending) block = "Checking this wallet's ETH balance for the network fee.";
+  else if (wallet.address && gas.isError) block = "The wallet's Robinhood Testnet ETH balance could not be read. Refresh before submitting.";
   else if (noGas) block = "This wallet has no Robinhood Testnet ETH to pay the network fee.";
   else if (!market.writesAvailable) block = "Transactions are not available right now.";
 
@@ -235,10 +237,10 @@ export function LendingV2Workspace() {
           <section className="panel panel--ticks protocol-panel" aria-labelledby="lendv2-side-heading">
             <div className="protocol-panel__head">
               <h2 id="lendv2-side-heading">Network fee</h2>
-              <Chip tone={gasBalance === undefined ? "neutral" : noGas ? "warn" : "valid"}>{gasBalance === undefined ? "Not read" : noGas ? "No ETH" : "ETH available"}</Chip>
+              <Chip tone={gas.isError || noGas ? "warn" : gas.isPending || gasBalance === undefined ? "neutral" : "valid"}>{gas.isError ? "Read unavailable" : gas.isPending ? "Checking" : gasBalance === undefined ? "Not read" : noGas ? "No ETH" : "ETH available"}</Chip>
             </div>
             <p className="small muted">
-              {gasBalance === undefined ? "Connect a wallet on Robinhood Chain Testnet to read its ETH balance." : `${formatAmount(gasBalance, 18, 5)} ETH for network fees.`}
+              {gas.isError ? "The wallet balance could not be read. Refresh the page or wallet connection before submitting." : gas.isPending ? "Checking this wallet's Robinhood Testnet ETH for network fees." : gasBalance === undefined ? "Connect a wallet on Robinhood Chain Testnet to read its ETH balance." : `${formatAmount(gasBalance, 18, 5)} ETH for network fees.`}
             </p>
             <p className="xsmall muted">
               Activity here lists only transactions confirmed in this browser session. A protocol-wide event history is not exposed by the V2 hooks yet, so none is shown.
