@@ -3,7 +3,7 @@
 import { useId, useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import { Chip } from "@/components/lending-v2/v2-parts";
 
-export type WitnessUploadStatus = "idle" | "loaded" | "invalid";
+export type WitnessUploadStatus = "idle" | "loading" | "loaded" | "invalid";
 
 /* A witness is a few hundred bytes of JSON; anything near this size is not one. Checked before the file is read at all. */
 const MAX_BYTES = 256 * 1024;
@@ -28,7 +28,7 @@ const FileIcon = () => (
  * A real <input type="file"> sits under the custom surface, so the keyboard, assistive technology and the
  * operating system's own picker all keep working.
  */
-export function WitnessUpload({ disabled, disabledReason, fileName, status, message, loadedFor, onFile, onRemove }: {
+export function WitnessUpload({ disabled, disabledReason, fileName, status, message, loadedFor, onFile, onRejected, onRemove }: {
   disabled: boolean;
   disabledReason?: string;
   fileName: string;
@@ -36,25 +36,34 @@ export function WitnessUpload({ disabled, disabledReason, fileName, status, mess
   message: string;
   loadedFor?: string;
   onFile: (file: File) => void;
+  onRejected?: (file: File, reason: string) => void;
   onRemove: () => void;
 }) {
   const id = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
   const [localError, setLocalError] = useState("");
+  const [localFileName, setLocalFileName] = useState("");
   const titleId = `${id}-title`;
   const hintId = `${id}-hint`;
   const statusId = `${id}-status`;
+  const displayFileName = fileName || localFileName;
+  const rejected = status === "invalid" || Boolean(localError);
 
   const pick = (file?: File | null) => {
     if (!file || disabled) return;
     setLocalError("");
+    setLocalFileName(file.name);
     if (!/\.json$/i.test(file.name) && file.type !== "application/json") {
-      setLocalError("That is not a .json file. Choose the witness file your project issuer delivered.");
+      const reason = "That is not a .json file. Choose the witness file your project issuer delivered.";
+      setLocalError(reason);
+      onRejected?.(file, reason);
       return;
     }
     if (file.size > MAX_BYTES) {
-      setLocalError("That file is too large to be a witness (the limit is 256 KB).");
+      const reason = "That file is too large to be a witness (the limit is 256 KB).";
+      setLocalError(reason);
+      onRejected?.(file, reason);
       return;
     }
     onFile(file);
@@ -81,6 +90,7 @@ export function WitnessUpload({ disabled, disabledReason, fileName, status, mess
   };
   const remove = () => {
     setLocalError("");
+    setLocalFileName("");
     onRemove();
   };
 
@@ -100,8 +110,8 @@ export function WitnessUpload({ disabled, disabledReason, fileName, status, mess
     >
       <div className="lendv2-witness__head">
         <h3 id={titleId} className="lendv2-witness__title">Import private witness</h3>
-        <Chip tone={status === "loaded" ? "valid" : status === "invalid" ? "invalid" : "demo"}>
-          {status === "loaded" ? "Witness loaded" : status === "invalid" ? "Not accepted" : "Stays in this browser"}
+        <Chip tone={status === "loaded" ? "valid" : rejected ? "invalid" : status === "loading" ? "pending" : "demo"}>
+          {status === "loaded" ? "Witness loaded" : rejected ? "Not accepted" : status === "loading" ? "Reading locally" : "Stays in this browser"}
         </Chip>
       </div>
 
@@ -111,13 +121,13 @@ export function WitnessUpload({ disabled, disabledReason, fileName, status, mess
         className="visually-hidden"
         type="file"
         accept="application/json,.json"
-        disabled={disabled}
+        disabled={disabled || status === "loading"}
         aria-labelledby={titleId}
         aria-describedby={`${hintId} ${statusId}`}
         onChange={onChange}
       />
 
-      {status === "idle" ? (
+      {status === "idle" && !localError ? (
         <label className="lendv2-drop" htmlFor={id}>
           <span className="lendv2-drop__icon" aria-hidden="true"><FileIcon /></span>
           <span className="lendv2-drop__copy">
@@ -129,21 +139,23 @@ export function WitnessUpload({ disabled, disabledReason, fileName, status, mess
           <span className="btn btn--secondary btn--sm lendv2-drop__cta" aria-hidden="true">Choose file</span>
         </label>
       ) : (
-        <div className="lendv2-file" data-tone={status === "loaded" ? "ok" : "bad"}>
+        <div className="lendv2-file" data-tone={status === "loaded" ? "ok" : status === "loading" ? "pending" : "bad"}>
           <span className="lendv2-file__icon" aria-hidden="true"><FileIcon /></span>
           <span className="lendv2-file__body">
-            <strong className="lendv2-file__name">{fileName || "Credential issued in this browser"}</strong>
+            <strong className="lendv2-file__name">{displayFileName || (status === "loading" ? "Reading witness…" : "Credential issued in this browser")}</strong>
             <span className="lendv2-file__meta" id={hintId}>
-              {status === "loaded"
-                ? <>Bound to <span className="addr">{loadedFor}</span> · held in memory only</>
-                : "This file was not accepted. Your previous witness, if any, was cleared."}
+              {status === "loading"
+                ? "Checking the file locally in this browser."
+                : status === "loaded"
+                  ? <>Bound to <span className="addr">{loadedFor}</span> · held in memory only</>
+                  : "This file was not accepted. Your previous witness, if any, was cleared."}
             </span>
           </span>
           <span className="lendv2-file__actions">
-            <button className="btn btn--secondary btn--sm" type="button" onClick={openPicker} disabled={disabled}>
+            <button className="btn btn--secondary btn--sm" type="button" onClick={openPicker} disabled={disabled || status === "loading"}>
               {status === "loaded" ? "Replace" : "Choose another"}
             </button>
-            <button className="btn btn--secondary btn--sm" type="button" onClick={remove} disabled={status === "loaded" ? false : !fileName}>
+            <button className="btn btn--secondary btn--sm" type="button" onClick={remove} disabled={status === "loading" || (status !== "loaded" && !displayFileName && !localError)}>
               {status === "loaded" ? "Remove" : "Dismiss"}
             </button>
           </span>

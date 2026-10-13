@@ -98,6 +98,12 @@ function describeSwitchError(error: unknown, chainId: number, connectorName?: st
   if (codes.includes(4001) || detail.includes("user rejected") || detail.includes("user denied")) {
     return "Network switching was rejected in your wallet. You are still connected to the current network.";
   }
+  const unsupportedChain = codes.includes(4902) || codes.includes(4901) || codes.includes(4200) || codes.includes(-32601)
+    || detail.includes("unknown chain") || detail.includes("chain not added") || detail.includes("not supported")
+    || detail.includes("switch chain not supported") || detail.includes("method not found");
+  if (connectorName?.toLowerCase().includes("phantom") && unsupportedChain) {
+    return "Phantom reported that Robinhood Testnet (chain 46630) is unsupported. Choose MetaMask or Rabby from the wallet selector, then switch to Robinhood Testnet.";
+  }
   if (codes.includes(4902) || detail.includes("unknown chain") || detail.includes("chain not added")) {
     return `The selected wallet could not add chain ${chainId}. Add Robinhood Testnet in that wallet, then retry.`;
   }

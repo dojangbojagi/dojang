@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useReadContract } from "wagmi";
 import { formatAmount, shortAddress } from "@/components/lending/format";
 import { Chip, type Tone } from "@/components/lending-v2/v2-parts";
@@ -42,7 +42,7 @@ const PROOF_COPY: Record<V2Proof["state"], { tone: Tone; label: string; text: st
 function IssuerTools({ market, onIssued }: { market: V2Market; onIssued: (witness: DemoCredentialWitness) => void }) {
   const wallet = useWalletNetwork(ROBINHOOD_TESTNET_CHAIN_ID);
   const issuance = useLendingV2CredentialIssuance();
-  const [privateValue, setPrivateValue] = useState("1250");
+  const [privateValue, setPrivateValue] = useState("");
   const [expiresAt, setExpiresAt] = useState(() => {
     const date = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
@@ -115,6 +115,7 @@ export function EligibilityCard({ market, proof, witness, onWitness }: {
   const [importMessage, setImportMessage] = useState("");
   const [importFailed, setImportFailed] = useState(false); /* presentation only: the picker shows the last attempt */
   const [witnessFile, setWitnessFile] = useState("");
+  const [importing, setImporting] = useState(false);
   const [proofMessage, setProofMessage] = useState("");
   const registry = market.snapshot?.credentialRegistry;
   const role = useReadContract({
@@ -133,6 +134,13 @@ export function EligibilityCard({ market, proof, witness, onWitness }: {
     query: { enabled: Boolean(registry && wallet.address && role.data), retry: 1 },
   });
 
+  useEffect(() => {
+    setWitnessFile("");
+    setImportMessage("");
+    setImportFailed(false);
+    setImporting(false);
+  }, [wallet.address]);
+
   const copy = PROOF_COPY[proof.state];
   const record = proof.credential;
   const canProve = (proof.state === "ready-to-prove" || proof.state === "proof-ready") && !market.isSubmitting;
@@ -143,6 +151,7 @@ export function EligibilityCard({ market, proof, witness, onWitness }: {
     setImportMessage("");
     setImportFailed(false);
     setWitnessFile(file.name);
+    setImporting(true);
     try {
       const candidate = parseDemoCredentialWitness(JSON.parse(await file.text()));
       if (!wallet.address || candidate.wallet.toLowerCase() !== wallet.address.toLowerCase()) throw new Error("This witness is not bound to the connected wallet.");
@@ -158,6 +167,8 @@ export function EligibilityCard({ market, proof, witness, onWitness }: {
       onWitness(null);
       setImportFailed(true);
       setImportMessage(cause instanceof SyntaxError ? "That file is not valid JSON." : cause instanceof Error && !("code" in cause) ? cause.message : explainProtocolError(cause));
+    } finally {
+      setImporting(false);
     }
   }
 
@@ -218,13 +229,14 @@ export function EligibilityCard({ market, proof, witness, onWitness }: {
       </p>
 
       <WitnessUpload
-        disabled={!record || proof.state === "generating"}
+        disabled={!record || proof.state === "generating" || importing}
         disabledReason={!record ? "A policy-3 credential has to be on record for this wallet before a witness can be imported." : "Wait for the proof to finish."}
         fileName={witnessFile}
-        status={witness ? "loaded" : importFailed ? "invalid" : "idle"}
-        message={importMessage}
+        status={importing ? "loading" : witness ? "loaded" : importFailed ? "invalid" : "idle"}
+        message={importMessage || (importing ? "Reading and checking witness metadata in this browser…" : "")}
         loadedFor={witness ? shortAddress(witness.wallet) : undefined}
         onFile={(file) => void importWitness(file)}
+        onRejected={(file, reason) => { onWitness(null); setWitnessFile(file.name); setImportFailed(true); setImportMessage(reason); }}
         onRemove={() => { onWitness(null); setImportFailed(false); setWitnessFile(""); setImportMessage("Witness cleared from memory."); }}
       />
 

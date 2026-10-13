@@ -77,7 +77,7 @@ export function SiteHeader() {
               <i className="net-pill__dot" aria-hidden="true" /><b>{networkText}</b><i>Testnet</i>
             </span>
           </span>
-          <WalletControl expectedChainId={ROBINHOOD_TESTNET_CHAIN_ID} />
+          <WalletControl expectedChainId={ROBINHOOD_TESTNET_CHAIN_ID} showRecoveryAction />
           <button
             className="menu-toggle"
             type="button"

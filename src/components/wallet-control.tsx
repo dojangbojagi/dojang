@@ -11,6 +11,7 @@ export function WalletControl({ expectedChainId, showRecoveryAction = false }: {
   const wallet = useWalletNetwork(expectedChainId);
   const disconnect = useDisconnect();
   const [selectionError, setSelectionError] = useState<string>();
+  const [connectionSlow, setConnectionSlow] = useState(false);
   const requiredChain = supportedProtocolChains.find((chain) => chain.id === wallet.expectedChainId);
   const activeChain = supportedProtocolChains.find((chain) => chain.id === wallet.chainId);
   const networkDescription = wallet.state === "wrong-network"
@@ -20,6 +21,16 @@ export function WalletControl({ expectedChainId, showRecoveryAction = false }: {
   useEffect(() => {
     setSelectionError(undefined);
   }, [wallet.address, wallet.connector?.uid]);
+
+  useEffect(() => {
+    if (wallet.status !== "connecting") {
+      setConnectionSlow(false);
+      return;
+    }
+    setConnectionSlow(false);
+    const timeout = window.setTimeout(() => setConnectionSlow(true), 20_000);
+    return () => window.clearTimeout(timeout);
+  }, [wallet.status]);
 
   return (
     <ConnectButton.Custom>
@@ -42,10 +53,11 @@ export function WalletControl({ expectedChainId, showRecoveryAction = false }: {
           else openAccountModal();
         };
         const chooseAnotherWallet = async () => {
-          if (!wallet.connector) return;
           setSelectionError(undefined);
           try {
-            await disconnect.disconnectAsync({ connector: wallet.connector });
+            if (wallet.connector && wallet.isConnected) {
+              await disconnect.disconnectAsync({ connector: wallet.connector });
+            }
             openConnectModal();
           } catch {
             setSelectionError("Could not disconnect the selected wallet. Disconnect it in the wallet app, then choose Connect Wallet to select another provider.");
@@ -68,17 +80,22 @@ export function WalletControl({ expectedChainId, showRecoveryAction = false }: {
               <span className="wl-short" aria-hidden="true">{state === "connected" ? account?.displayName : state === "wrong-network" ? wallet.isSwitching ? "Switching" : wallet.switchError ? "Retry" : "Switch" : "Connect"}</span>
               {wallet.switchError && <span className="visually-hidden" role="alert">{wallet.switchError}</span>}
             </button>
-            {showRecoveryAction && state === "wrong-network" && wallet.connector && (
+            {showRecoveryAction && ((state === "wrong-network" && wallet.connector) || (state === "connecting" && connectionSlow)) && (
               <button
                 className="btn btn--secondary btn--sm"
                 type="button"
                 onClick={() => void chooseAnotherWallet()}
                 disabled={!mounted || disconnect.isPending || wallet.isSwitching}
-                aria-label={`Disconnect ${wallet.connector.name} and choose another wallet`}
-                title={`Currently connected with ${wallet.connector.name}`}
+                aria-label={wallet.connector ? `Disconnect ${wallet.connector.name} and choose another wallet` : "Choose another wallet"}
+                title={wallet.connector ? `Currently connected with ${wallet.connector.name}` : "The wallet request is taking longer than expected"}
               >
-                {disconnect.isPending ? "Disconnecting…" : "Choose another wallet"}
+                {disconnect.isPending ? "Disconnecting…" : connectionSlow && state === "connecting" ? "Retry wallet selection" : "Choose another wallet"}
               </button>
+            )}
+            {showRecoveryAction && connectionSlow && state === "connecting" && (
+              <span className="callout callout--caution protocol-notice" role="alert">
+                The wallet request is still pending. Close or approve the extension prompt, then retry or choose MetaMask/Rabby explicitly.
+              </span>
             )}
             {selectionError && <span className="callout callout--caution protocol-notice" role="alert">{selectionError}</span>}
           </>

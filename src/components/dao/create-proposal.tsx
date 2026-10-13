@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { MAX_CONTENT_BYTES, formatDuration, parseValidity, utf8Length, type ValidityUnit } from "@/components/dao/format";
+import { ValidityUnitSelect } from "@/components/dao/validity-unit-select";
 import type { GovRunner, Governance } from "@/components/dao/types";
 
 /**
@@ -65,11 +66,10 @@ export function CreateProposal({ gov, runner, onCreated }: { gov: Governance; ru
           <label className="protocol-field" htmlFor="dao-validity"><span>New minimum remaining validity</span>
             <input id="dao-validity" inputMode="numeric" autoComplete="off" value={amount} onChange={(event) => setAmount(event.currentTarget.value)} disabled={runner.busy} />
           </label>
-          <label className="protocol-field" htmlFor="dao-unit"><span>Unit</span>
-            <select id="dao-unit" value={unit} onChange={(event) => setUnit(event.currentTarget.value as ValidityUnit)} disabled={runner.busy}>
-              <option value="days">days</option><option value="hours">hours</option><option value="minutes">minutes</option><option value="seconds">seconds</option>
-            </select>
-          </label>
+          <div className="protocol-field">
+            <span id="dao-unit-label">Unit</span>
+            <ValidityUnitSelect labelId="dao-unit-label" value={unit} onChange={setUnit} disabled={runner.busy} />
+          </div>
         </div>
         <p className="xsmall muted">
           {parsed.value !== null ? `That is ${parsed.value.toString()} seconds (${formatDuration(parsed.value)}).` : "From 0 up to 365 days."}{" "}

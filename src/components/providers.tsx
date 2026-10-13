@@ -9,8 +9,9 @@ import type { CreateConnectorFn } from "wagmi";
 import { supportedProtocolChains } from "@/lib/config/network-registry";
 import { appEnv } from "@/lib/config/env";
 import { DemoWitnessProvider } from "@/components/witness-context";
+import { hasExplicitEvmWalletProvider, type ExplicitEvmWallet } from "@/lib/wallet/provider-detection";
 
-type InjectedTarget = "metaMask" | "rabby";
+type InjectedTarget = ExplicitEvmWallet;
 
 /** Use wagmi's provider targeting so a different extension owning window.ethereum cannot hijack this wallet choice. */
 function targetInjectedWallet(target: InjectedTarget, rdns: string | string[], iconAccent: string, downloadUrl: string): Wallet {
@@ -26,6 +27,7 @@ function targetInjectedWallet(target: InjectedTarget, rdns: string | string[], i
     iconAccent,
     iconBackground: "#fff",
     downloadUrls: { chrome: downloadUrl, browserExtension: downloadUrl },
+    installed: typeof window !== "undefined" && hasExplicitEvmWalletProvider(target, (window as Window & { ethereum?: unknown }).ethereum),
     createConnector: (walletDetails) => {
       const injectedConnector = injected({ shimDisconnect: true, target });
       const connector: CreateConnectorFn = (config) => ({

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { AmountAction } from "@/components/lending/amount-action";
+import { WitnessUpload } from "@/components/lending-v2/v2-witness-upload";
 import { formatAmount, minBigint, shortAddress } from "@/components/lending/format";
 import { LendingIssuerTools } from "@/components/lending/lending-issuer-tools";
 import { shortMarketMessage } from "@/components/lending/lending-panels";
@@ -70,12 +71,25 @@ function Step({ n, title, done, status, children }: { n: number; title: string; 
 export function BorrowView({ market, runner, credential, proof, witness, onWitness }: BorrowViewProps) {
   const wallet = useWalletNetwork(GIWA_CHAIN_ID);
   const [importMessage, setImportMessage] = useState("");
+  const [witnessFile, setWitnessFile] = useState("");
+  const [importFailed, setImportFailed] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [proofMessage, setProofMessage] = useState("");
   const { summary, position } = market;
+
+  useEffect(() => {
+    setWitnessFile("");
+    setImportMessage("");
+    setImportFailed(false);
+    setImporting(false);
+  }, [wallet.address]);
 
   async function importWitness(file?: File) {
     if (!file) return;
     setImportMessage("");
+    setImportFailed(false);
+    setWitnessFile(file.name);
+    setImporting(true);
     try {
       const candidate = parseDemoCredentialWitness(JSON.parse(await file.text()));
       if (!wallet.address || candidate.wallet.toLowerCase() !== wallet.address.toLowerCase()) throw new Error("This witness is not bound to the connected wallet.");
@@ -87,7 +101,10 @@ export function BorrowView({ market, runner, credential, proof, witness, onWitne
       setImportMessage("The witness metadata matches the credential on record. The circuit checks the private value and salt when you generate the proof.");
     } catch (cause) {
       onWitness(null);
+      setImportFailed(true);
       setImportMessage(cause instanceof SyntaxError ? "That file is not valid JSON." : explainProtocolError(cause));
+    } finally {
+      setImporting(false);
     }
   }
 
@@ -134,14 +151,17 @@ export function BorrowView({ market, runner, credential, proof, witness, onWitne
             <p className={`callout ${credential.state === "checking" || credential.state === "disconnected" ? "callout--demo" : "callout--caution"}`} role="status">{CREDENTIAL_COPY[credential.state]}</p>
           )}
           <p className="small muted">This is a project demo credential from the registry. It is separate from official Dojang and says nothing about real funds.</p>
-          <label className="protocol-field" htmlFor="lend-witness-file"><span>Private witness JSON (from your issuer)</span>
-            <input id="lend-witness-file" type="file" accept="application/json,.json" disabled={!credentialActive} onChange={(event) => { void importWitness(event.currentTarget.files?.[0]); event.currentTarget.value = ""; }} />
-          </label>
-          {witness && <p className="small muted" role="status">Witness loaded in memory for <span className="addr">{shortAddress(witness.wallet)}</span>. It is not uploaded or stored.</p>}
-          {importMessage && <p className={`callout ${witness ? "callout--demo" : "callout--caution"}`} role="status" aria-live="polite">{importMessage}</p>}
-          <div className="protocol-actions">
-            <button className="btn btn--secondary" type="button" onClick={() => { onWitness(null); setImportMessage("Witness cleared from memory."); }} disabled={!witness}>Clear witness</button>
-          </div>
+          <WitnessUpload
+            disabled={!credentialActive || importing}
+            disabledReason="An active policy-2 credential must be on record before importing its witness."
+            fileName={witnessFile}
+            status={importing ? "loading" : witness ? "loaded" : importFailed ? "invalid" : "idle"}
+            message={importMessage || (importing ? "Reading and checking witness metadata in this browser…" : "")}
+            loadedFor={witness ? shortAddress(witness.wallet) : undefined}
+            onFile={(file) => void importWitness(file)}
+            onRejected={(file, reason) => { onWitness(null); setWitnessFile(file.name); setImportFailed(true); setImportMessage(reason); }}
+            onRemove={() => { onWitness(null); setWitnessFile(""); setImportFailed(false); setImportMessage("Witness cleared from memory."); }}
+          />
           <LendingIssuerTools onIssued={(issued) => { onWitness(issued); setImportMessage("The new credential and its witness are ready."); }} />
         </Step>
 

@@ -65,7 +65,8 @@ test("provider keeps EIP-6963 discovery and explicit MetaMask/Rabby choices with
   assert.match(source, /targetInjectedWallet\(\s*"metaMask"/);
   assert.match(source, /targetInjectedWallet\("rabby"/);
   assert.match(source, /<WagmiProvider config=\{wagmiConfig\} reconnectOnMount=\{false\}>/);
-  assert.match(control, /showRecoveryAction && state === "wrong-network"/);
+  assert.match(control, /showRecoveryAction && \(\(state === "wrong-network"/);
+  assert.match(control, /connectionSlow/);
   assert.match(control, /disconnect\.disconnectAsync\(\{ connector: wallet\.connector \}\)/);
   assert.match(control, /openConnectModal\(\)/);
 });
