@@ -50,3 +50,6 @@ contracts/lib/
 # Playwright output
 playwright-report/
 test-results/
+
+# GYEVO promo videos: the soundtracks are generated (bun run video:audio); renders go to out/
+remotion/public/audio/*.wav

@@ -197,8 +197,10 @@ export function PositionView({ market, runner, asset, onAsset }: {
             <div className="lend-action lendv2-action">
               <h3 className="lend-action__title">Collateral use</h3>
               <p className="small muted">
-                {position?.isCollateralEnabled
-                  ? `${reserve.symbol} currently counts toward your borrowing capacity. Turning it off removes that capacity and is refused if it would leave the position unsafe.`
+                {position?.isCollateralEnabled && position.collateral === 0n
+                  ? `Collateral use for ${reserve.symbol} is enabled on-chain, but no ${reserve.symbol} collateral is deposited, so it adds no borrowing capacity.`
+                  : position?.isCollateralEnabled
+                    ? `${reserve.symbol} currently counts toward your borrowing capacity. Turning it off removes that capacity and is refused if it would leave the position unsafe.`
                   : `${reserve.symbol} is not counted toward your borrowing capacity. Enabling it needs a proof; do that in the Borrow tab.`}
               </p>
               <div className="protocol-actions lend-action__buttons">

@@ -14,6 +14,7 @@ import {
   controlledTestOracleAbi,
   controlledTokenAbi,
   credentialIssuerRoleAbi,
+  credentialRegistryAbi,
   eligibilityVerifierAdapterAbi,
   lendingPoolV2Abi,
   robinhoodGovernanceAbi,
@@ -110,7 +111,7 @@ function sourceLabel(value) {
   return "UNAVAILABLE";
 }
 
-function renderReport({ chainId, head, verified, verificationByName, calls, initReceipts, oracleStates }) {
+function renderReport({ chainId, head, verified, verificationByName, calls, initReceipts, oracleStates, demoReadiness }) {
   const lines = [];
   const rule = "+----------------------------------------------------------------------------+";
   const line = (value = "") => lines.push(cleanAscii(value));
@@ -133,6 +134,18 @@ function renderReport({ chainId, head, verified, verificationByName, calls, init
   line(`Deployment receipts confirmed: ${good(`${verified.length}/10`)} | initialization receipts: ${good(`${initReceipts.length}/${calls.length}`)}`);
   line(`Runtime bytecode verified present on RPC: ${good(`${verified.length}/10`)}`);
   line(`Explorer source: ${sourceVerifiedCount} verified | ${sourceNotVerifiedCount} not verified | ${sourceUnavailableCount} unavailable`);
+  line();
+  section("OPERATOR READINESS");
+  line(`DEPLOYED: ${verified.length}/10 contracts | ${initReceipts.length}/${calls.length} initialization receipts confirmed`);
+  line("PUBLIC RECEIPT CONFIRMED: 10/10 contract creations and 5/5 initialization transactions");
+  line(`READY TO TEST: ${demoReadiness.daoReady
+    ? `DAO Phase 1 membership ready for Wallet A + Wallet B | quorum ${demoReadiness.quorum} | voting ${demoReadiness.votingPeriod}s | next proposal ${demoReadiness.nextProposalId}`
+    : "DAO proposal creation blocked by missing active policy-4 membership"}`);
+  line(`NEEDS OWNER ACTION: ${demoReadiness.ownerActions.join("; ") || "none identified by read-only checks"}`);
+  line(`BLOCKED: ${demoReadiness.lendingReady
+    ? "Lending V2 prerequisites currently pass read-only checks; wallet transactions still require participant approval"
+    : `Lending risk-increasing actions unavailable until ${demoReadiness.lendingBlockers.join("; ")}`}`);
+  line(`NOT VERIFIED: Blockscout source ${sourceVerifiedCount}/10 verified`);
   line();
 
   const categories = [
@@ -491,6 +504,49 @@ async function main() {
   });
   pass("Oracle and reserves", "two approved reserve configs and price bounds confirmed; current oracle state follows");
 
+  const participants = [
+    { label: "Wallet A", address: ADMIN },
+    { label: "Wallet B", address: ISSUER },
+  ];
+  const participantCredentials = await Promise.all(participants.flatMap(({ label, address }) => [3n, 4n].map(async (policyId) => {
+    const record = await read(client, registryAddress, credentialRegistryAbi, "getCredential", [address, policyId]);
+    const issuerAuthorized = record.version > 0n && await read(client, registryAddress, accessControlAbi, "hasRole", [issuerRole, record.issuer]);
+    return {
+      label,
+      policyId,
+      active: record.version > 0n && !record.revoked && record.expiresAt > block.timestamp && issuerAuthorized,
+    };
+  })));
+  const activeCredential = (label, policyId) => participantCredentials.find((item) => item.label === label && item.policyId === policyId)?.active === true;
+  const [nextProposalId, quorum, votingPeriod, loanLiquidity] = await Promise.all([
+    read(client, governanceAddress, robinhoodGovernanceAbi, "nextProposalId"),
+    read(client, governanceAddress, robinhoodGovernanceAbi, "quorum"),
+    read(client, governanceAddress, robinhoodGovernanceAbi, "votingPeriod"),
+    read(client, poolAddress, lendingPoolV2Abi, "availableLiquidity", [loanAddress]),
+  ]);
+  const daoReady = activeCredential("Wallet A", 4n) && activeCredential("Wallet B", 4n);
+  const policy3Ready = activeCredential("Wallet A", 3n) && activeCredential("Wallet B", 3n);
+  const oracleReady = oracleStates.every((state) => state.state === "fresh");
+  const lendingReady = policy3Ready && oracleReady && loanLiquidity > 0n;
+  const ownerActions = [];
+  if (nextProposalId === 1n) ownerActions.push("start the public DAO demo by creating a proposal from Wallet A; two eligible wallets must vote later");
+  if (!policy3Ready) ownerActions.push("issuer must issue policy-3 credentials and deliver each matching private witness");
+  if (!oracleReady) ownerActions.push("admin must simulate and authorize refresh of each stale synthetic oracle price");
+  if (loanLiquidity === 0n) ownerActions.push("supplier must supply rUSD2 liquidity before borrowing");
+  const lendingBlockers = [];
+  if (!policy3Ready) lendingBlockers.push("active policy-3 credentials and matching private witnesses");
+  if (!oracleReady) lendingBlockers.push("fresh bounded synthetic oracle prices");
+  if (loanLiquidity === 0n) lendingBlockers.push("nonzero rUSD2 pool liquidity");
+  const demoReadiness = {
+    daoReady,
+    lendingReady,
+    ownerActions,
+    lendingBlockers,
+    quorum: quorum.toString(),
+    votingPeriod: votingPeriod.toString(),
+    nextProposalId: nextProposalId.toString(),
+  };
+
   const verification = await Promise.all(verified.map(async (record) => [record.name, await sourceVerification(record.address)]));
   const verificationByName = new Map(verification);
   const initReceipts = [];
@@ -505,7 +561,7 @@ async function main() {
     assertAddress(rpcTransaction.to, entry.transaction.to, `Initialization target for ${entry.hash}`);
     initReceipts.push({ entry, receipt: rpcReceipt });
   }
-  renderReport({ chainId, head, verified, verificationByName, calls, initReceipts, oracleStates });
+  renderReport({ chainId, head, verified, verificationByName, calls, initReceipts, oracleStates, demoReadiness });
 }
 
 main().catch((error) => {

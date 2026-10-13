@@ -1,6 +1,6 @@
 # Robinhood Chain Testnet Protocol Demo
 
-Status: full protocol stack deployed to Robinhood Chain Testnet (chain 46630) on 2026-10-12. All 10 contract creation receipts and 5 initialization receipts are successful. Lending bootstrap transactions and user journeys have not yet been run. Source verification is still pending for all 10 contracts.
+Status checked 2026-10-13: the full protocol stack is deployed to Robinhood Chain Testnet (chain 46630). All 10 contract creation receipts and 5 initialization receipts succeeded. Synthetic prices, demo token allocations, and two policy-4 credentials have public successful receipts; the prices are now stale. Policy-3 credentials, DAO proposal/votes, and public Lending user-journey transactions remain pending. Source verification is pending for all 10 contracts. See [the current bootstrap runbook](ROBINHOOD_TESTNET_BOOTSTRAP.md) for live readback commands and the exact remaining steps.
 
 ## Network and scope
 
@@ -16,7 +16,7 @@ The demo uses project-owned `RobinhoodDemoCredentialRegistry`, `RobinhoodGoverna
 - The new Robinhood proof-context helper builds chain `46630` context and validates all nine public inputs. Existing GIWA helpers and query keys retain their GIWA defaults.
 - V2 read adapters accept an explicit expected chain. Omitting it continues to mean GIWA Sepolia.
 - The `robinhood_testnet` Foundry profile pins Solidity `0.8.28`, Prague EVM, optimizer settings, and chain `46630`. The deployment script refuses every other chain, including Robinhood Mainnet `4663`.
-- The app registers Robinhood Testnet as primary and keeps GIWA separately available for official Dojang and legacy V1/Vault paths. The confirmed deployment addresses populate the isolated RH registry and frontend outputs. DAO/Lending hooks use the chain-46630 registry; live writes still depend on wallet/network checks and contract bootstrap state. Oracle prices are currently unset, so risk-increasing Lending actions remain blocked.
+- The app registers Robinhood Testnet as primary and keeps GIWA separately available for official Dojang and legacy V1/Vault paths. The confirmed deployment addresses populate the isolated RH registry and frontend outputs. DAO/Lending hooks use the chain-46630 registry; live writes still depend on wallet/network checks and contract bootstrap state. Synthetic oracle prices were set but are now stale; risk-increasing Lending actions require fresh prices and policy-3 credentials/proofs.
 
 ## Confirmed deployment registry
 
@@ -105,12 +105,12 @@ The shared provider registers RH before GIWA, while GIWA-only feature hooks sele
 - `bun run robinhood:deploy:show` passed read-only validation: chain ID `46630`, all 15 deployment/initialization receipts successful, bytecode at all 10 contract addresses, linked HonkVerifier creation bytecode, dependencies, roles, token metadata, two reserve configs, and oracle bounds. The command reports the live head when run; block height is time-sensitive.
 - The official docs describe standard EVM compatibility but do not state a specific Prague fork activation for testnet. The successful Foundry compile validates the selected compiler target locally; it does not prove the remote node accepts every Prague-specific opcode. Confirm a testnet `eth_estimateGas` call with the actual deployment initcode before broadcast.
 - `FOUNDRY_PROFILE=robinhood_testnet bun run contracts:build` passed with Solidity `0.8.28` and the pinned Prague target. The full Foundry suite now has `90` passing tests, including five Robinhood governance cases; legacy GIWA governance tests remain passing.
-- Latest regression run: `bun run typecheck` and `bun run build` passed; `bun run contracts:test` passed `90/90`; targeted Robinhood runtime/config tests passed `12/12`. The production build prerendered all eight application routes.
+- Current regression run: `bun run typecheck` and `bun run build` passed; the Foundry suite passed `90/90`; six focused frontend/protocol test files passed `31/31`; proof conformance passed; and the local Anvil DAO/Lending lifecycle passed. The production build prerendered all ten application routes. These local results do not establish public Lending or DAO execution.
 - `bun run zk:conformance` passed after read-only access to the Barretenberg CRS endpoint was permitted. It accepted the valid proof and rejected under-threshold, mismatched-commitment, and wrong-wallet witnesses.
 - `bun run robinhood:protocol:anvil` passed on an ephemeral local chain ID `46630`: policy-4 DAO credential, proposal, two votes, finalization and execution; proposal feed empty/populated reads, quorum/totals, and active/revoked/expired credential readback; genuine policy-3 ZK proof; Lending V2 supply, collateral, borrow, repay, withdraw and liquidation; plus invalid proof/domain rejection. This is local evidence only.
-- Deployment is confirmed. No oracle prices have been set, both token supplies remain zero, and no credential, DAO proposal/vote, or Lending user-journey bootstrap transactions have yet been performed by this verification task.
+- Deployment and the initial demo bootstrap are confirmed. Successful public receipts cover both synthetic price writes, 106 rUSD2 and 10 rCOL2 in three controlled mints, and policy-4 issuance to both designated participants. The current prices are stale. Policy-3 issuance, DAO proposal/votes, and Lending user-journey transactions have no public receipts yet; use the [bootstrap runbook](ROBINHOOD_TESTNET_BOOTSTRAP.md) for the exact transaction links and current readbacks.
 - Official Dojang verified-balance attestations/witnesses are not available through this Robinhood flow. The test journey below proves only project-issued demo eligibility.
-- DAO and Lending hooks resolve the configured Robinhood addresses. Borrowing remains blocked until bounded fresh prices are set and demo balances/credentials/witnesses are bootstrapped. Source verification must be submitted separately to Blockscout using the exact compiler settings and constructor/library arguments.
+- DAO and Lending hooks resolve the configured Robinhood addresses. Borrowing remains blocked until prices are refreshed, supplier liquidity is supplied, borrower collateral is enabled, and each participant has its authorized policy-3 credential plus matching private witness. Source verification must be submitted separately to Blockscout using the exact compiler settings and constructor/library arguments.
 
 ## Local validation commands
 

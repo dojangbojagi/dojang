@@ -39,6 +39,8 @@ const DEFAULT_ADMIN_ROLE = `0x${"0".repeat(64)}`;
 const DAY = 86_400;
 const PROPOSED_PRICES = { rUSD2: "1.00", rCOL2: "2.00" };
 const TOKEN_IDS = { rUSD2: "rUSD2", rCOL2: "rCOL2" };
+const RPC_READ_RETRIES = 5;
+const POST_STATE_RETRIES = 6;
 const authLabels = {
   price: "oracle-price",
   "refresh-price": "oracle-price-refresh",
@@ -151,12 +153,65 @@ async function liveContext() {
   return ctx;
 }
 
+function errorText(error) {
+  const parts = [];
+  const seen = new Set();
+  let current = error;
+  while (current && !seen.has(current)) {
+    seen.add(current);
+    if (typeof current === "string") parts.push(current);
+    else if (typeof current === "object") {
+      for (const key of ["shortMessage", "message", "details", "name"]) {
+        if (typeof current[key] === "string") parts.push(current[key]);
+      }
+      current = current.cause;
+      continue;
+    }
+    break;
+  }
+  return parts.join(" ");
+}
+
+function isTransientRpcError(error) {
+  return /could not be found|block not found|missing trie|timeout|timed out|fetch failed|network error|ECONNRESET|ECONNREFUSED|EAI_AGAIN|temporarily unavailable|gateway|\b429\b|\b502\b|\b503\b|\b504\b/i.test(errorText(error));
+}
+
+function delay(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+async function retryRpcRead(operation, retries = RPC_READ_RETRIES) {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (attempt >= retries || !isTransientRpcError(error)) throw error;
+      await delay(400 * (attempt + 1));
+    }
+  }
+}
+
+async function retryPostState(operation) {
+  let lastError;
+  for (let attempt = 0; attempt < POST_STATE_RETRIES; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (attempt + 1 < POST_STATE_RETRIES) await delay(700 * (attempt + 1));
+    }
+  }
+  throw lastError;
+}
+
 async function read(client, address, abi, functionName, args = []) {
-  return client.readContract({ address, abi, functionName, args });
+  return retryRpcRead(() => client.readContract({ address, abi, functionName, args }));
 }
 
 async function chainTimestamp(ctx) {
-  const block = await ctx.client.getBlock({ blockNumber: ctx.head });
+  // Avoid pinning a later preflight read to a block number returned by an RPC node
+  // whose block index may not have caught up yet.
+  const block = await retryRpcRead(() => ctx.client.getBlock({ blockTag: "latest" }));
   return block.timestamp;
 }
 
@@ -385,10 +440,17 @@ async function printAndMaybeSend(ctx, action, actor, target, abi, functionName, 
     return sameAddress(event.wallet, args[0]) && event.policyId === args[1] && event.commitment.toLowerCase() === args[2].toLowerCase() && sameAddress(event.issuer, actor);
   });
   assert.equal(eventMatches, true, `${functionName} receipt did not include its expected event arguments.`);
-  const state = await expectedState(hash, receipt);
-  pass("confirmed receipt and post-state", `${hash} · block ${receipt.blockNumber} · ${state}`);
+  let state;
+  try {
+    state = await retryPostState(() => expectedState(hash, receipt));
+    pass("confirmed receipt and post-state", `${hash} · block ${receipt.blockNumber} · ${state}`);
+  } catch (error) {
+    console.error(`RECEIPT SUCCESS · post-state is not yet verified after RPC read retries. Do not resubmit this transaction. Hash ${hash} · block ${receipt.blockNumber} · ${errorText(error)}`);
+    console.log(`Read-only follow-up: bun run robinhood:bootstrap status · Explorer: ${EXPLORER}/tx/${hash}`);
+    return { simulation, gas, submitted: true, hash, receipt, postStateVerified: false };
+  }
   console.log(`Explorer: ${EXPLORER}/tx/${hash}`);
-  return { simulation, gas, submitted: true, hash, receipt };
+  return { simulation, gas, submitted: true, hash, receipt, postStateVerified: true, state };
 }
 
 async function readLine(prompt) {
@@ -462,7 +524,10 @@ async function actionRefreshPrice(symbol, options) {
   assert.ok(bounds[3] <= now, `${symbol} oracle timestamp is in the future; refusing a refresh.`);
   const maxOracleAge = BigInt(reserve.maxOracleAge ?? reserve[4]);
   const age = now - bounds[3];
-  assert.ok(age > maxOracleAge, `${symbol} oracle price is still fresh (${age}s old; max ${maxOracleAge}s); no refresh write is needed.`);
+  if (age <= maxOracleAge) {
+    console.log(`SKIPPED — PRICE STILL FRESH · ${symbol} is ${age}s old; reserve maximum is ${maxOracleAge}s. No refresh transaction is needed.`);
+    return { skipped: true, reason: "price-still-fresh", age, maxOracleAge };
+  }
   await requireRole(ctx.client, ctx.addresses.ControlledTestOracle, updaterRole, ctx.admin, "Oracle updater");
   console.log(`Guarded refresh only: re-submit the existing ${symbol} synthetic test price ${formatUnits(bounds[2], 18)} WAD (not a market quote). Age ${age}s exceeds reserve max ${maxOracleAge}s.`);
   await printAndMaybeSend(ctx, "refresh-price", ctx.admin, ctx.addresses.ControlledTestOracle, controlledTestOracleAbi, "setPrice", [asset, bounds[2]], async () => {

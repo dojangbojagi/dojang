@@ -24,6 +24,7 @@
     "robinhood:stack:simulate": "bun run contracts:build && bash scripts/forge-simulate.sh script/DeployRobinhoodProtocolStack.s.sol:DeployRobinhoodProtocolStack --profile robinhood_testnet --rpc-url \"$RH_TESTNET_RPC_URL\"",
     "robinhood:deploy:show": "bun scripts/robinhood-deploy-show.mjs",
     "robinhood:bootstrap": "bun scripts/robinhood-bootstrap.mjs",
+    "robinhood:lending": "bun scripts/robinhood-lending-operator.mjs",
     "robinhood:source:plan": "bun scripts/robinhood-source-verify-plan.mjs",
     "deploy:status": "bun scripts/deploy-console.ts status",
     "deploy:replay": "bun scripts/deploy-console.ts replay",
