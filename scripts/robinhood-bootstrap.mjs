@@ -567,19 +567,42 @@ async function assertNoPriorMint(ctx, tokenAddress, symbol, recipient) {
   const fromBlock = BigInt(receipt.blockNumber);
   const toBlock = ctx.head;
   assert.ok(toBlock >= fromBlock, "Current block precedes token deployment block.");
-  const span = toBlock - fromBlock;
-  assert.ok(span <= 100_000n, `Mint history exceeds bounded audit window (${span.toString()} blocks); refusing a duplicate-safe mint without a reviewed cursor.`);
   const transferEvent = parseAbiItem("event Transfer(address indexed from,address indexed to,uint256 value)");
-  const chunkSize = 1_000n;
-  for (let start = fromBlock; start <= toBlock; start += chunkSize) {
-    const end = start + chunkSize - 1n > toBlock ? toBlock : start + chunkSize - 1n;
-    const logs = await ctx.client.getLogs({
-      address: tokenAddress, event: transferEvent,
-      args: { from: zeroAddress, to: recipient },
-      fromBlock: start, toBlock: end,
-    });
+  const initialChunkSize = 5_000n;
+  const maxQueries = 4_096;
+  const isRangeLimit = (error) => /block.?range|range.{0,24}(limit|too large|exceed)|(?:exceed(?:s|ed)?|over).{0,24}(range|result|log|response)|(?:too many|more than|max(?:imum)?).{0,24}(blocks|results|logs)|query exceeds|response size|result set|maximum.{0,20}block|eth_getlogs.{0,30}(limit|range)/i.test(errorText(error));
+  let queries = 0;
+
+  async function scanRange(start, end) {
+    queries += 1;
+    assert.ok(queries <= maxQueries, `${symbol} mint-history audit exceeded its bounded ${maxQueries}-query safety limit; refusing to mint without complete history.`);
+    let logs;
+    try {
+      logs = await retryRpcRead(() => ctx.client.getLogs({
+        address: tokenAddress,
+        event: transferEvent,
+        args: { from: zeroAddress, to: recipient },
+        fromBlock: start,
+        toBlock: end,
+      }));
+    } catch (error) {
+      const width = end - start + 1n;
+      if (width > 1n && isRangeLimit(error)) {
+        const middle = start + (width / 2n) - 1n;
+        await scanRange(start, middle);
+        await scanRange(middle + 1n, end);
+        return;
+      }
+      throw new Error(`Could not establish complete ${symbol} mint history for blocks ${start}-${end}: ${errorText(error)}`);
+    }
     assert.equal(logs.length, 0, `${symbol} has a prior mint event to ${recipient}; duplicate-mint guard refuses a repeated allocation.`);
   }
+
+  for (let start = fromBlock; start <= toBlock; start += initialChunkSize) {
+    const end = start + initialChunkSize - 1n > toBlock ? toBlock : start + initialChunkSize - 1n;
+    await scanRange(start, end);
+  }
+  pass(`complete mint-history audit ${symbol}`, `deployment block ${fromBlock} through head ${toBlock} · ${queries} bounded RPC ranges · no prior mint event for ${recipient}`);
 }
 
 async function credentialRecord(ctx, wallet, policy) {
