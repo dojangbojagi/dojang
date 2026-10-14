@@ -6,20 +6,17 @@ test.setTimeout(60_000);
 
 test("contracts selector preserves Testnet and shows independently checked Mainnet evidence", async ({ page, context }) => {
   const writeMethods: string[] = [];
+  page.on("request", (request) => {
+    const method = request.postData()?.match(/"method"\s*:\s*"([^"]+)"/)?.[1];
+    if (method && /sendTransaction|sendRawTransaction|wallet_sendCalls|sign/i.test(method)) writeMethods.push(method);
+  });
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-  await page.route(/^https:\/\/rpc\.(mainnet|testnet)\.chain\.robinhood\.com\//, async (route) => {
+  await page.route("https://rpc.mainnet.chain.robinhood.com/**", async (route) => {
     const request = route.request().postDataJSON() as { id: number; method: string };
-    if (/sendTransaction|sendRawTransaction|wallet_sendCalls|sign/i.test(request.method)) writeMethods.push(request.method);
-    await route.fulfill({ json: { jsonrpc: "2.0", id: request.id, result: request.method === "eth_chainId"
-      ? route.request().url().includes("mainnet") ? "0x1237" : "0xb626"
-      : request.method === "eth_getCode" ? "0x6000" : "0x0" } });
+    await route.fulfill({ json: { jsonrpc: "2.0", id: request.id, result: request.method === "eth_chainId" ? "0x1237" : "0x6000" } });
   });
   await page.route("https://robinhoodchain.blockscout.com/api/v2/addresses/**", async (route) => {
     await route.fulfill({ json: { is_verified: route.request().url().toLowerCase().includes("803c6f452abdb5b9a23dadba8d7e157ba55b6dea") } });
-  });
-  await page.route("https://explorer.testnet.chain.robinhood.com/api?**", async (route) => {
-    const address = new URL(route.request().url()).searchParams.get("address");
-    await route.fulfill({ json: { status: "1", result: [{ Address: address, SourceCode: "pragma solidity ^0.8.28;", ABI: "[]" }] } });
   });
 
   await page.goto(`${site}/contracts`);
