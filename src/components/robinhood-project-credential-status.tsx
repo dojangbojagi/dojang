@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { RobinhoodPolicy4Issuer } from "@/components/robinhood-policy4-issuer";
 import { WalletNetworkCard } from "@/components/wallet-network-card";
 import { StateChip } from "@/components/protocol-state";
 import { useLendingV2EligibilityProof } from "@/hooks/use-lending-v2-eligibility-proof";
@@ -64,6 +65,7 @@ export function RobinhoodProjectCredentialStatus() {
         <p>These credentials are issued by the project's authorized issuer. They are not official GIWA Dojang or Upbit credentials.</p>
       </header>
       <WalletNetworkCard expectedChainId={ROBINHOOD_TESTNET_CHAIN_ID} />
+      <RobinhoodPolicy4Issuer />
       <div className="protocol-grid protocol-grid--even">
         <section className="panel panel--ticks protocol-panel" aria-labelledby="project-policy-3-heading">
           <div className="protocol-panel__head"><h3 id="project-policy-3-heading">Lending <span className="protocol-policy">Policy 3</span></h3><StateChip state={lendingState}>{lendingState === "active" ? "Credential active" : lendingState === "missing" ? "Credential missing" : lendingState.replaceAll("-", " ")}</StateChip></div>
