@@ -46,9 +46,14 @@ export default function ContractsPage() {
       lendingV2Asset: ["RobinhoodMainnetDemoToken · dUSD", robinhoodMainnetDemoContracts.loanToken],
       lendingV2Collateral: ["RobinhoodMainnetDemoToken · dCOL", robinhoodMainnetDemoContracts.collateralToken],
     }[row.key];
-    return { ...row, tech: mainnet[0]!, address: mainnet[1]!, purpose: row.key === "lendingV2Asset" || row.key === "lendingV2Collateral"
-      ? "Synthetic demo asset with no redemption value. Restricted Mainnet demonstration only."
-      : row.purpose };
+    const purpose = row.key === "lendingV2Asset" || row.key === "lendingV2Collateral"
+      ? "Synthetic demo asset with no redemption value."
+      : row.key === "lendingV2Pool"
+        ? "Proof-gated Lending V2 pool. Paused on Mainnet; not available for public production use."
+        : row.key === "governance"
+          ? "Credential-gated governance contract. Paused on Mainnet."
+          : row.purpose;
+    return { ...row, tech: mainnet[0]!, address: mainnet[1]!, purpose };
   });
 
   return (
@@ -58,8 +63,7 @@ export default function ContractsPage() {
         <p className="eyebrow">Contract Explorer</p>
         <h1>Contracts</h1>
         <p className="page-lead">
-          {appEnv.appName} has deployments on Robinhood Testnet (chain {ROBINHOOD_TESTNET_CHAIN_ID}) and a controlled Mainnet demo
-          (chain {ROBINHOOD_MAINNET_CHAIN_ID}). Select a network to inspect its contracts and independent verification status.
+          {appEnv.appName} is deployed on Robinhood Mainnet (chain {ROBINHOOD_MAINNET_CHAIN_ID}). Its interactive DAO and Lending journeys remain on Robinhood Testnet (chain {ROBINHOOD_TESTNET_CHAIN_ID}). Select a network to inspect contract evidence.
         </p>
       </header>
 

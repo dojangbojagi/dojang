@@ -9,7 +9,7 @@ export function PrototypeBar() {
   return (
     <div className="proto-bar">
       <div className="container proto-bar__inner">
-        <span><strong>Interactive demo: Robinhood Testnet · chain 46630.</strong> Controlled Mainnet deployment · chain 4663; DAO and Lending paused. {appEnv.appName} credentials are project-issued, not official GIWA or Upbit credentials.</span>
+        <span><strong>Deployed on Robinhood Mainnet · chain 4663 · 10 contracts.</strong> Interactive journeys run on Robinhood Testnet · chain 46630. Mainnet DAO and Lending are paused; assets are synthetic. {appEnv.appName} credentials are project-issued, not official GIWA or Upbit credentials.</span>
       </div>
     </div>
   );

@@ -8,6 +8,8 @@ import { createCipherSculpture } from "./cipher-sculpture";
 import { createGlobeSculpture } from "./globe-sculpture";
 import { FORM_TIMELINE, GlyphField } from "./glyph-field";
 import { scrollToId } from "./smooth-scroll";
+import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
+import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo";
 
 /* Phase 1 is the claim on white. The full stop after "more" is a black dot, like the one after "less";
    scrolling cuts it into a row of slabs that turn, fly and settle as the strips of the screen (see
@@ -22,7 +24,7 @@ import { scrollToId } from "./smooth-scroll";
    numbers written on the stage (see the header of landing.css), and every animated value
    in the stylesheet reads them. Nothing here animates by itself, so it runs in reverse. */
 
-const STACK = ["Robinhood Testnet", "Dojang", "EAS", "Noir", "Barretenberg", "UltraHonk", "Solidity"];
+const STACK = ["Robinhood Mainnet", "Dojang", "EAS", "Noir", "Barretenberg", "UltraHonk", "Solidity"];
 
 /* "Prove more. Reveal less." -> ["Prove more", "Reveal less."]; the stop after "more" becomes the dot */
 function splitTagline(tagline: string): [string, string] {
@@ -252,7 +254,7 @@ export function CoverReveal({ tagline }: Props) {
           </h1>
           <p className="lp-sub">
             Verify trusted state, prove eligibility privately, then unlock an <span style={{ whiteSpace: "nowrap" }}>on-chain</span> action.
-            A testnet demonstration on Robinhood Testnet.
+            Deployed on Robinhood Mainnet (chain {ROBINHOOD_MAINNET_CHAIN_ID}) with 10 contracts. Interactive journeys run on Robinhood Testnet (chain {ROBINHOOD_TESTNET_CHAIN_ID}).
           </p>
           <p className="lp-hint" aria-hidden="true">
             <span>Scroll to open</span>
@@ -270,7 +272,7 @@ export function CoverReveal({ tagline }: Props) {
             <div className="lp-hero__col">
               <p className="lp-badge">
                 <i aria-hidden="true" />
-                <span>Testnet<span className="lp-badge__more"> demonstration</span></span>
+                <span>Robinhood Mainnet<span className="lp-badge__more"> deployed</span></span>
                 <span>Not audited</span>
                 <span>No funds held</span>
               </p>

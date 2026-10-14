@@ -115,8 +115,8 @@ export function FinalReveal({ appName }: { appName: string }) {
                 <span>{appName}</span>
               </Link>
               <p>
-                Verified Testnet demo. Robinhood Mainnet: 10 contracts, DAO/Lending paused.
-                Synthetic assets: no redemption. Independent of Robinhood, GIWA and Upbit.
+                Robinhood Testnet demo. Restricted Mainnet: 10 contracts, DAO/Lending paused.
+                Synthetic assets: no redemption. Independent of Robinhood, GIWA or Upbit.
               </p>
             </div>
             <nav aria-label="Protocol">
@@ -186,7 +186,7 @@ export function FinalReveal({ appName }: { appName: string }) {
             </nav>
           </div>
           <p className="lp-legal">
-            <span>Testnet {ROBINHOOD_TESTNET_CHAIN_ID} · Mainnet {ROBINHOOD_MAINNET_CHAIN_ID}</span>
+            <span>Verified Testnet {ROBINHOOD_TESTNET_CHAIN_ID} · Mainnet {ROBINHOOD_MAINNET_CHAIN_ID}</span>
             <span>Unaudited · Not public production-ready</span>
           </p>
           <span

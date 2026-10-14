@@ -20,19 +20,14 @@ test("contracts selector preserves Testnet and shows independently checked Mainn
   });
 
   await page.goto(`${site}/contracts`);
-  await expect(page.locator(".cdir__addr")).toHaveCount(10);
-  const testnetAddresses = await page.locator(".cdir__addr").allTextContents();
-  await expect(page.getByRole("button", { name: /Robinhood Testnet/ })).toHaveAttribute("aria-pressed", "true");
-
-  await page.evaluate(() => (document.querySelectorAll(".cdir__net-opt")[1] as HTMLButtonElement).click());
-  await expect(page.getByRole("button", { name: /Robinhood Mainnet/ })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: /Robinhood Mainnet — Deployed/ })).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator(".cdir__addr")).toHaveCount(10);
   await expect(page.locator(".cdir__stats")).toContainText("Bytecode confirmed");
   await expect(page.locator(".cdir__stats")).toContainText("1/10");
   await expect(page.locator(".cdir__status").filter({ hasText: "Bytecode confirmed" })).toHaveCount(10);
   await expect(page.locator(".cdir__status").filter({ hasText: "Source verified" })).toHaveCount(1);
-  await expect(page.locator(".cdir__note")).toContainText("not redeemable");
-  await expect(page.locator(".cdir__note")).toContainText("not production-ready");
+  await expect(page.locator(".cdir__note")).toContainText("no redemption value");
+  await expect(page.locator(".cdir__note")).toContainText("paused");
   const mainnetAddresses = await page.locator(".cdir__addr").allTextContents();
   expect(mainnetAddresses).toContain("0xFBaFDF28bB402EcDaFB90E3852f1494352444Bc1");
   expect(mainnetAddresses).toContain("0xC59B87173B03b030482e5FF8234CBbFD702A49b9");
@@ -43,8 +38,10 @@ test("contracts selector preserves Testnet and shows independently checked Mainn
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(mainnetAddresses[0]);
 
   await page.evaluate(() => (document.querySelectorAll(".cdir__net-opt")[0] as HTMLButtonElement).click());
+  await expect(page.getByRole("button", { name: /Robinhood Testnet — Interactive/ })).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator(".cdir__addr")).toHaveCount(10);
-  expect(await page.locator(".cdir__addr").allTextContents()).toEqual(testnetAddresses);
+  const testnetAddresses = await page.locator(".cdir__addr").allTextContents();
+  expect(testnetAddresses).not.toEqual(mainnetAddresses);
   for (const href of await page.locator(".cdir__actions a").evaluateAll((links) => links.map((link) => (link as HTMLAnchorElement).href))) {
     expect(href).toMatch(/^https:\/\/explorer\.testnet\.chain\.robinhood\.com\/address\/0x/);
   }
@@ -62,11 +59,22 @@ test("Mainnet RPC and Blockscout 403 failures leave receipt status intact", asyn
   await expect(page.locator(".cdir__stats dd").last()).toHaveText("Unavailable");
 });
 
-test("landing roadmap completes controlled deployment and keeps production pending", async ({ page }) => {
+test("landing leads with Mainnet deployment and keeps production pending", async ({ page }) => {
   await page.goto(site, { waitUntil: "domcontentloaded" });
   const phase = page.locator(".lp-phase").last();
-  await expect(phase).toContainText("Controlled Mainnet Deployment");
+  await expect(phase).toContainText("Robinhood Mainnet deployment");
   await expect(phase).toContainText("Completed");
   await expect(phase).toContainText("chain 4663");
   await expect(page.locator("#roadmap .lp-lead").last()).toContainText("Public Production Readiness — Pending");
+  await expect(page.locator(".lp-cover .lp-sub")).toContainText("Deployed on Robinhood Mainnet");
+  await expect(page.locator(".lp-facts__grid")).toContainText("10 deployed · 10 runtime bytecodes");
+});
+
+test("Docs identifies Mainnet first and Testnet as the interactive environment", async ({ page }) => {
+  await page.goto(`${site}/docs`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator(".proto-bar")).toContainText("Deployed on Robinhood Mainnet");
+  await expect(page.locator(".docs__glance")).toContainText("Robinhood Mainnet · 4663");
+  await expect(page.locator(".docs__glance")).toContainText("Robinhood Testnet · 46630");
+  await expect(page.locator("#network")).toContainText("DAO and Lending");
+  await expect(page.locator("#network")).toContainText("Paused");
 });

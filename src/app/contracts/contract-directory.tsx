@@ -74,7 +74,7 @@ function CopyButton({ value }: { value: string }) {
    runtime bytecode and explorer source status are checked independently without assuming either result. */
 export function ContractDirectory({ rows, mainnetRows }: { rows: DirectoryRow[]; mainnetRows: DirectoryRow[] }) {
   const client = usePublicClient({ chainId: ROBINHOOD_TESTNET_CHAIN_ID });
-  const [network, setNetwork] = useState<"testnet" | "mainnet">("testnet");
+  const [network, setNetwork] = useState<"testnet" | "mainnet">("mainnet");
   const [live, setLive] = useState<Live>({});
   const [mainnetLive, setMainnetLive] = useState<MainnetLive>({});
   const [state, setState] = useState<"checking" | "ready" | "unavailable">("checking");
@@ -123,13 +123,14 @@ export function ContractDirectory({ rows, mainnetRows }: { rows: DirectoryRow[];
       <div className="cdir__head">
         <h2 id="contracts-heading">Deployed contracts</h2>
         <div className="cdir__net" role="group" aria-label="Network">
-          <button type="button" aria-pressed={network === "testnet"} className="cdir__net-opt" data-active={network === "testnet"} onClick={() => setNetwork("testnet")}>
+          <button type="button" aria-label={`Robinhood Testnet — Interactive, chain ${ROBINHOOD_TESTNET_CHAIN_ID}`} aria-pressed={network === "testnet"} className="cdir__net-opt" data-active={network === "testnet"} onClick={() => setNetwork("testnet")}>
             <i aria-hidden="true" />
             <span>Robinhood Testnet</span>
-            <small>Chain 46630 · Active</small>
+            <small>Interactive · Chain {ROBINHOOD_TESTNET_CHAIN_ID}</small>
           </button>
           <button
             type="button"
+            aria-label={`Robinhood Mainnet — Deployed, chain ${ROBINHOOD_MAINNET_CHAIN_ID}`}
             className="cdir__net-opt"
             aria-pressed={network === "mainnet"}
             data-active={network === "mainnet"}
@@ -137,7 +138,7 @@ export function ContractDirectory({ rows, mainnetRows }: { rows: DirectoryRow[];
           >
             <i aria-hidden="true" />
             <span>Robinhood Mainnet</span>
-            <small>Chain 4663 · Controlled demo</small>
+            <small>Deployed · Chain {ROBINHOOD_MAINNET_CHAIN_ID}</small>
           </button>
         </div>
       </div>
@@ -203,7 +204,7 @@ export function ContractDirectory({ rows, mainnetRows }: { rows: DirectoryRow[];
         </section>
       ))}
 
-      {network === "mainnet" ? <p className="cdir__note"><b>Controlled Mainnet Demo.</b> These assets are synthetic and not redeemable. Lending is restricted and not production-ready. Deployment is backed by successful creation receipts; bytecode and source verification are checked independently. Public production readiness remains pending.</p> : <p className="cdir__note">
+      {network === "mainnet" ? <p className="cdir__note"><b>Mainnet status.</b> Lending assets are synthetic and have no redemption value; Lending and Governance are paused. Deployment receipts, live bytecode and Blockscout source verification are reported separately. Public production readiness remains pending.</p> : <p className="cdir__note">
         <b>Deployed</b> means the network returned contract code at the address. <b>Source Not Verified</b> means Blockscout does not currently report published source for that contract; code presence alone is not source verification.
       </p>}
     </div>

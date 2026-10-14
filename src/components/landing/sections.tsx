@@ -157,7 +157,7 @@ export function LendingSection() {
 }
 
 /* ----------------------------------------------------------------- 05 */
-/* The five phases cover protocol development and controlled deployment. Production controls remain future work. */
+/* The five phases cover protocol development and deployment. Production controls remain future work. */
 type PhaseStatus = "done" | "live" | "wip" | "future";
 const STATUS_LABEL: Record<PhaseStatus, string> = {
   done: "Completed",
@@ -209,11 +209,12 @@ const PHASES: readonly { n: string; name: string; status: PhaseStatus; items: re
   },
   {
     n: "05",
-    name: "Controlled Mainnet Deployment",
+    name: "Robinhood Mainnet deployment",
     status: "done",
     items: [
-      "Ten protocol contracts deployed on Robinhood Mainnet (chain 4663), including the credential registry, zero-knowledge verifier, governance, and restricted demo Lending infrastructure.",
+      "Ten protocol contracts deployed on Robinhood Mainnet (chain 4663), with runtime bytecode confirmed at all ten addresses.",
       "Ten successful contract creation receipts recorded in the Foundry chain 4663 broadcast artifact",
+      "Mainnet DAO and Lending are paused; Lending assets are synthetic and have no redemption value.",
     ],
   },
 ];
@@ -234,10 +235,10 @@ export function RoadmapSection() {
       <div className="lp-wrap">
         <Eyebrow n="05" ac="blue">Roadmap</Eyebrow>
         <h2 className="lp-h2" id="road-title" data-lp-reveal style={{ ["--i" as string]: 1 }}>
-          Controlled Mainnet deployed. <em className="o">Production</em> still ahead.
+          Deployed on Robinhood Mainnet. <em className="o">Production</em> still ahead.
         </h2>
         <p className="lp-lead" data-lp-reveal style={{ ["--i" as string]: 2 }}>
-          Testnet demo journeys are confirmed on chain {ROBINHOOD_TESTNET_CHAIN_ID}. A restricted Mainnet demo is deployed on chain {ROBINHOOD_MAINNET_CHAIN_ID}; public production readiness remains pending.
+          GYEVO has ten deployed contracts on Robinhood Mainnet (chain {ROBINHOOD_MAINNET_CHAIN_ID}). DAO and Lending remain paused and use synthetic demo assets. Interactive user journeys run on Robinhood Testnet (chain {ROBINHOOD_TESTNET_CHAIN_ID}); public production readiness remains pending.
         </p>
 
         {/* the route: solid where the work is done or live, dotted where it is not. Decorative; the list below says the same in words. */}
@@ -283,9 +284,9 @@ export function FactsSection() {
           What is live today
         </p>
         <dl className="lp-facts__grid" data-lp-reveal>
-          <div className="lp-fact" data-spot><dt>Demo network</dt><dd>Robinhood Chain Testnet</dd></div>
-          <div className="lp-fact" data-spot><dt>Chain ID</dt><dd className="mono">{ROBINHOOD_TESTNET_CHAIN_ID}</dd></div>
-          <div className="lp-fact" data-spot><dt>Project contracts</dt><dd>Testnet + controlled Mainnet</dd></div>
+          <div className="lp-fact" data-spot><dt>Primary deployment</dt><dd className="mono">Robinhood Mainnet · {ROBINHOOD_MAINNET_CHAIN_ID}</dd></div>
+          <div className="lp-fact" data-spot><dt>Mainnet contracts</dt><dd>10 deployed · 10 runtime bytecodes</dd></div>
+          <div className="lp-fact" data-spot><dt>Interactive environment</dt><dd>Robinhood Testnet · {ROBINHOOD_TESTNET_CHAIN_ID}</dd></div>
           <div className="lp-fact" data-spot><dt>Audit</dt><dd>None</dd></div>
           <div className="lp-fact" data-spot><dt>Funds held</dt><dd>None</dd></div>
         </dl>
