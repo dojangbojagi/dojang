@@ -1,23 +1,32 @@
-import { Easing, interpolate } from "remotion";
-import { FPS } from "./theme";
+import { interpolate, spring, type SpringConfig } from 'remotion';
 
-export const sec = (s: number) => Math.round(s * FPS);
+// Canonical spring presets for the film
+export const SPR_HERO: SpringConfig = { damping: 26, mass: 1, stiffness: 180, overshootClamping: false };
+export const SPR_CARD: SpringConfig = { damping: 30, mass: 1, stiffness: 220, overshootClamping: false };
+export const SPR_SNAP: SpringConfig = { damping: 40, mass: 0.8, stiffness: 320, overshootClamping: true };
+export const SPR_STAMP: SpringConfig = { damping: 20, mass: 1.2, stiffness: 260, overshootClamping: false };
 
-/* the site's own ease (--lp-ease) and a symmetric one for camera moves */
-export const easeOut = Easing.bezier(0.16, 1, 0.3, 1);
-export const easeInOut = Easing.bezier(0.65, 0, 0.35, 1);
-export const easeIn = Easing.bezier(0.7, 0, 0.84, 0);
-
-/* progress 0..1 of time t between a and b (seconds), eased */
-export function prog(t: number, a: number, b: number, ease: (x: number) => number = easeOut): number {
-  return interpolate(t, [a, b], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: ease });
+/** Ease-out cubic-bezier approximated via interpolate extrapolateClamp */
+export function easeOut(v: number): number {
+  return interpolate(v, [0, 1], [0, 1], {
+    easing: (x) => 1 - Math.pow(1 - x, 3),
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+  });
 }
 
-export const lerp = (a: number, b: number, p: number) => a + (b - a) * p;
-export const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+export function fadeIn(frame: number, fps: number, delay = 0, duration = 0.4): number {
+  return interpolate(frame, [delay * fps, (delay + duration) * fps], [0, 1], {
+    extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
+    easing: (x) => 1 - Math.pow(1 - x, 2),
+  });
+}
 
-/* a tiny deterministic pseudo-random, so a render is identical every time */
-export function rand(n: number): number {
-  const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
-  return x - Math.floor(x);
+export function slideY(frame: number, fps: number, delay = 0, duration = 0.5, from = 40): number {
+  const spr = spring({ fps, frame: frame - delay * fps, config: SPR_HERO });
+  return interpolate(spr, [0, 1], [from, 0]);
+}
+
+export function scaleIn(frame: number, fps: number, delay = 0): number {
+  return spring({ fps, frame: frame - delay * fps, config: SPR_CARD });
 }

@@ -1,41 +1,45 @@
-/* The site's own palette and type (src/app/theme.css, components/landing/landing.css). Values are not new. */
-export const FPS = 30;
-export const W = 1920;
-export const H = 1080;
+// GYEVO design tokens — mirrors src/app/theme.css exactly
 
 export const C = {
-  ink: "#060405",
-  ink2: "#0E0A0C",
-  surface: "#150F12",
-  burgundy: "#6D001A",
-  burgundyHi: "#8F1332",
-  burgundyLo: "#4A0011",
-  wine: "#B81A34",
-  white: "#FFFFFF",
-  text: "#F7F3F4",
-  muted: "#A89DA1",
-  dim: "#857A7E",
-  line: "rgba(255,255,255,0.12)",
-  line2: "rgba(255,255,255,0.2)",
-  paper: "#F7F3F4",
-  paperInk: "#0A0708",
-  paperSoft: "#5A4F53",
+  ink1000: '#030203',
+  ink950:  '#060405',
+  ink900:  '#0E0A0C',
+  ink850:  '#150F12',
+  ink800:  '#1D1519',
+  ink700:  '#281D22',
+  ink600:  '#3A2B32',
+
+  line:       'rgba(255,255,255,0.12)',
+  lineStrong: 'rgba(255,255,255,0.22)',
+  lineFaint:  'rgba(255,255,255,0.07)',
+
+  text:     '#F7F3F4',
+  textMuted:'#A89DA1',
+  textDim:  '#857A7E',
+
+  // burgundy accent (private / proof / primary)
+  burgundy:  '#6D001A',
+  burgundyHi:'#8F1332',
+  gold:      '#B81A34',
+  goldInk:   '#FFFFFF',
+  periwinkle:'#A8183A',
+
+  // public / on-chain
+  celadon:   '#F7F3F4',
+
+  stateValid:  '#F7F3F4',
+  stateWarn:   '#E0A95A',
+  stateInvalid:'#FF5C5C',
+  stateDemo:   '#B8AEB1',
 } as const;
 
 export const FONT = {
   display: '"Quicksand", system-ui, sans-serif',
-  mono: '"JetBrains Mono", ui-monospace, monospace',
+  mono:    '"JetBrains Mono", ui-monospace, monospace',
 } as const;
 
-export const SITE = "gyevo.tech";
-export const DISCLOSURE = "Robinhood Testnet · Chain 46630 · Test tokens only · Not audited · Independent of GIWA and Upbit";
-
-export type Cues = {
-  duration: number;
-  bpm: number;
-  scenes: number[];
-  hits: number[];
-  accents: number[];
-  risers: number[][];
-  clicks: number[];
-};
+export const EASE = {
+  // matches --ease-out: cubic-bezier(0.16,1,0.3,1)
+  out:   [0.16, 1, 0.3, 1] as [number,number,number,number],
+  sharp: [0.4, 0, 0.2, 1] as [number,number,number,number],
+} as const;
