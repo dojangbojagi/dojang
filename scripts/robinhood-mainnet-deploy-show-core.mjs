@@ -1,3 +1,8 @@
+import {
+  renderPresentation as renderTestnetPresentation,
+  runPresentation as runTestnetPresentation,
+} from "./robinhood-deploy-presentation.mjs";
+
 const CONTRACT_GROUPS = [
   ["ZK INFRASTRUCTURE", ["ZKTranscriptLib", "RelationsLib", "HonkVerifier", "EligibilityVerifierAdapter"]],
   ["CREDENTIALS", ["RobinhoodMainnetDemoCredentialRegistry"]],
@@ -28,6 +33,19 @@ const LOGO_GLYPHS = [
 const ASCII_LOGO = Array.from({ length: LOGO_GLYPHS[0].length }, (_, row) => LOGO_GLYPHS.map((glyph) => glyph[row]).join("  "));
 
 const ANSI = /\u001b\[[0-9;]*m/g;
+const TESTNET_VISUAL_CONTRACTS = [
+  { visualName: "ZKTranscriptLib", mainnetName: "ZKTranscriptLib", label: "ZKTranscriptLib" },
+  { visualName: "RelationsLib", mainnetName: "RelationsLib", label: "RelationsLib" },
+  { visualName: "HonkVerifier", mainnetName: "HonkVerifier", label: "HonkVerifier" },
+  { visualName: "EligibilityVerifierAdapter", mainnetName: "EligibilityVerifierAdapter", label: "EligibilityVerifierAdapter" },
+  { visualName: "RobinhoodDemoCredentialRegistry", mainnetName: "RobinhoodMainnetDemoCredentialRegistry", label: "RobinhoodMainnetDemoCredentialRegistry" },
+  { visualName: "ControlledTestOracle", mainnetName: "RobinhoodMainnetDemoOracle", label: "RobinhoodMainnetDemoOracle" },
+  { visualName: "rUSD2", mainnetName: "RobinhoodMainnetDemoTokenLoan", label: "RobinhoodMainnetDemoToken (dUSD)" },
+  { visualName: "rCOL2", mainnetName: "RobinhoodMainnetDemoTokenCollateral", label: "RobinhoodMainnetDemoToken (dCOL)" },
+  { visualName: "LendingPoolV2", mainnetName: "RobinhoodMainnetDemoLendingPool", label: "RobinhoodMainnetDemoLendingPool" },
+  { visualName: "RobinhoodGovernancePhase1", mainnetName: "RobinhoodMainnetDemoGovernancePhase1", label: "RobinhoodMainnetDemoGovernancePhase1" },
+];
+const VISUAL_CONTRACT_BY_NAME = new Map(TESTNET_VISUAL_CONTRACTS.map((entry) => [entry.visualName, entry]));
 const PALETTE = {
   burgundy: { rgb: [198, 56, 96], ansi256: 168, ansi16: 91 },
   rose: { rgb: [225, 138, 164], ansi256: 217, ansi16: 97 },
@@ -196,12 +214,63 @@ function buildUnavailableScenes(report, options) {
   return scenes;
 }
 
+function buildOfflineReplayScenes(report, options) {
+  const box = makeBoxRenderer(options);
+  const scenes = [];
+  box.rows.push(box.border("="));
+  box.line("G Y E V O", "white");
+  for (const row of ASCII_LOGO) box.line(row, "rose");
+  box.line("PRIVATE ELIGIBILITY. PUBLIC EXECUTION.", "rose");
+  box.line("ROBINHOOD CHAIN MAINNET  |  CHAIN 4663", "rose");
+  box.line("HISTORICAL RECEIPT REPLAY  |  LOCAL ARTIFACT ONLY", "amber");
+  box.rows.push(box.border("="));
+  scenes.push(box.scene());
+
+  box.section("01 / RECORDED DEPLOYMENT EVIDENCE");
+  box.line(`Foundry artifact: ${report.deploymentArtifact}`, "muted");
+  box.line(`Artifact commit: ${report.artifactCommit ?? "not recorded"}  |  time: ${report.artifactTimestamp ?? "not recorded"}`, "muted");
+  box.line(`Recorded successful creation receipts: ${report.successfulReceiptCount}/10`, report.successfulReceiptCount === 10 ? "green" : "amber");
+  box.line("These are receipt records from the local artifact, not current RPC confirmations.", "amber");
+  box.line(`Live RPC: ${report.liveStatus === "unavailable" ? "UNAVAILABLE" : "NOT REQUESTED"}${report.liveError ? ` | ${report.liveError}` : ""}`, "amber");
+  box.line("Live bytecode: NOT CHECKED  |  Blockscout source: NOT CHECKED", "muted");
+  scenes.push(box.scene());
+
+  for (const [groupIndex, [group, names]] of CONTRACT_GROUPS.entries()) {
+    box.section(`${String(groupIndex + 1).padStart(2, "0")} / ${group}`);
+    for (const name of names) {
+      const address = report.contracts?.[name];
+      const receipt = receiptFor(report, name);
+      for (const row of addressRows(name, address, box.innerWidth)) box.line(row, address ? "white" : "amber");
+      const recordedStatus = receipt?.status === "recorded_success" ? "RECORDED RECEIPT SUCCESS" : "RECORDED RECEIPT UNCONFIRMED";
+      const hash = receipt?.transactionHash;
+      const shortHash = hash ? `${hash.slice(0, 10)}...${hash.slice(-8)}` : "hash unavailable";
+      box.line(`  ${recordedStatus} ${shortHash}`, receipt?.status === "recorded_success" ? "green" : "amber");
+      box.line("  LIVE BYTECODE NOT CHECKED  |  SOURCE NOT CHECKED", "muted");
+    }
+    scenes.push(box.scene());
+  }
+
+  box.section("06 / CONTRACT STATE");
+  box.line("Paused states, token supplies, oracle prices, roles and dependencies: NOT READ OFFLINE", "muted");
+  box.line("Recorded transaction success does not establish current contract state.", "amber");
+  box.rows.push(box.border("="));
+  box.line("HISTORICAL LOCAL RECEIPTS ONLY  |  NO LIVE VALIDATION CLAIMS", "amber");
+  box.line("READ ONLY  |  NO SIGNING, DEPLOYMENT OR STATE CHANGES", "muted");
+  box.rows.push(box.border("="));
+  scenes.push(box.scene());
+  return scenes;
+}
+
 function buildDeployedScenes(report, options, { verbose = false } = {}) {
   const box = makeBoxRenderer(options);
   const scenes = [];
   const verifiedSources = report.blockscoutSourceVerification?.verifiedCount ?? 0;
   const totalSources = report.blockscoutSourceVerification?.total ?? 10;
   const receiptCount = report.successfulReceiptCount ?? 0;
+  const liveBytecodeCount = report.deploymentReceipts?.filter((receipt) => receipt.liveBytecodeStatus).length ?? 0;
+  const sourceStatuses = Object.values(report.blockscoutSourceVerification?.statusByContract ?? {});
+  const sourceNotVerified = sourceStatuses.filter((status) => status === "not verified").length;
+  const sourceUnavailable = sourceStatuses.filter((status) => String(status).startsWith("unavailable")).length;
 
   box.rows.push(box.border("="));
   box.line("G Y E V O", "white");
@@ -215,8 +284,8 @@ function buildDeployedScenes(report, options, { verbose = false } = {}) {
   box.section("01 / LIVE MAINNET VALIDATION");
   box.line(`RPC CONNECTED  |  chain ${report.chainId}  |  head ${report.headBlock}`, "green");
   box.line(`Contract deployments with successful receipts: ${receiptCount}/10`, receiptCount === 10 ? "green" : "amber");
-  box.line(`Runtime bytecode present: ${receiptCount}/10`, receiptCount === 10 ? "green" : "amber");
-  box.line(`Blockscout source verified: ${verifiedSources}/${totalSources}`, verifiedSources === totalSources ? "green" : "amber");
+  box.line(`Live runtime bytecode matched: ${liveBytecodeCount}/10`, liveBytecodeCount === 10 ? "green" : "amber");
+  box.line(`Blockscout source: ${verifiedSources} verified | ${sourceNotVerified} not verified | ${sourceUnavailable} unavailable`, verifiedSources === totalSources ? "green" : "amber");
   box.line("Deployment and source-verification counts are separate evidence.", "muted");
   scenes.push(box.scene());
 
@@ -230,7 +299,8 @@ function buildDeployedScenes(report, options, { verbose = false } = {}) {
       const hash = record?.transactionHash;
       const shortHash = hash ? `${hash.slice(0, 10)}...${hash.slice(-8)}` : "receipt unavailable";
       const receiptStatus = record?.status === "success" ? "RECEIPT SUCCESS" : "RECEIPT UNCONFIRMED";
-      box.line(`  ${receiptStatus} ${shortHash}  |  ${sourceText}`, record?.status === "success" && sourceText === "SOURCE VERIFIED" ? "green" : sourceTone);
+      const bytecodeText = record?.liveBytecodeStatus ? "BYTECODE MATCHED" : "BYTECODE NOT CONFIRMED";
+      box.line(`  ${receiptStatus} ${shortHash}  |  ${bytecodeText}  |  ${sourceText}`, record?.status === "success" && record?.liveBytecodeStatus && sourceText === "SOURCE VERIFIED" ? "green" : sourceTone);
       if (verbose && record) {
         box.line(`  TX ${record.transactionHash}`, "muted");
         box.line(`  BLOCK ${record.blockNumber}  |  GAS ${record.gasUsed}  |  BYTECODE ${record.runtimeCodeHash}`, "muted");
@@ -276,6 +346,8 @@ export function renderMainnetPresentation(report, { columns = 120, color = false
     ? buildNotDeployedScenes(report, options)
     : report.kind === "unavailable"
       ? buildUnavailableScenes(report, options)
+      : report.kind === "offline-replay"
+        ? buildOfflineReplayScenes(report, options)
       : buildDeployedScenes(report, options, { verbose });
   return scenes.map((scene) => scene.join("\n")).join("\n\n");
 }
@@ -296,6 +368,8 @@ export async function playMainnetPresentation(report, {
     ? buildNotDeployedScenes(report, options)
     : report.kind === "unavailable"
       ? buildUnavailableScenes(report, options)
+      : report.kind === "offline-replay"
+        ? buildOfflineReplayScenes(report, options)
       : buildDeployedScenes(report, options, { verbose });
   if (!tty) {
     write(`${scenes.map((scene) => scene.join("\n")).join("\n\n")}\n`);

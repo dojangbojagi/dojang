@@ -4,6 +4,7 @@ import { PageGlyphFigure } from "@/components/page-glyph";
 import { appEnv } from "@/lib/config/env";
 import { invalidRobinhoodContractConfig, robinhoodContracts } from "@/lib/config/contracts";
 import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
+import { ROBINHOOD_MAINNET_CHAIN_ID, robinhoodMainnetDemoContracts } from "@/lib/config/robinhood-mainnet-demo";
 import { RobinhoodEvidenceLookup } from "@/components/evidence/robinhood-evidence-lookup";
 import { VerifiedDemoHistory } from "@/components/evidence/verified-demo-history";
 import { ContractDirectory, type DirectoryRow } from "./contract-directory";
@@ -32,21 +33,38 @@ export default function ContractsPage() {
     address: robinhoodContracts[row.key] ?? undefined,
     invalid: invalidRobinhoodContractConfig.includes(row.key),
   }));
+  const mainnetRows: DirectoryRow[] = ROWS.map((row) => {
+    const mainnet = {
+      credentialRegistry: ["RobinhoodMainnetDemoCredentialRegistry", robinhoodMainnetDemoContracts.credentialRegistry],
+      honkVerifier: ["HonkVerifier", robinhoodMainnetDemoContracts.honkVerifier],
+      verifierAdapter: ["EligibilityVerifierAdapter", robinhoodMainnetDemoContracts.verifierAdapter],
+      zkTranscriptLib: ["ZKTranscriptLib", robinhoodMainnetDemoContracts.zkTranscriptLib],
+      relationsLib: ["RelationsLib", robinhoodMainnetDemoContracts.relationsLib],
+      governance: ["RobinhoodMainnetDemoGovernancePhase1", robinhoodMainnetDemoContracts.governance],
+      lendingV2Pool: ["RobinhoodMainnetDemoLendingPool", robinhoodMainnetDemoContracts.lendingPool],
+      lendingV2Oracle: ["RobinhoodMainnetDemoOracle", robinhoodMainnetDemoContracts.oracle],
+      lendingV2Asset: ["RobinhoodMainnetDemoToken · dUSD", robinhoodMainnetDemoContracts.loanToken],
+      lendingV2Collateral: ["RobinhoodMainnetDemoToken · dCOL", robinhoodMainnetDemoContracts.collateralToken],
+    }[row.key];
+    return { ...row, tech: mainnet[0]!, address: mainnet[1]!, purpose: row.key === "lendingV2Asset" || row.key === "lendingV2Collateral"
+      ? "Synthetic demo asset with no redemption value. Restricted Mainnet demonstration only."
+      : row.purpose };
+  });
 
   return (
     <main className="page page--compact">
       <header className="page-head">
-        <PageGlyphFigure glyph={{ shape: "stack", label: "The project's contracts, layer by layer, on Robinhood Chain Testnet.", caption: "Evidence, layer by layer", legend: ["public"] }} />
+        <PageGlyphFigure glyph={{ shape: "stack", label: "The project's contracts, layer by layer, on Robinhood Chain.", caption: "Evidence, layer by layer", legend: ["public"] }} />
         <p className="eyebrow">Contract Explorer</p>
         <h1>Contracts</h1>
         <p className="page-lead">
-          {appEnv.appName} is deployed on Robinhood Testnet (chain ID {ROBINHOOD_TESTNET_CHAIN_ID}). Each contract below links to the
-          network's explorer, and its status is read live from the network.
+          {appEnv.appName} has deployments on Robinhood Testnet (chain {ROBINHOOD_TESTNET_CHAIN_ID}) and a controlled Mainnet demo
+          (chain {ROBINHOOD_MAINNET_CHAIN_ID}). Select a network to inspect its contracts and independent verification status.
         </p>
       </header>
 
       <section className="panel cdir__panel" aria-labelledby="contracts-heading">
-        <ContractDirectory rows={rows} />
+        <ContractDirectory rows={rows} mainnetRows={mainnetRows} />
       </section>
 
       <VerifiedDemoHistory />
@@ -56,7 +74,7 @@ export default function ContractsPage() {
           <summary id="legacy-heading">Earlier GIWA Sepolia prototype contracts</summary>
           <p className="muted">
             The first prototype ran on GIWA Sepolia with its own credential registry, lending pool and DAO. Those contracts are separate from
-            the deployment above and are not used on Robinhood Testnet. GIWA&apos;s own Dojang and attestation contracts are external
+            the Robinhood deployments above. GIWA&apos;s own Dojang and attestation contracts are external
             infrastructure, and {appEnv.appName} credentials are never to be read as official GIWA or Upbit credentials.
           </p>
         </details>

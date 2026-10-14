@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
+import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo";
 import { Arrow } from "./arrow";
 
 /* Story sections between the hero and the curtain footer (01, the idea, is the sticky scene in idea-scene.tsx).
@@ -156,8 +157,7 @@ export function LendingSection() {
 }
 
 /* ----------------------------------------------------------------- 05 */
-/* Testnet stages reflect the confirmed deployment, Blockscout source checks and public DAO/Lending receipts.
-   Production controls, an independent audit and a production price oracle remain future work. */
+/* The five phases cover protocol development and controlled deployment. Production controls remain future work. */
 type PhaseStatus = "done" | "live" | "wip" | "future";
 const STATUS_LABEL: Record<PhaseStatus, string> = {
   done: "Completed",
@@ -209,17 +209,16 @@ const PHASES: readonly { n: string; name: string; status: PhaseStatus; items: re
   },
   {
     n: "05",
-    name: "Production readiness",
-    status: "future",
+    name: "Controlled Mainnet Deployment",
+    status: "done",
     items: [
-      "An independent security audit and review",
-      "Production-grade price oracle infrastructure",
-      "A mainnet launch decision, only once the work above is complete",
+      "Ten protocol contracts deployed on Robinhood Mainnet (chain 4663), including the credential registry, zero-knowledge verifier, governance, and restricted demo Lending infrastructure.",
+      "Ten successful contract creation receipts recorded in the Foundry chain 4663 broadcast artifact",
     ],
   },
 ];
 
-/* the route through the five nodes: solid up to the last live one, dotted after it */
+/* the route through the five nodes */
 const NODE_X = (i: number) => 100 + i * 200; /* 100 ... 900 of a 1000 wide drawing */
 const NODE_Y = (i: number) => (i % 2 ? 28 : 92);
 const route = (from: number, to: number) => {
@@ -235,16 +234,16 @@ export function RoadmapSection() {
       <div className="lp-wrap">
         <Eyebrow n="05" ac="blue">Roadmap</Eyebrow>
         <h2 className="lp-h2" id="road-title" data-lp-reveal style={{ ["--i" as string]: 1 }}>
-          Live on testnet. <em className="o">Production</em> still ahead.
+          Controlled Mainnet deployed. <em className="o">Production</em> still ahead.
         </h2>
         <p className="lp-lead" data-lp-reveal style={{ ["--i" as string]: 2 }}>
-          The protocol and public demo journeys are confirmed on Robinhood Testnet (chain {ROBINHOOD_TESTNET_CHAIN_ID}). Production readiness is future development.
+          Testnet demo journeys are confirmed on chain {ROBINHOOD_TESTNET_CHAIN_ID}. A restricted Mainnet demo is deployed on chain {ROBINHOOD_MAINNET_CHAIN_ID}; public production readiness remains pending.
         </p>
 
         {/* the route: solid where the work is done or live, dotted where it is not. Decorative; the list below says the same in words. */}
         <div className="lp-road__map" data-lp-rail aria-hidden="true">
           <svg className="lp-road__svg lp-road__svg--todo" viewBox="0 0 1000 120" preserveAspectRatio="none" focusable="false">
-            <path d={`${route(LAST_LIVE, PHASES.length - 1)} L1000 ${NODE_Y(PHASES.length - 1)}`} />
+            <path d={LAST_LIVE < PHASES.length - 1 ? `${route(LAST_LIVE, PHASES.length - 1)} L1000 ${NODE_Y(PHASES.length - 1)}` : ""} />
           </svg>
           <svg className="lp-road__svg lp-road__svg--done" viewBox="0 0 1000 120" preserveAspectRatio="none" focusable="false">
             <path d={`M0 ${NODE_Y(0)} L${NODE_X(0)} ${NODE_Y(0)} ${route(0, LAST_LIVE).replace(/^M[^C]*/, "")}`} />
@@ -268,6 +267,7 @@ export function RoadmapSection() {
             </li>
           ))}
         </ol>
+        <p className="lp-lead">Public Production Readiness — Pending: independent security audits, production-grade oracle infrastructure, and public real-asset activation remain future development.</p>
       </div>
     </section>
   );

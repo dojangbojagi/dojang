@@ -52,8 +52,8 @@ async function inspectNetwork(rpcUrl) {
   return { rpcStatus: "connected", chainId, headBlock: headBlock.toString() };
 }
 
-function inspectDeployment(rpcUrl) {
-  const result = spawnSync(process.execPath, [path.join(ROOT, "scripts/robinhood-mainnet-demo-postdeploy.mjs")], {
+function inspectDeployment(rpcUrl, extraArgs = []) {
+  const result = spawnSync(process.execPath, [path.join(ROOT, "scripts/robinhood-mainnet-demo-postdeploy.mjs"), ...extraArgs], {
     cwd: ROOT,
     encoding: "utf8",
     env: { ...process.env, RH_MAINNET_RPC_URL: rpcUrl },
@@ -82,23 +82,35 @@ function readLocalArtifactCount() {
 }
 
 function parseArgs(args) {
-  const valid = new Set(["--presentation", "--plain"]);
+  const valid = new Set(["--presentation", "--plain", "--replay"]);
   for (const arg of args) {
-    if (!valid.has(arg)) throw new Error(`Unknown option ${arg}; use --presentation or --plain.`);
+    if (!valid.has(arg)) throw new Error(`Unknown option ${arg}; use --presentation, --plain, or --replay.`);
   }
   if (args.includes("--presentation") && args.includes("--plain")) {
     throw new Error("Choose one output mode: --presentation or --plain.");
   }
-  return { presentation: args.includes("--presentation"), plain: args.includes("--plain") };
+  return {
+    presentation: args.includes("--presentation"),
+    plain: args.includes("--plain"),
+    replay: args.includes("--replay"),
+  };
+}
+
+function isTransientRpcFailure(error) {
+  return /RPC connection unavailable|RPC request timed out|HTTP request failed|fetch failed|ECONNRESET|network request failed/i.test(String(error?.message ?? error));
 }
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
-  const rpcUrl = readConfiguredRpcUrl();
+  const rpcUrl = options.replay ? undefined : readConfiguredRpcUrl();
   let report;
   let exitCode = 0;
 
-  if (!fs.existsSync(DEPLOYMENT)) {
+  if (options.replay) {
+    report = inspectDeployment("", ["--replay"]);
+    report.kind = "offline-replay";
+    report.liveStatus = "not requested";
+  } else if (!fs.existsSync(DEPLOYMENT)) {
     let network;
     try {
       network = await inspectNetwork(rpcUrl);
@@ -117,12 +129,28 @@ async function main() {
       if (!expected) throw new Error("Mainnet artifact did not produce exactly 10 confirmed contract deployments.");
       report.kind = "deployed";
     } catch (error) {
-      report = {
-        kind: "unavailable",
-        localTransactionCount: readLocalArtifactCount(),
-        error: safeMessage(error, rpcUrl),
-      };
-      exitCode = 1;
+      if (isTransientRpcFailure(error)) {
+        try {
+          report = inspectDeployment(rpcUrl, ["--replay"]);
+          report.kind = "offline-replay";
+          report.liveStatus = "unavailable";
+          report.liveError = safeMessage(error, rpcUrl);
+        } catch (replayError) {
+          report = {
+            kind: "unavailable",
+            localTransactionCount: readLocalArtifactCount(),
+            error: `${safeMessage(error, rpcUrl)}; local replay failed: ${safeMessage(replayError, rpcUrl)}`,
+          };
+          exitCode = 1;
+        }
+      } else {
+        report = {
+          kind: "unavailable",
+          localTransactionCount: readLocalArtifactCount(),
+          error: safeMessage(error, rpcUrl),
+        };
+        exitCode = 1;
+      }
     }
   }
 

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { isAddress } from "viem";
 import { robinhoodMainnetDemoChain, robinhoodMainnetDemoContracts, ROBINHOOD_MAINNET_CHAIN_ID } from "../src/lib/config/robinhood-mainnet-demo.ts";
 import { supportedProtocolChains, getLendingV2ContractSet } from "../src/lib/config/network-registry.ts";
 
@@ -12,9 +13,11 @@ describe("dormant Robinhood Mainnet demo configuration", () => {
     expect(getLendingV2ContractSet(4_663)).toBeUndefined();
   });
 
-  test("does not invent Mainnet deployment addresses", () => {
-    expect(robinhoodMainnetDemoContracts.lendingPool).toBeUndefined();
-    expect(robinhoodMainnetDemoContracts.governance).toBeUndefined();
-    expect(robinhoodMainnetDemoContracts.oracle).toBeUndefined();
+  test("publishes the ten confirmed creation addresses, including distinct dUSD and dCOL tokens", () => {
+    const { chainId, explorerUrl, ...addresses } = robinhoodMainnetDemoContracts;
+    expect(Object.values(addresses)).toHaveLength(10);
+    expect(Object.values(addresses).every((address) => isAddress(address))).toBe(true);
+    expect(addresses.loanToken).toBe("0xFBaFDF28bB402EcDaFB90E3852f1494352444Bc1");
+    expect(addresses.collateralToken).toBe("0xC59B87173B03b030482e5FF8234CBbFD702A49b9");
   });
 });
