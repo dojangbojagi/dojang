@@ -195,8 +195,8 @@ function transformedContent(text, report, facts, state) {
   if (text === "G Y E V O") return { lines: ["GYEVO"], tone: "white" };
   if (text === "ROBINHOOD TESTNET  |  CHAIN 46630") return { lines: ["ROBINHOOD MAINNET | CHAIN 4663"], tone: "rose" };
   if (text === "HISTORICAL DEPLOYMENT REPLAY  |  READ ONLY") return { lines: ["CONTROLLED DEMO DEPLOYMENT | READ ONLY"], tone: "muted" };
-  if (text === "01  /  LIVE ON-CHAIN VALIDATION") return { lines: ["01  /  LIVE MAINNET VALIDATION"], tone: "rose" };
-  if (text === "05  /  GOVERNANCE & PROTOCOL EVIDENCE") return { lines: ["05  /  MAINNET OPERATIONAL STATE"], tone: "rose" };
+  if (text === "01  /  LIVE ON-CHAIN VALIDATION") return { lines: ["01 / LIVE MAINNET VALIDATION"], tone: "rose" };
+  if (text === "05  /  GOVERNANCE & PROTOCOL EVIDENCE") return { lines: ["05 / MAINNET OPERATIONAL STATE"], tone: "rose" };
   if (/^\d{2}\s+\/\s+/.test(text)) return { lines: [text.replace(/\s{2,}/g, " ")] };
 
   if (text.startsWith("PASS") && text.includes("RPC connected")) {
