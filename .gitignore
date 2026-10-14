@@ -10,6 +10,7 @@ coverage/
 
 # Smart Contracts & Circuits build artifacts
 contracts/out/
+/contracts/out-mainnet/
 contracts/cache/
 circuits/cache/
 contracts/broadcast/
@@ -46,6 +47,7 @@ contracts/lib/
 !/docs/BOJOGAY_ROBINHOOD_MASTER_HANDOFF.md
 !/docs/ROBINHOOD_DAO_FRONTEND_HANDOFF.md
 !/docs/ROBINHOOD_TESTNET_BOOTSTRAP.md
+!/docs/ROBINHOOD_MAINNET_DEMO_APPROVAL_PACKAGE.md
 
 # Playwright output
 playwright-report/
