@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { PageGlyphFigure } from "@/components/page-glyph";
 import { appEnv } from "@/lib/config/env";
 import { ROBINHOOD_TESTNET_CHAIN_ID, ROBINHOOD_TESTNET_EXPLORER_URL } from "@/lib/config/robinhood-testnet";
+import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo";
 
 export const metadata: Metadata = { title: `Docs · ${appEnv.appName}` };
 
@@ -35,7 +36,7 @@ export default function DocsPage() {
           a zero-knowledge proof lets a holder show eligibility without revealing the private value behind it.
         </p>
         <dl className="docs__glance">
-          <div><dt>Network</dt><dd>Robinhood Testnet</dd></div>
+          <div><dt>Interactive app</dt><dd>Robinhood Testnet</dd></div>
           <div><dt>Chain ID</dt><dd>{ROBINHOOD_TESTNET_CHAIN_ID}</dd></div>
           <div><dt>Stage</dt><dd>Testnet demonstration</dd></div>
           <div><dt>Tokens</dt><dd>Test tokens only</dd></div>
@@ -93,8 +94,8 @@ export default function DocsPage() {
               </figcaption>
             </figure>
             <p>
-              It runs on Robinhood Testnet (chain ID {ROBINHOOD_TESTNET_CHAIN_ID}) as a controlled testnet demonstration with test tokens.{" "}
-              {name} is not operated, verified or endorsed by GIWA, Dojang or Upbit.
+              The interactive app runs on Robinhood Testnet (chain ID {ROBINHOOD_TESTNET_CHAIN_ID}) with test tokens. Ten contracts are also deployed for a controlled Robinhood Mainnet demo (chain ID {ROBINHOOD_MAINNET_CHAIN_ID}); Mainnet DAO and Lending remain paused.{" "}
+              {name} is an independent project, not operated, verified or endorsed by Robinhood, GIWA, Dojang or Upbit.
             </p>
           </section>
 
@@ -179,11 +180,11 @@ export default function DocsPage() {
           <section className="docs__sec" id="limits" aria-labelledby="limits-h">
             <h2 id="limits-h"><span>08</span>Security, privacy and limits</h2>
             <dl className="docs__rows">
-              <div><dt>Testnet only</dt><dd>{name} is not audited, not a financial product and holds no real funds. Test tokens have no value.</dd></div>
+              <div><dt>Deployment scope</dt><dd>The interactive demo is on Testnet. Mainnet is a controlled, paused deployment with synthetic assets that have no redemption value. {name} is not audited or public production-ready.</dd></div>
               <div><dt>What privacy covers</dt><dd>A proof hides the private eligibility value. Wallet addresses, transactions, amounts and votes are public, and so is the fact that a gated action happened.</dd></div>
               <div><dt>Trusted issuer</dt><dd>The project issuer decides who receives a credential. A proof shows that a holder meets a rule; it does not remove trust in the issuer.</dd></div>
               <div><dt>Not official</dt><dd>Project credentials are separate from official GIWA Dojang and Upbit credentials.</dd></div>
-              <div><dt>Source verification</dt><dd>The ten deployed GYEVO contracts have source verified on Robinhood Testnet Blockscout. The Contracts page reads the current explorer status.</dd></div>
+              <div><dt>Source verification</dt><dd>All ten Testnet contracts have verified source. Mainnet source status is unconfirmed while Blockscout checks are unavailable; the Contracts page reports each network separately.</dd></div>
             </dl>
 
             <details className="docs__tech">

@@ -6,6 +6,7 @@ import { appEnv } from "@/lib/config/env";
 import { BrandLogo } from "@/components/brand-logo";
 import { GIWA_EXPLORER_URL } from "@/lib/config/chain";
 import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
+import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo";
 
 const GIWA_DOCS = "https://docs.giwa.io/giwa-chain/en/get-started/connect-to-giwa";
 const DOJANG_DOCS = "https://docs.giwa.io/giwa-chain/en/giwa-ecosystem/dojang/contracts";
@@ -30,9 +31,9 @@ export function SiteFooter() {
           </ul></nav>
         </div>
         <div className="site-footer__legal">
-          <div><span className="net-pill"><i className="net-pill__dot" aria-hidden="true" /><b>Robinhood Testnet</b><i>{ROBINHOOD_TESTNET_CHAIN_ID}</i></span></div>
-          <p>Testnet demonstration on Robinhood Testnet (chain ID {ROBINHOOD_TESTNET_CHAIN_ID}). Not audited. Not a financial product. No funds are held.</p>
-          <p>Independent project, not affiliated with GIWA or Upbit. DOJANG and BOJAGI are this project’s own credential and proof layers; they are separate from GIWA’s Dojang and native Bojagi.</p>
+          <div><span className="net-pill"><i className="net-pill__dot" aria-hidden="true" /><b>Testnet + Mainnet</b><i>{ROBINHOOD_TESTNET_CHAIN_ID} · {ROBINHOOD_MAINNET_CHAIN_ID}</i></span></div>
+          <p>Robinhood Testnet: verified interactive demo. Robinhood Mainnet: controlled deployment of ten contracts; DAO and Lending remain paused.</p>
+          <p>Synthetic assets have no redemption value. Not audited or public production-ready. Independent project, not affiliated with Robinhood, GIWA or Upbit. DOJANG and BOJAGI are project layers, separate from GIWA&apos;s.</p>
         </div>
       </div>
     </footer>

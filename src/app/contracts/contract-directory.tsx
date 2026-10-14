@@ -114,6 +114,7 @@ export function ContractDirectory({ rows, mainnetRows }: { rows: DirectoryRow[];
   const verified = selectedRows.filter((row) => network === "mainnet"
     ? mainnetLive[row.key]?.source === "verified" : live[row.key]?.sourceVerification === "verified").length;
   const unavailableSources = mainnetRows.filter((row) => mainnetLive[row.key]?.source === "unavailable").length;
+  const allSourcesUnavailable = network === "mainnet" && unavailableSources === mainnetRows.length;
   const groups = Array.from(new Set(selectedRows.map((row) => row.group)));
   const explorer = network === "mainnet" ? ROBINHOOD_MAINNET_DEMO_EXPLORER_URL : ROBINHOOD_TESTNET_EXPLORER_URL;
 
@@ -144,7 +145,7 @@ export function ContractDirectory({ rows, mainnetRows }: { rows: DirectoryRow[];
       <dl className="cdir__stats" aria-live="polite">
         <div><dt>{network === "mainnet" ? "Deployed" : "Contracts"}</dt><dd>{network === "mainnet" ? mainnetRows.length : rows.length}</dd><small>{network === "mainnet" ? "Successful chain 4663 creation receipts" : "Robinhood Testnet"}</small></div>
         <div><dt>{network === "mainnet" ? "Bytecode confirmed" : "Deployed"}</dt><dd>{state === "ready" ? network === "mainnet" ? bytecodeConfirmed : deployed : "…"}</dd><small>{state === "checking" ? "Checking the network" : state === "unavailable" ? "Network status unavailable" : network === "mainnet" && bytecodeConfirmed < mainnetRows.length ? "RPC confirmation incomplete or unavailable" : "Code found at the address"}</small></div>
-        <div><dt>Source verified</dt><dd>{state === "ready" ? `${verified}/${selectedRows.length}` : "…"}</dd><small>{state !== "ready" ? "Checking Blockscout" : network === "mainnet" && unavailableSources ? "Some Blockscout checks unavailable" : "Blockscout source status checked"}</small></div>
+        <div><dt>Source verified</dt><dd>{state !== "ready" ? "…" : allSourcesUnavailable ? "Unavailable" : `${verified}/${selectedRows.length}`}</dd><small>{state !== "ready" ? "Checking Blockscout" : allSourcesUnavailable ? "Blockscout status unavailable" : network === "mainnet" && unavailableSources ? "Some Blockscout checks unavailable" : "Blockscout source status checked"}</small></div>
       </dl>
 
       {groups.map((group) => (
@@ -164,7 +165,7 @@ export function ContractDirectory({ rows, mainnetRows }: { rows: DirectoryRow[];
                 : { tone: "wait", text: "Status unavailable" };
               const source = network === "mainnet"
                 ? state === "checking" ? "Checking source…" : mainnetEvidence?.source === "verified" ? "Source verified"
-                  : mainnetEvidence?.source === "unverified" ? "Source Not Verified" : "Source status unavailable"
+                  : mainnetEvidence?.source === "unverified" ? "Source Not Verified" : "Source Status Unavailable"
                 : deployedHere
                 ? evidence?.sourceVerification === "verified" ? "Source verified"
                   : evidence?.sourceVerification === "unverified" ? "Source Not Verified"

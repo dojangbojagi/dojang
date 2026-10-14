@@ -33,7 +33,7 @@ const SECTIONS = [
     href: "/contracts",
     name: "Contracts",
     tag: "Transparency",
-    text: "The deployed contracts, their purpose and status on the Robinhood Testnet explorer.",
+    text: "Testnet and controlled Mainnet contracts, their addresses and independent verification status.",
   },
 ] as const;
 

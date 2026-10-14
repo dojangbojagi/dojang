@@ -51,14 +51,15 @@ test("contracts selector preserves Testnet and shows independently checked Mainn
   expect(writeMethods).toEqual([]);
 });
 
-test("Mainnet RPC failures leave receipt status intact", async ({ page }) => {
+test("Mainnet RPC and Blockscout 403 failures leave receipt status intact", async ({ page }) => {
   await page.route("https://rpc.mainnet.chain.robinhood.com/**", (route) => route.abort());
-  await page.route("https://robinhoodchain.blockscout.com/api/v2/addresses/**", (route) => route.abort());
+  await page.route("https://robinhoodchain.blockscout.com/api/v2/addresses/**", (route) => route.fulfill({ status: 403, contentType: "text/html", body: "Cloudflare challenge" }));
   await page.goto(`${site}/contracts`, { waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: /Robinhood Mainnet/ }).click({ force: true });
   await expect(page.locator(".cdir__status").filter({ hasText: "Deployed · receipt confirmed" })).toHaveCount(10);
   await expect(page.locator(".cdir__status").filter({ hasText: "Bytecode status unavailable" })).toHaveCount(10);
-  await expect(page.locator(".cdir__status").filter({ hasText: "Source status unavailable" })).toHaveCount(10);
+  await expect(page.locator(".cdir__status").filter({ hasText: "Source Status Unavailable" })).toHaveCount(10);
+  await expect(page.locator(".cdir__stats dd").last()).toHaveText("Unavailable");
 });
 
 test("landing roadmap completes controlled deployment and keeps production pending", async ({ page }) => {

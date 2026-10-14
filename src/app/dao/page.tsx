@@ -12,7 +12,7 @@ export default function DaoPage() {
       status="DAO Governance"
       glyph={{ shape: "assembly", label: "Tiered half-circle seating made of characters: a governing body voting in public.", caption: "Verified wallets, public votes", legend: ["public"] }}
       title="Govern with a project credential."
-      lead="Holders of an active project credential propose and vote on Robinhood Testnet. Votes are public. An earlier GIWA Sepolia DAO, which uses official Dojang membership, remains available as a separate network."
+      lead="Holders of an active Policy 4 project credential propose and vote on Robinhood Testnet. Votes are public; approved proposals can execute their bounded action. Mainnet governance remains paused. An earlier GIWA Sepolia DAO uses separate official Dojang membership."
     >
       <div className="protocol-section">
         <DaoWorkspace />

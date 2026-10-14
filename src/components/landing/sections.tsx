@@ -285,7 +285,7 @@ export function FactsSection() {
         <dl className="lp-facts__grid" data-lp-reveal>
           <div className="lp-fact" data-spot><dt>Demo network</dt><dd>Robinhood Chain Testnet</dd></div>
           <div className="lp-fact" data-spot><dt>Chain ID</dt><dd className="mono">{ROBINHOOD_TESTNET_CHAIN_ID}</dd></div>
-          <div className="lp-fact" data-spot><dt>Project contracts</dt><dd>Deployed on Robinhood Testnet</dd></div>
+          <div className="lp-fact" data-spot><dt>Project contracts</dt><dd>Testnet + controlled Mainnet</dd></div>
           <div className="lp-fact" data-spot><dt>Audit</dt><dd>None</dd></div>
           <div className="lp-fact" data-spot><dt>Funds held</dt><dd>None</dd></div>
         </dl>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { GIWA_EXPLORER_URL } from "@/lib/config/chain";
 import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
+import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo";
 import { Arrow } from "./arrow";
 import { BrandLogo } from "@/components/brand-logo";
 
@@ -114,8 +115,8 @@ export function FinalReveal({ appName }: { appName: string }) {
                 <span>{appName}</span>
               </Link>
               <p>
-                A testnet demonstration of private eligibility proofs on Robinhood
-                Testnet. An independent project, not affiliated with GIWA, Dojang or Upbit.
+                Verified Testnet demo. Robinhood Mainnet: 10 contracts, DAO/Lending paused.
+                Synthetic assets: no redemption. Independent of Robinhood, GIWA and Upbit.
               </p>
             </div>
             <nav aria-label="Protocol">
@@ -185,8 +186,8 @@ export function FinalReveal({ appName }: { appName: string }) {
             </nav>
           </div>
           <p className="lp-legal">
-            <span>Robinhood Testnet · chain {ROBINHOOD_TESTNET_CHAIN_ID}</span>
-            <span>Not audited · No funds held</span>
+            <span>Testnet {ROBINHOOD_TESTNET_CHAIN_ID} · Mainnet {ROBINHOOD_MAINNET_CHAIN_ID}</span>
+            <span>Unaudited · Not public production-ready</span>
           </p>
           <span
             className="lp-word-out"
