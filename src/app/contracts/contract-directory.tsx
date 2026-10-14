@@ -70,9 +70,8 @@ function CopyButton({ value }: { value: string }) {
   );
 }
 
-/* The contract list, written for a visitor: a name, what it is for, where it lives and whether it is there.
-   Deployment is read live from the Robinhood RPC; source publication is read from the explorer. Neither is
-   assumed: while a check is running, or if it fails, the row says so instead of guessing. */
+/* Testnet deployment is read from RPC. Mainnet creation receipts are recorded in the address registry;
+   runtime bytecode and explorer source status are checked independently without assuming either result. */
 export function ContractDirectory({ rows, mainnetRows }: { rows: DirectoryRow[]; mainnetRows: DirectoryRow[] }) {
   const client = usePublicClient({ chainId: ROBINHOOD_TESTNET_CHAIN_ID });
   const [network, setNetwork] = useState<"testnet" | "mainnet">("testnet");
@@ -114,6 +113,7 @@ export function ContractDirectory({ rows, mainnetRows }: { rows: DirectoryRow[];
   const bytecodeConfirmed = mainnetRows.filter((row) => mainnetLive[row.key]?.bytecode === "present").length;
   const verified = selectedRows.filter((row) => network === "mainnet"
     ? mainnetLive[row.key]?.source === "verified" : live[row.key]?.sourceVerification === "verified").length;
+  const unavailableSources = mainnetRows.filter((row) => mainnetLive[row.key]?.source === "unavailable").length;
   const groups = Array.from(new Set(selectedRows.map((row) => row.group)));
   const explorer = network === "mainnet" ? ROBINHOOD_MAINNET_DEMO_EXPLORER_URL : ROBINHOOD_TESTNET_EXPLORER_URL;
 
@@ -144,7 +144,7 @@ export function ContractDirectory({ rows, mainnetRows }: { rows: DirectoryRow[];
       <dl className="cdir__stats" aria-live="polite">
         <div><dt>{network === "mainnet" ? "Deployed" : "Contracts"}</dt><dd>{network === "mainnet" ? mainnetRows.length : rows.length}</dd><small>{network === "mainnet" ? "Successful chain 4663 creation receipts" : "Robinhood Testnet"}</small></div>
         <div><dt>{network === "mainnet" ? "Bytecode confirmed" : "Deployed"}</dt><dd>{state === "ready" ? network === "mainnet" ? bytecodeConfirmed : deployed : "…"}</dd><small>{state === "checking" ? "Checking the network" : state === "unavailable" ? "Network status unavailable" : network === "mainnet" && bytecodeConfirmed < mainnetRows.length ? "RPC confirmation incomplete or unavailable" : "Code found at the address"}</small></div>
-        <div><dt>Source verified</dt><dd>{state === "ready" ? `${verified}/${selectedRows.length}` : "…"}</dd><small>{state === "ready" ? "Blockscout source status checked separately" : "Checking Blockscout"}</small></div>
+        <div><dt>Source verified</dt><dd>{state === "ready" ? `${verified}/${selectedRows.length}` : "…"}</dd><small>{state !== "ready" ? "Checking Blockscout" : network === "mainnet" && unavailableSources ? "Some Blockscout checks unavailable" : "Blockscout source status checked"}</small></div>
       </dl>
 
       {groups.map((group) => (

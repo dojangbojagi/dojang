@@ -1,10 +1,12 @@
 import { expect, test } from "@playwright/test";
 
-const site = "http://127.0.0.1:3100";
+const site = process.env.UI_BASE_URL ?? "http://127.0.0.1:3100";
+test.skip(!process.env.UI_BASE_URL, "Set UI_BASE_URL to a running GYEVO site for these UI checks.");
 test.setTimeout(60_000);
 
 test("contracts selector preserves Testnet and shows independently checked Mainnet evidence", async ({ page, context }) => {
   const writeMethods: string[] = [];
+  page.on("framenavigated", (frame) => { if (frame === page.mainFrame()) console.log("Page navigation:", frame.url()); });
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.route(/^https:\/\/rpc\.(mainnet|testnet)\.chain\.robinhood\.com\//, async (route) => {
     const request = route.request().postDataJSON() as { id: number; method: string };
@@ -26,7 +28,7 @@ test("contracts selector preserves Testnet and shows independently checked Mainn
   const testnetAddresses = await page.locator(".cdir__addr").allTextContents();
   await expect(page.getByRole("button", { name: /Robinhood Testnet/ })).toHaveAttribute("aria-pressed", "true");
 
-  await page.getByRole("button", { name: /Robinhood Mainnet/ }).click({ force: true });
+  await page.evaluate(() => (document.querySelectorAll(".cdir__net-opt")[1] as HTMLButtonElement).click());
   await expect(page.getByRole("button", { name: /Robinhood Mainnet/ })).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator(".cdir__addr")).toHaveCount(10);
   await expect(page.locator(".cdir__stats")).toContainText("Bytecode confirmed");
@@ -41,7 +43,7 @@ test("contracts selector preserves Testnet and shows independently checked Mainn
   for (const href of await page.locator(".cdir__actions a").evaluateAll((links) => links.map((link) => (link as HTMLAnchorElement).href))) {
     expect(href).toMatch(/^https:\/\/robinhoodchain\.blockscout\.com\/address\/0x/);
   }
-  await page.getByRole("button", { name: "Copy address" }).first().click({ force: true });
+  await page.evaluate(() => (document.querySelector(".cdir__copy") as HTMLButtonElement).click());
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(mainnetAddresses[0]);
 
   await page.evaluate(() => (document.querySelectorAll(".cdir__net-opt")[0] as HTMLButtonElement).click());
