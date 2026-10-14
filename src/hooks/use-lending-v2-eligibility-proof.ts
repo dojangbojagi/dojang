@@ -115,7 +115,7 @@ export function useLendingV2EligibilityProof(witness?: DemoCredentialWitness): {
     setProofWitness(undefined);
     setGenerationError(undefined);
     setVerificationStatus("not-generated");
-  }, [account.address, credential?.commitment, credential?.expiresAt, pool]);
+  }, [account.address, credential?.commitment, credential?.expiresAt, pool, witness?.commitment]);
 
   let state: LendingV2EligibilityState;
   if (!configuredPoolValue) state = "unconfigured";

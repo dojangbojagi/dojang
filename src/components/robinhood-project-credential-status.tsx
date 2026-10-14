@@ -22,11 +22,12 @@ function lendingCredentialState(state: ReturnType<typeof useLendingV2Eligibility
     case "credential-revoked": return ["credential-revoked", "The project issuer revoked this credential."] as const;
     case "credential-not-yet-valid": return ["checking-credential", "The credential is not valid yet."] as const;
     case "issuer-untrusted": return ["issuer-untrusted", "The issuer is not currently authorized by the project registry."] as const;
+    case "verifier-unavailable": return ["read-error", "The local proof passed, but the deployed verifier response could not be confirmed."] as const;
     case "witness-required": return ["active", "Policy-3 credential is active; its issuer-delivered witness is still required."] as const;
     case "witness-mismatch": return ["invalid", "The witness does not match the connected wallet's current credential."] as const;
     case "ready-to-prove": return ["ready-to-prove", "The credential and private witness are ready for browser proof generation."] as const;
     case "generating": return ["generating", "The proof is being generated and checked locally."] as const;
-    case "proof-ready": return ["proof-ready", "A genuine proof is verified locally; Lending V2 will verify it again on-chain."] as const;
+    case "proof-ready": return ["proof-ready", "A genuine proof passed the deployed read-only verifier check; Lending V2 checks it again in protected transactions."] as const;
     case "invalid": return ["invalid", "The witness or generated proof failed validation."] as const;
   }
 }
