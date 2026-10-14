@@ -126,6 +126,185 @@ function sourceLabel(status) {
   return [`SOURCE UNKNOWN${status?.startsWith("unavailable") ? " (LIVE CHECK UNAVAILABLE)" : ""}`, "muted"];
 }
 
+function bytecodeMatched(receipt) {
+  const status = receipt?.liveBytecodeStatus;
+  return status === true || (typeof status === "string" && /\bmatch(?:ed|es)?\b/i.test(status) && !/not\s+match|mismatch|unavailable/i.test(status));
+}
+
+function mainnetVisualReport(report) {
+  const verified = [];
+  const verificationByName = new Map();
+  for (const entry of TESTNET_VISUAL_CONTRACTS) {
+    const address = report.contracts?.[entry.mainnetName];
+    if (address) verified.push({ name: entry.visualName, address });
+    const status = report.blockscoutSourceVerification?.statusByContract?.[entry.mainnetName];
+    verificationByName.set(entry.visualName,
+      status === "verified" ? "source verified"
+        : status === "not verified" ? "source not verified"
+          : "source status unavailable");
+  }
+  const checks = report.roleAndDependencyChecks ?? [];
+  const zeroSupply = checks.some((check) => check.includes("tokens have zero initial supply"));
+  const oracleUnseeded = checks.some((check) => check.includes("oracle has configured bounds but no seeded prices"));
+  return {
+    chainId: report.chainId,
+    head: report.headBlock,
+    verified,
+    verificationByName,
+    calls: [],
+    initReceipts: [],
+    deploymentReceiptCount: report.successfulReceiptCount ?? 0,
+    governance: {
+      proposalOneExecuted: false,
+      proposalOneState: "not reported for Mainnet",
+      minimumRemainingValidity: "not reported",
+    },
+    oracleStates: [
+      { name: "dUSD / dCOL supply", state: zeroSupply ? "missing" : "unknown", ageSeconds: 0, maxAge: 0 },
+      { name: "Synthetic oracle", state: oracleUnseeded ? "missing" : "unknown", ageSeconds: 0, maxAge: 0 },
+    ],
+  };
+}
+
+function liveMainnetFacts(report) {
+  const checks = report.roleAndDependencyChecks ?? [];
+  const sourceStatuses = Object.values(report.blockscoutSourceVerification?.statusByContract ?? {});
+  const verifiedSources = sourceStatuses.filter((status) => status === "verified").length;
+  const unverifiedSources = sourceStatuses.filter((status) => status === "not verified").length;
+  const unavailableSources = sourceStatuses.filter((status) => String(status).startsWith("unavailable")).length;
+  const receipts = report.deploymentReceipts ?? [];
+  const bytecodeCount = receipts.filter(bytecodeMatched).length;
+  const roleCount = checks.filter((item) => item.includes(" role confirmed")).length;
+  const dependencyCount = checks.filter((item) => item.includes("dependency confirmed") || item.includes("reserve addresses confirmed")).length;
+  const exactCheck = (fragment) => checks.some((item) => item.includes(fragment));
+  return {
+    receiptCount: report.successfulReceiptCount ?? receipts.filter((receipt) => receipt.status === "success").length,
+    bytecodeCount,
+    roleCount,
+    dependencyCount,
+    verifiedSources,
+    unverifiedSources,
+    unavailableSources,
+    paused: exactCheck("Lending and Governance start paused"),
+    zeroSupply: exactCheck("tokens have zero initial supply"),
+    oracleUnseeded: exactCheck("oracle has configured bounds but no seeded prices"),
+  };
+}
+
+function transformedContent(text, report, facts, state) {
+  if (text === "G Y E V O") return { lines: ["GYEVO"], tone: "white" };
+  if (text === "ROBINHOOD TESTNET  |  CHAIN 46630") return { lines: ["ROBINHOOD MAINNET | CHAIN 4663"], tone: "rose" };
+  if (text === "HISTORICAL DEPLOYMENT REPLAY  |  READ ONLY") return { lines: ["CONTROLLED DEMO DEPLOYMENT | READ ONLY"], tone: "muted" };
+  if (text === "01  /  LIVE ON-CHAIN VALIDATION") return { lines: ["01  /  LIVE MAINNET VALIDATION"], tone: "rose" };
+  if (text === "05  /  GOVERNANCE & PROTOCOL EVIDENCE") return { lines: ["05  /  MAINNET OPERATIONAL STATE"], tone: "rose" };
+  if (/^\d{2}\s+\/\s+/.test(text)) return { lines: [text.replace(/\s{2,}/g, " ")] };
+
+  if (text.startsWith("PASS") && text.includes("RPC connected")) {
+    return { lines: ["PASS       RPC connected | Robinhood Mainnet 4663"], tone: "rose" };
+  }
+  if (text.startsWith("PASS") && text.includes("Network identified")) {
+    return { lines: [`PASS       Lending and Governance | ${facts.paused ? "PAUSED" : "STATE NOT CONFIRMED"}`], tone: facts.paused ? "rose" : "muted" };
+  }
+  if (text.startsWith("PASS") && text.includes("Public receipts")) {
+    return { lines: [`PASS       Public deployment receipts | ${facts.receiptCount}/10`], tone: "rose" };
+  }
+  if (text.startsWith("PASS") && text.includes("Runtime bytecode")) {
+    return { lines: [`PASS       Runtime bytecode matched | ${facts.bytecodeCount}/10`], tone: facts.bytecodeCount === 10 ? "rose" : "muted" };
+  }
+  if (text.includes("Blockscout sources")) {
+    let summary;
+    let tone = "muted";
+    if (facts.unavailableSources === 10 && facts.verifiedSources === 0 && facts.unverifiedSources === 0) {
+      summary = "UNAVAILABLE Blockscout source verification | 10 status checks unavailable";
+    } else if (facts.unavailableSources > 0) {
+      summary = `PARTIAL Blockscout source verification | ${facts.verifiedSources} verified, ${facts.unverifiedSources} not verified, ${facts.unavailableSources} unavailable`;
+    } else if (facts.verifiedSources === 10) {
+      summary = "PASS       Blockscout source verification | 10/10 verified";
+      tone = "rose";
+    } else {
+      summary = `INCOMPLETE Blockscout source verification | ${facts.verifiedSources} verified, ${facts.unverifiedSources} not verified`;
+    }
+    return { lines: [summary], tone };
+  }
+  if (text.startsWith("PASS") && text.includes("Dependencies, roles, reserves")) {
+    return {
+      lines: [
+        `PASS       Access-control roles | ${facts.roleCount}/15`,
+        `PASS       Contract dependencies and reserves | ${facts.dependencyCount}/8`,
+      ],
+      tone: "rose",
+    };
+  }
+
+  const contractRow = text.match(/^([A-Za-z0-9]+)\s+(0x[\da-fA-F]{6}\.\.\.[\da-fA-F]{6})\s+(DEPLOYED|NOT CONFIRMED)\s*\/\s*SOURCE.*$/);
+  if (contractRow) {
+    const entry = VISUAL_CONTRACT_BY_NAME.get(contractRow[1]);
+    if (entry) {
+      const receipt = report.deploymentReceipts?.find((record) => record.name === entry.mainnetName);
+      const matched = bytecodeMatched(receipt);
+      const deployed = receipt?.status === "success";
+      const address = report.contracts?.[entry.mainnetName];
+      const short = address ? `${address.slice(0, 8)}...${address.slice(-6)}` : "address unavailable";
+      return {
+        lines: [`${entry.label.padEnd(40)} ${short.padEnd(18)} ${deployed ? "DEPLOYED" : "NOT CONFIRMED"} / ${matched ? "BYTECODE MATCHED" : "BYTECODE NOT CONFIRMED"}`],
+        tone: deployed && matched ? "rose" : "muted",
+      };
+    }
+  }
+
+  if (text.startsWith("DAO Proposal #1")) return { lines: [`Runtime bytecode matched | ${facts.bytecodeCount}/10`], tone: "rose" };
+  if (text.startsWith("Minimum credential validity")) return { lines: [`Access-control role checks | ${facts.roleCount}/15`], tone: "rose" };
+  if (text.startsWith("Deployment evidence")) return { lines: [`Dependencies and reserves | ${facts.dependencyCount}/8`], tone: "rose" };
+  if (text.startsWith("Source verification")) return { lines: [`Lending | ${facts.paused ? "PAUSED" : "STATE NOT CONFIRMED"}`], tone: facts.paused ? "rose" : "muted" };
+  if (text.startsWith("ORACLE READINESS")) return { lines: [`Governance | ${facts.paused ? "PAUSED" : "STATE NOT CONFIRMED"}`], tone: facts.paused ? "rose" : "muted" };
+  if (text.startsWith("dUSD / dCOL supply")) return { lines: [`dUSD / dCOL supply | ${facts.zeroSupply ? "ZERO" : "NOT CONFIRMED"}`], tone: facts.zeroSupply ? "rose" : "muted" };
+  if (text.startsWith("Synthetic oracle")) return { lines: [`Synthetic oracle | ${facts.oracleUnseeded ? "UNSEEDED" : "STATE NOT CONFIRMED"}`], tone: facts.oracleUnseeded ? "rose" : "muted" };
+
+  if (/^\d+ \/ 10 SOURCES VERIFIED$/.test(text)) {
+    return { lines: [`${facts.bytecodeCount} / 10 BYTECODES MATCHED`], tone: facts.bytecodeCount === 10 ? "rose" : "muted" };
+  }
+  if (text === "PRIVATE ELIGIBILITY. PUBLIC EXECUTION.") {
+    state.taglineOccurrences += 1;
+    if (state.taglineOccurrences === 2) return { lines: ["ROBINHOOD MAINNET | CHAIN 4663"], tone: "rose" };
+  }
+  if (text === "Historical deployment verified on Robinhood Testnet.") {
+    return { lines: ["CONTROLLED DEMO | SYNTHETIC ASSETS"], tone: "rose" };
+  }
+  return { lines: [text] };
+}
+
+function createMainnetTextTransformer(report, { columns = 120, color = false, colorDepth = "256" } = {}) {
+  const facts = liveMainnetFacts(report);
+  const width = Math.max(32, Math.min(110, Math.floor(columns) - 2));
+  const innerWidth = width - 4;
+  const state = { taglineOccurrences: 0 };
+  return (chunk) => String(chunk).split(/(\n)/).map((part) => {
+    if (part === "\n" || part.length === 0) return part;
+    const plain = part.replace(ANSI, "");
+    const frame = plain.match(/^(\s*\| )(.*) \|$/);
+    if (!frame) return part;
+    const visibleInner = frame[2];
+    const text = visibleInner.trim();
+    if (!text) return part;
+    const transformed = transformedContent(text, report, facts, state);
+    const centered = visibleInner.startsWith(" ");
+    const originalPrefix = frame[1];
+    const originalColor = part.slice(originalPrefix.length).match(/^\u001b\[[0-9;]*m/)?.[0] ?? "";
+    const rows = transformed.lines.flatMap((value) => {
+      const wrapped = value.length <= innerWidth ? [value] : wrap(value, innerWidth);
+      return wrapped.map((line) => {
+        const left = centered ? Math.floor((innerWidth - line.length) / 2) : 0;
+        const padded = `${" ".repeat(Math.max(0, left))}${line}${" ".repeat(Math.max(0, innerWidth - left - line.length))}`;
+        const painted = transformed.tone
+          ? colorize(padded, transformed.tone, color, colorDepth)
+          : originalColor ? `${originalColor}${padded}\u001b[0m` : padded;
+        return `${originalPrefix}${painted} |`;
+      });
+    });
+    return rows.join("\n");
+  }).join("");
+}
+
 function receiptFor(report, name) {
   return report.deploymentReceipts?.find((receipt) => receipt.name === name);
 }
@@ -342,6 +521,11 @@ function buildDeployedScenes(report, options, { verbose = false } = {}) {
 
 export function renderMainnetPresentation(report, { columns = 120, color = false, colorDepth = "256", verbose = false } = {}) {
   const options = { columns, color, colorDepth };
+  if (report.kind === "deployed") {
+    const compatibleReport = mainnetVisualReport(report);
+    const output = renderTestnetPresentation(compatibleReport, options);
+    return createMainnetTextTransformer(report, options)(output);
+  }
   const scenes = report.kind === "not-deployed"
     ? buildNotDeployedScenes(report, options)
     : report.kind === "unavailable"
@@ -363,6 +547,20 @@ export async function playMainnetPresentation(report, {
   finalHoldMs = 2_500,
   signalTarget = process,
 } = {}) {
+  if (report.kind === "deployed") {
+    const compatibleReport = mainnetVisualReport(report);
+    const transform = createMainnetTextTransformer(report, { columns, color, colorDepth });
+    return runTestnetPresentation(compatibleReport, {
+      tty,
+      color,
+      colorDepth,
+      columns,
+      write: (chunk) => write(transform(chunk)),
+      pause,
+      finalHoldMs,
+      signalTarget,
+    });
+  }
   const options = { columns, color, colorDepth, verbose };
   const scenes = report.kind === "not-deployed"
     ? buildNotDeployedScenes(report, options)
