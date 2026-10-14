@@ -29,6 +29,16 @@ library RobinhoodVerifierDeployment {
     }
 
     function deploy() internal returns (Addresses memory deployed) {
+        return _deploy("out/EligibilityHonkVerifier.sol/HonkVerifier.json");
+    }
+
+    /// @dev Robinhood Mainnet has an isolated Cancun build output so its verifier bytecode
+    ///      cannot accidentally be sourced from the historical Prague/Testnet artifact.
+    function deployMainnetDemo() internal returns (Addresses memory deployed) {
+        return _deploy("out-mainnet/EligibilityHonkVerifier.sol/HonkVerifier.json");
+    }
+
+    function _deploy(string memory verifierArtifactPath) private returns (Addresses memory deployed) {
         deployed.transcriptLibrary = _create(
             vm.getCode("src/generated/EligibilityHonkVerifier.sol:ZKTranscriptLib")
         );
@@ -36,7 +46,7 @@ library RobinhoodVerifierDeployment {
             vm.getCode("src/generated/EligibilityHonkVerifier.sol:RelationsLib")
         );
 
-        string memory artifact = vm.readFile("out/EligibilityHonkVerifier.sol/HonkVerifier.json");
+        string memory artifact = vm.readFile(verifierArtifactPath);
         bytes memory linkedObject = _stripHexPrefix(bytes(vm.parseJsonString(artifact, ".bytecode.object")));
         _replaceLink(linkedObject, "ZKTranscriptLib", deployed.transcriptLibrary);
         _replaceLink(linkedObject, "RelationsLib", deployed.relationsLibrary);

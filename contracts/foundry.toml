@@ -30,6 +30,24 @@ fs_permissions = [
     { access = "read", path = "out" }
 ]
 
+# Separate controlled-demo profile. Cancun is selected conservatively so this deployment
+# path does not rely on the Prague-specific opcode set used by the historical GIWA profile.
+[profile.robinhood_mainnet]
+src = "src"
+test = "test"
+out = "out-mainnet"
+libs = ["lib"]
+solc_version = "0.8.28"
+evm_version = "cancun"
+chain_id = 4663
+optimizer = true
+optimizer_runs = 200
+remappings = ["@openzeppelin/contracts/=../node_modules/@openzeppelin/contracts/"]
+fs_permissions = [
+    { access = "read", path = "../circuits/testdata" },
+    { access = "read", path = "out-mainnet" }
+]
+
 [fmt]
 line_length = 100
 tab_width = 4
