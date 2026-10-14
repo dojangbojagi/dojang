@@ -6,7 +6,6 @@ test.setTimeout(60_000);
 
 test("contracts selector preserves Testnet and shows independently checked Mainnet evidence", async ({ page, context }) => {
   const writeMethods: string[] = [];
-  page.on("framenavigated", (frame) => { if (frame === page.mainFrame()) console.log("Page navigation:", frame.url()); });
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.route(/^https:\/\/rpc\.(mainnet|testnet)\.chain\.robinhood\.com\//, async (route) => {
     const request = route.request().postDataJSON() as { id: number; method: string };
@@ -23,7 +22,7 @@ test("contracts selector preserves Testnet and shows independently checked Mainn
     await route.fulfill({ json: { status: "1", result: [{ Address: address, SourceCode: "pragma solidity ^0.8.28;", ABI: "[]" }] } });
   });
 
-  await page.goto(`${site}/contracts`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${site}/contracts`);
   await expect(page.locator(".cdir__addr")).toHaveCount(10);
   const testnetAddresses = await page.locator(".cdir__addr").allTextContents();
   await expect(page.getByRole("button", { name: /Robinhood Testnet/ })).toHaveAttribute("aria-pressed", "true");
