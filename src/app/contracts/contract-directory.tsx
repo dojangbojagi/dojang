@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { usePublicClient } from "wagmi";
-import { createPublicClient, http, type Address } from "viem";
+import { createPublicClient, http, parseAbi, type Address } from "viem";
 import { inspectRobinhoodContracts, type RobinhoodCodeEvidence } from "@/lib/protocol/robinhood-chain-evidence";
 import { ROBINHOOD_TESTNET_CHAIN_ID, ROBINHOOD_TESTNET_EXPLORER_URL } from "@/lib/config/robinhood-testnet";
-import { robinhoodMainnetDemoChain, ROBINHOOD_MAINNET_CHAIN_ID, ROBINHOOD_MAINNET_DEMO_EXPLORER_URL } from "@/lib/config/robinhood-mainnet-demo";
+import { robinhoodMainnetDemoChain, robinhoodMainnetDemoContracts, ROBINHOOD_MAINNET_CHAIN_ID, ROBINHOOD_MAINNET_DEMO_EXPLORER_URL } from "@/lib/config/robinhood-mainnet-demo";
 
 export type DirectoryRow = {
   key: RobinhoodCodeEvidence["name"];
@@ -20,8 +20,92 @@ export type DirectoryRow = {
 type Live = Partial<Record<DirectoryRow["key"], RobinhoodCodeEvidence>>;
 type MainnetEvidence = { bytecode: "present" | "absent" | "unavailable"; source: "verified" | "unverified" | "unavailable" };
 type MainnetLive = Partial<Record<DirectoryRow["key"], MainnetEvidence>>;
+type MainnetProtocolReadout =
+  | { state: "checking" }
+  | { state: "unavailable" }
+  | {
+      state: "ready";
+      blockNumber: bigint;
+      lendingPaused: boolean;
+      governancePaused: boolean;
+      loanSupplyIsZero: boolean;
+      collateralSupplyIsZero: boolean;
+      loanOracleUnseeded: boolean;
+      collateralOracleUnseeded: boolean;
+      dependenciesMatch: boolean;
+      demoOnly: boolean;
+    };
 
-const mainnetClient = createPublicClient({ chain: robinhoodMainnetDemoChain, transport: http() });
+const mainnetClient = createPublicClient({ chain: robinhoodMainnetDemoChain, transport: http(undefined, { retryCount: 1, timeout: 15_000 }) });
+const mainnetPoolReadAbi = parseAbi([
+  "function paused() view returns (bool)",
+  "function credentialRegistry() view returns (address)",
+  "function eligibilityVerifier() view returns (address)",
+  "function priceOracle() view returns (address)",
+  "function getReserveAssets() view returns (address[])",
+  "function demoOnly() pure returns (bool)",
+]);
+const mainnetGovernanceReadAbi = parseAbi([
+  "function paused() view returns (bool)",
+  "function credentialRegistry() view returns (address)",
+  "function demoOnly() pure returns (bool)",
+]);
+const mainnetOracleReadAbi = parseAbi([
+  "function getPriceBounds(address asset) view returns (uint128 minimumPriceWad,uint128 maximumPriceWad,uint128 priceWad,uint64 updatedAt)",
+  "function demoOnly() pure returns (bool)",
+]);
+const mainnetTokenReadAbi = parseAbi([
+  "function totalSupply() view returns (uint256)",
+  "function demoOnly() pure returns (bool)",
+]);
+
+async function inspectMainnetProtocol(): Promise<MainnetProtocolReadout> {
+  const chainId = await mainnetClient.getChainId();
+  if (chainId !== ROBINHOOD_MAINNET_CHAIN_ID) throw new Error("Wrong Mainnet chain.");
+  const addresses = robinhoodMainnetDemoContracts;
+  const required = [addresses.credentialRegistry, addresses.verifierAdapter, addresses.oracle, addresses.loanToken, addresses.collateralToken, addresses.lendingPool, addresses.governance];
+  if (required.some((address) => !address)) throw new Error("Mainnet registry is incomplete.");
+  const [blockNumber] = await Promise.all([mainnetClient.getBlockNumber()]);
+  const at = { blockNumber } as const;
+  const [
+    lendingPaused, governancePaused, poolRegistry, poolVerifier, poolOracle, governanceRegistry, reserves,
+    loanSupply, collateralSupply, loanPriceBounds, collateralPriceBounds,
+    poolDemoOnly, governanceDemoOnly, oracleDemoOnly, loanDemoOnly, collateralDemoOnly,
+  ] = await Promise.all([
+    mainnetClient.readContract({ address: addresses.lendingPool!, abi: mainnetPoolReadAbi, functionName: "paused", ...at }),
+    mainnetClient.readContract({ address: addresses.governance!, abi: mainnetGovernanceReadAbi, functionName: "paused", ...at }),
+    mainnetClient.readContract({ address: addresses.lendingPool!, abi: mainnetPoolReadAbi, functionName: "credentialRegistry", ...at }),
+    mainnetClient.readContract({ address: addresses.lendingPool!, abi: mainnetPoolReadAbi, functionName: "eligibilityVerifier", ...at }),
+    mainnetClient.readContract({ address: addresses.lendingPool!, abi: mainnetPoolReadAbi, functionName: "priceOracle", ...at }),
+    mainnetClient.readContract({ address: addresses.governance!, abi: mainnetGovernanceReadAbi, functionName: "credentialRegistry", ...at }),
+    mainnetClient.readContract({ address: addresses.lendingPool!, abi: mainnetPoolReadAbi, functionName: "getReserveAssets", ...at }),
+    mainnetClient.readContract({ address: addresses.loanToken!, abi: mainnetTokenReadAbi, functionName: "totalSupply", ...at }),
+    mainnetClient.readContract({ address: addresses.collateralToken!, abi: mainnetTokenReadAbi, functionName: "totalSupply", ...at }),
+    mainnetClient.readContract({ address: addresses.oracle!, abi: mainnetOracleReadAbi, functionName: "getPriceBounds", args: [addresses.loanToken!], ...at }),
+    mainnetClient.readContract({ address: addresses.oracle!, abi: mainnetOracleReadAbi, functionName: "getPriceBounds", args: [addresses.collateralToken!], ...at }),
+    mainnetClient.readContract({ address: addresses.lendingPool!, abi: mainnetPoolReadAbi, functionName: "demoOnly", ...at }),
+    mainnetClient.readContract({ address: addresses.governance!, abi: mainnetGovernanceReadAbi, functionName: "demoOnly", ...at }),
+    mainnetClient.readContract({ address: addresses.oracle!, abi: mainnetOracleReadAbi, functionName: "demoOnly", ...at }),
+    mainnetClient.readContract({ address: addresses.loanToken!, abi: mainnetTokenReadAbi, functionName: "demoOnly", ...at }),
+    mainnetClient.readContract({ address: addresses.collateralToken!, abi: mainnetTokenReadAbi, functionName: "demoOnly", ...at }),
+  ]);
+  const same = (left: string, right?: string) => Boolean(right && left.toLowerCase() === right.toLowerCase());
+  const reserveSet = new Set(reserves.map((address) => address.toLowerCase()));
+  return {
+    state: "ready",
+    blockNumber,
+    lendingPaused,
+    governancePaused,
+    loanSupplyIsZero: loanSupply === 0n,
+    collateralSupplyIsZero: collateralSupply === 0n,
+    loanOracleUnseeded: loanPriceBounds[2] === 0n && loanPriceBounds[3] === 0n,
+    collateralOracleUnseeded: collateralPriceBounds[2] === 0n && collateralPriceBounds[3] === 0n,
+    dependenciesMatch: same(poolRegistry, addresses.credentialRegistry) && same(poolVerifier, addresses.verifierAdapter) &&
+      same(poolOracle, addresses.oracle) && same(governanceRegistry, addresses.credentialRegistry) &&
+      reserveSet.has(addresses.loanToken!.toLowerCase()) && reserveSet.has(addresses.collateralToken!.toLowerCase()),
+    demoOnly: poolDemoOnly && governanceDemoOnly && oracleDemoOnly && loanDemoOnly && collateralDemoOnly,
+  };
+}
 
 async function mainnetSource(address: Address): Promise<MainnetEvidence["source"]> {
   try {
@@ -77,6 +161,7 @@ export function ContractDirectory({ rows, mainnetRows }: { rows: DirectoryRow[];
   const [network, setNetwork] = useState<"testnet" | "mainnet">("mainnet");
   const [live, setLive] = useState<Live>({});
   const [mainnetLive, setMainnetLive] = useState<MainnetLive>({});
+  const [mainnetProtocol, setMainnetProtocol] = useState<MainnetProtocolReadout>({ state: "checking" });
   const [state, setState] = useState<"checking" | "ready" | "unavailable">("checking");
 
   useEffect(() => {
@@ -84,11 +169,17 @@ export function ContractDirectory({ rows, mainnetRows }: { rows: DirectoryRow[];
     setState("checking");
     if (network === "mainnet") {
       setMainnetLive({});
+      setMainnetProtocol({ state: "checking" });
       inspectMainnet(mainnetRows).then((result) => {
         if (!current) return;
         setMainnetLive(result);
         setState("ready");
       }).catch(() => { if (current) setState("unavailable"); });
+      inspectMainnetProtocol().then((result) => {
+        if (current) setMainnetProtocol(result);
+      }).catch(() => {
+        if (current) setMainnetProtocol({ state: "unavailable" });
+      });
       return () => { current = false; };
     }
     setLive({});
@@ -143,8 +234,29 @@ export function ContractDirectory({ rows, mainnetRows }: { rows: DirectoryRow[];
         </div>
       </div>
 
+      {network === "mainnet" && (
+        <section aria-labelledby="mainnet-protocol-state-heading">
+          <h3 id="mainnet-protocol-state-heading">Live Mainnet protocol state</h3>
+          {mainnetProtocol.state === "checking" && <p className="cdir__note" role="status">Checking chain 4663 pause state, demo reserves, token supplies, oracle initialization, and contract dependencies.</p>}
+          {mainnetProtocol.state === "unavailable" && <p className="callout callout--caution" role="status">Live Mainnet protocol state is unavailable. No current pause, supply, or oracle status is inferred from recorded deployment receipts.</p>}
+          {mainnetProtocol.state === "ready" && (
+            <>
+              <dl className="cdir__stats" aria-live="polite">
+                <div><dt>Lending V2 risk</dt><dd>{mainnetProtocol.lendingPaused ? "Paused" : "Unpaused"}</dd><small>Live read at block {mainnetProtocol.blockNumber.toString()}</small></div>
+                <div><dt>Governance</dt><dd>{mainnetProtocol.governancePaused ? "Paused" : "Unpaused"}</dd><small>Live contract state</small></div>
+                <div><dt>Demo token supply</dt><dd>{mainnetProtocol.loanSupplyIsZero && mainnetProtocol.collateralSupplyIsZero ? "Zero" : "Nonzero"}</dd><small>Both deployed token contracts</small></div>
+                <div><dt>Synthetic oracle</dt><dd>{mainnetProtocol.loanOracleUnseeded && mainnetProtocol.collateralOracleUnseeded ? "Unseeded" : "Seeded"}</dd><small>Not a market price feed</small></div>
+                <div><dt>Dependencies</dt><dd>{mainnetProtocol.dependenciesMatch ? "Match" : "Mismatch"}</dd><small>Registry, verifier, oracle, and two reserves</small></div>
+                <div><dt>Demo-only markers</dt><dd>{mainnetProtocol.demoOnly ? "Confirmed" : "Mismatch"}</dd><small>Pool, DAO, oracle, and both tokens</small></div>
+              </dl>
+              <p className="cdir__note">Read-only state from Robinhood Mainnet RPC. This app does not expose Mainnet write or activation controls.</p>
+            </>
+          )}
+        </section>
+      )}
+
       <dl className="cdir__stats" aria-live="polite">
-        <div><dt>{network === "mainnet" ? "Deployed" : "Contracts"}</dt><dd>{network === "mainnet" ? mainnetRows.length : rows.length}</dd><small>{network === "mainnet" ? "Successful chain 4663 creation receipts" : "Robinhood Testnet"}</small></div>
+        <div><dt>{network === "mainnet" ? "Deployed" : "Contracts"}</dt><dd>{network === "mainnet" ? mainnetRows.length : rows.length}</dd><small>{network === "mainnet" ? "Recorded successful chain 4663 creation receipts" : "Robinhood Testnet"}</small></div>
         <div><dt>{network === "mainnet" ? "Bytecode confirmed" : "Deployed"}</dt><dd>{state === "ready" ? network === "mainnet" ? bytecodeConfirmed : deployed : "…"}</dd><small>{state === "checking" ? "Checking the network" : state === "unavailable" ? "Network status unavailable" : network === "mainnet" && bytecodeConfirmed < mainnetRows.length ? "RPC confirmation incomplete or unavailable" : "Code found at the address"}</small></div>
         <div><dt>Source verified</dt><dd>{state !== "ready" ? "…" : allSourcesUnavailable ? "Unavailable" : `${verified}/${selectedRows.length}`}</dd><small>{state !== "ready" ? "Checking Blockscout" : allSourcesUnavailable ? "Blockscout status unavailable" : network === "mainnet" && unavailableSources ? "Some Blockscout checks unavailable" : "Blockscout source status checked"}</small></div>
       </dl>
@@ -157,7 +269,7 @@ export function ContractDirectory({ rows, mainnetRows }: { rows: DirectoryRow[];
               const evidence = live[row.key];
               const deployedHere = evidence?.state === "code-present";
               const mainnetEvidence = mainnetLive[row.key];
-              const status = network === "mainnet" ? { tone: "ok", text: "Deployed · receipt confirmed" }
+              const status = network === "mainnet" ? { tone: "ok", text: "Deployment receipt recorded" }
                 : !row.address ? { tone: "warn", text: "Address not published" }
                 : row.invalid ? { tone: "bad", text: "Invalid address" }
                 : state === "checking" ? { tone: "wait", text: "Checking…" }
@@ -204,7 +316,7 @@ export function ContractDirectory({ rows, mainnetRows }: { rows: DirectoryRow[];
         </section>
       ))}
 
-      {network === "mainnet" ? <p className="cdir__note"><b>Mainnet status.</b> Lending assets are synthetic and have no redemption value; Lending and Governance are paused. Deployment receipts, live bytecode and Blockscout source verification are reported separately. Public production readiness remains pending.</p> : <p className="cdir__note">
+      {network === "mainnet" ? <p className="cdir__note"><b>Mainnet status.</b> Lending assets are synthetic and have no redemption value. The live pause, supply, oracle, and dependency reads above are distinct from recorded deployment receipts, live bytecode, and Blockscout source status. Public production readiness remains pending.</p> : <p className="cdir__note">
         <b>Deployed</b> means the network returned contract code at the address. <b>Source Not Verified</b> means Blockscout does not currently report published source for that contract; code presence alone is not source verification.
       </p>}
     </div>

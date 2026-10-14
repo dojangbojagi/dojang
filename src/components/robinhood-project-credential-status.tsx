@@ -62,7 +62,7 @@ export function RobinhoodProjectCredentialStatus() {
       <header className="protocol-section__head">
         <p className="stub__num">ROBINHOOD TESTNET · PROJECT CREDENTIALS</p>
         <h2 id="project-credential-heading">Your project credentials</h2>
-        <p>These credentials are issued by the project's authorized issuer. They are not official GIWA Dojang or Upbit credentials.</p>
+        <p>For Lending, request an active Policy 3 credential for your connected wallet and its matching private JSON witness from the authorized project issuer. For DAO, request a Policy 4 credential; it needs no witness. Neither project credential is an official GIWA Dojang or Upbit credential.</p>
       </header>
       <WalletNetworkCard expectedChainId={ROBINHOOD_TESTNET_CHAIN_ID} />
       <RobinhoodPolicy4Issuer />

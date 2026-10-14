@@ -297,6 +297,10 @@ export const eligibilityVerifierAdapterAbi = parseAbi([
   "function honkVerifier() view returns (address)",
 ]);
 
+export const eligibilityVerifierProofAbi = parseAbi([
+  "function verifyProof(bytes proof, uint256[9] publicInputs) view returns (bool)",
+]);
+
 export const credentialIssuerRoleAbi = parseAbi([
   "function ISSUER_ROLE() view returns (bytes32)",
   "function hasRole(bytes32 role, address account) view returns (bool)",

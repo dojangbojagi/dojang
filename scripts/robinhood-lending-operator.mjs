@@ -62,6 +62,7 @@ function usage() {
 
 Read-only status:
   bun run robinhood:lending status --wallet A|B
+  bun run robinhood:lending prove --wallet A|B --witness-file <private-file>
 
 Each action simulates by default. A write requires --execute, the exact authorization label,
 an encrypted Foundry alias that resolves to the selected wallet, and an interactive TTY.
@@ -390,6 +391,16 @@ async function waitForReceipt(ctx, hash) {
 async function main() {
   const { command, options } = parseArgs(process.argv.slice(2));
   if (command === "help" || command === "--help") return usage();
+  if (command === "prove") {
+    const ctx = context();
+    const chainId = await ctx.client.getChainId();
+    assert.equal(chainId, CHAIN_ID, `Configured RPC reports chain ${chainId}; refusing other networks.`);
+    const wallet = walletFrom(options.wallet);
+    const proof = await generateProof(ctx, wallet, options["witness-file"]);
+    console.log(`PASS genuine policy-3 proof · local Barretenberg verification and deployed verifier accepted · nine bound public inputs · ${proof.proofBytes} proof bytes. Private witness fields withheld.`);
+    console.log(`Read-only proof check complete · chain ${CHAIN_ID} · wallet ${wallet} · pool ${ctx.addresses.pool}. No transaction was signed or broadcast.`);
+    return;
+  }
   if (command === "status") {
     const ctx = context();
     const chainId = await ctx.client.getChainId();

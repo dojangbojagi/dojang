@@ -30,11 +30,12 @@ const PROOF_COPY: Record<V2Proof["state"], { tone: Tone; label: string; text: st
   "credential-revoked": { tone: "invalid", label: "Revoked", text: "The project issuer revoked this credential. New supply, collateral activation and borrowing are blocked. Repaying and withdrawing stay available." },
   "credential-not-yet-valid": { tone: "warn", label: "Not yet valid", text: "The credential's start time has not been reached." },
   "issuer-untrusted": { tone: "warn", label: "Issuer not authorized", text: "The credential's issuer no longer holds the registry issuer role, so the pool would reject it." },
+  "verifier-unavailable": { tone: "warn", label: "Verifier unavailable", text: "The proof passed locally, but the deployed verifier could not be reached. It is not marked ready." },
   "witness-required": { tone: "demo", label: "Action required", text: "A credential is on record. Import the private witness your issuer delivered so a proof can be built in this browser." },
   "witness-mismatch": { tone: "invalid", label: "Witness mismatch", text: "The imported witness does not match the active credential for this wallet." },
   "ready-to-prove": { tone: "demo", label: "Ready to prove", text: "Ready. The proof is built in this browser and can take a while; the private value never leaves this device." },
-  generating: { tone: "pending", label: "Verifying", text: "Generating the proof in your browser. Keep this tab open." },
-  "proof-ready": { tone: "valid", label: "Proof ready", text: "A proof bound to this wallet, credential, policy 3 and the Lending V2 pool was verified locally. Nothing has been sent on-chain yet." },
+  generating: { tone: "pending", label: "Verifying", text: "Generating the proof in your browser and checking it with the deployed verifier. Keep this tab open." },
+  "proof-ready": { tone: "valid", label: "Proof ready", text: "The proof passed local verification and the deployed Robinhood Lending verifier adapter. No transaction has been submitted." },
   invalid: { tone: "invalid", label: "Proof failed", text: "The witness, credential or proof does not satisfy the V2 policy." },
 };
 
@@ -174,7 +175,7 @@ export function EligibilityCard({ market, proof, witness, onWitness }: {
     setProofMessage("");
     try {
       await proof.generateProof();
-      setProofMessage("Proof generated and verified locally in this browser. No transaction was submitted.");
+      setProofMessage("Proof generated, verified locally, and accepted by the deployed Robinhood Lending verifier adapter. This was a read-only check; no transaction was submitted.");
     } catch (cause) {
       setProofMessage(explainProtocolError(cause));
     }
@@ -205,8 +206,12 @@ export function EligibilityCard({ market, proof, witness, onWitness }: {
           </>
         ) : null}
         <div className="kv__row">
-          <dt>Zero-knowledge proof</dt>
-          <dd>{proof.verificationStatus === "locally-verified" ? "Verified locally in this browser" : proof.state === "generating" ? "Generating…" : "Not generated"}</dd>
+          <dt>Local proof check</dt>
+          <dd>{proof.verificationStatus === "locally-verified" || proof.verificationStatus === "checking-deployed-verifier" || proof.verificationStatus === "deployed-verifier-accepted" || proof.verificationStatus === "deployed-verifier-rejected" || proof.verificationStatus === "deployed-verifier-unavailable" ? "Verified in this browser" : proof.state === "generating" ? "Generating…" : "Not generated"}</dd>
+        </div>
+        <div className="kv__row">
+          <dt>Deployed verifier check</dt>
+          <dd>{proof.verificationStatus === "deployed-verifier-accepted" ? "Accepted by Robinhood Lending verifier" : proof.verificationStatus === "deployed-verifier-rejected" ? "Rejected by Robinhood Lending verifier" : proof.verificationStatus === "deployed-verifier-unavailable" ? "No response; not accepted" : proof.verificationStatus === "checking-deployed-verifier" ? "Checking…" : "Not checked"}</dd>
         </div>
         {proof.proof && (
           <>
@@ -222,6 +227,20 @@ export function EligibilityCard({ market, proof, witness, onWitness }: {
         the contract is the final authority. Repaying, withdrawing and liquidation never need a current credential.
       </p>
       <p className="xsmall muted">Generate an eligibility proof to show the lending rule is met without revealing the private test value. This requires an active Policy 3 project credential and its matching witness. <Link className="protocol-inline-link" href="/dojang">Check project credential status</Link>.</p>
+
+      {(proof.state === "credential-required" || proof.state === "witness-required" || proof.state === "witness-mismatch") && (
+        <details className="lendv2-privacy">
+          <summary className="protocol-inline-link">How to get a matching Policy 3 credential and witness</summary>
+          <div className="lendv2-privacy__body">
+            <p><strong>1. Connect the recipient wallet.</strong> Check the address shown above and use Robinhood Chain Testnet, chain 46630. The credential and witness are bound to that exact address and the deployed Lending V2 pool.</p>
+            <p><strong>2. Request a Policy 3 Project Test Credential.</strong> Give that address to a GYEVO project issuer. A regular wallet cannot issue its own credential. The issuer's hidden local input is test data (at least 1,000 test units), not an official Dojang balance, KYC result, or exchange asset.</p>
+            <p><strong>3. Receive the matching JSON privately.</strong> The issuer creates the witness locally, simulates the registry call, and issues only the public commitment after the required owner authorization. Ask the issuer to deliver the resulting `.json` file directly to the recipient; do not post it in a public channel or upload it to a third-party site.</p>
+            <p><strong>4. Import it here and generate the proof.</strong> This page checks the wallet, policy, commitment, and expiry before using the witness in the browser. The proof is locally verified first; the contract verifies it again when a protected action is submitted. The witness stays in browser memory for this session and is cleared when removed or when the tab closes.</p>
+            <p>For a project operator, the existing guarded preparation command is <code>bun run robinhood:bootstrap prepare-lending &lt;recipient-wallet&gt; &lt;expiry-days&gt; ~/.local/share/gyevo-witnesses/&lt;recipient&gt;-policy3.json</code>. It writes a mode-0600 witness and runs a no-broadcast issuance simulation. The follow-up <code>issue-lending &lt;witness-file&gt;</code> also simulates by default; any public issuance requires separate owner authorization and the guarded execution flags.</p>
+            <p><strong>DAO Policy 4 is separate.</strong> It needs an issuer-backed project credential but no ZK witness. Neither project policy is an official GIWA Dojang credential.</p>
+          </div>
+        </details>
+      )}
 
       <WitnessUpload
         disabled={!record || proof.state === "generating" || importing}

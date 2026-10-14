@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePublicClient } from "wagmi";
 import type { Address } from "viem";
@@ -11,6 +11,7 @@ import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
 import { LENDING_V2_POLICY_ID } from "@/lib/lending/v2-config";
 import { isRobinhoodLendingV2ProofForContext, robinhoodLendingV2CredentialQueryKey, robinhoodLendingV2DeploymentQueryKey, robinhoodLendingV2ProofContextForCredential } from "@/lib/lending/v2-network";
 import { LendingV2UnavailableError, readLendingV2Credential, readLendingV2Deployment } from "@/lib/lending/v2-service";
+import { eligibilityVerifierProofAbi } from "@/lib/contracts/abis";
 import { generateEligibilityProof } from "@/lib/zk/eligibility-prover";
 import { ProtocolError, type EligibilityProof, type DemoCredentialRecord } from "@/lib/protocol/types";
 import type { DemoCredentialWitness } from "@/lib/credential/witness";
@@ -31,8 +32,17 @@ export type LendingV2EligibilityState =
   | "witness-mismatch"
   | "ready-to-prove"
   | "generating"
+  | "verifier-unavailable"
   | "proof-ready"
   | "invalid";
+
+type ProofVerificationStatus =
+  | "not-generated"
+  | "locally-verified"
+  | "checking-deployed-verifier"
+  | "deployed-verifier-accepted"
+  | "deployed-verifier-rejected"
+  | "deployed-verifier-unavailable";
 
 function matchesV2Witness(witness: DemoCredentialWitness | undefined, wallet: Address, record: DemoCredentialRecord): boolean {
   return Boolean(
@@ -50,7 +60,7 @@ export function useLendingV2EligibilityProof(witness?: DemoCredentialWitness): {
   credentialLabel: "Project Test Credential";
   credential?: DemoCredentialRecord;
   proof?: EligibilityProof;
-  verificationStatus: "not-generated" | "locally-verified";
+  verificationStatus: ProofVerificationStatus;
   error?: string;
   generateProof: (witnessOverride?: DemoCredentialWitness) => Promise<EligibilityProof>;
   refetchCredential: () => Promise<void>;
@@ -89,6 +99,7 @@ export function useLendingV2EligibilityProof(witness?: DemoCredentialWitness): {
   const [proofWitness, setProofWitness] = useState<DemoCredentialWitness>();
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationError, setGenerationError] = useState<string>();
+  const [verificationStatus, setVerificationStatus] = useState<ProofVerificationStatus>("not-generated");
   const credential = credentialQuery.data?.record;
   const currentWitness = witness ?? proofWitness;
   const witnessMatches = Boolean(account.address && credential && matchesV2Witness(currentWitness, account.address, credential));
@@ -98,6 +109,13 @@ export function useLendingV2EligibilityProof(witness?: DemoCredentialWitness): {
   }, [account.address, credential, pool]);
   const proof = context && credentialQuery.data?.state === "active" && witnessMatches &&
     isRobinhoodLendingV2ProofForContext(storedProof, context) ? storedProof : undefined;
+
+  useEffect(() => {
+    setStoredProof(undefined);
+    setProofWitness(undefined);
+    setGenerationError(undefined);
+    setVerificationStatus("not-generated");
+  }, [account.address, credential?.commitment, credential?.expiresAt, pool]);
 
   let state: LendingV2EligibilityState;
   if (!configuredPoolValue) state = "unconfigured";
@@ -116,6 +134,7 @@ export function useLendingV2EligibilityProof(witness?: DemoCredentialWitness): {
   else if (isGenerating) state = "generating";
   else if (!currentWitness) state = "witness-required";
   else if (!witnessMatches) state = "witness-mismatch";
+  else if (verificationStatus === "deployed-verifier-unavailable") state = "verifier-unavailable";
   else if (proof) state = "proof-ready";
   else if (generationError) state = "invalid";
   else state = "ready-to-prove";
@@ -144,15 +163,39 @@ export function useLendingV2EligibilityProof(witness?: DemoCredentialWitness): {
     setIsGenerating(true);
     setGenerationError(undefined);
     setStoredProof(undefined);
+    setVerificationStatus("not-generated");
+    let verifierFailure: "deployed-verifier-rejected" | "deployed-verifier-unavailable" | undefined;
     try {
       const generated = await generateEligibilityProof(selectedWitness, publicContext);
       if (!isRobinhoodLendingV2ProofForContext(generated, publicContext)) {
         throw new ProtocolError("INVALID_PROOF", "The locally generated proof is not bound to the V2 policy and pool address.");
       }
+      setVerificationStatus("locally-verified");
+      setVerificationStatus("checking-deployed-verifier");
+      let accepted: boolean;
+      try {
+        accepted = await client.readContract({
+          address: deploymentQuery.data.eligibilityVerifier,
+          abi: eligibilityVerifierProofAbi,
+          functionName: "verifyProof",
+          args: [generated.proof, generated.publicInputs],
+        });
+      } catch (cause) {
+        verifierFailure = "deployed-verifier-unavailable";
+        setVerificationStatus(verifierFailure);
+        throw new ProtocolError("RPC_ERROR", "The proof passed local verification, but the read-only deployed verifier call failed. No verifier result is claimed.", cause);
+      }
+      if (!accepted) {
+        verifierFailure = "deployed-verifier-rejected";
+        setVerificationStatus(verifierFailure);
+        throw new ProtocolError("INVALID_PROOF", "The deployed Robinhood verifier adapter returned false for this proof.");
+      }
       setProofWitness(selectedWitness);
       setStoredProof(generated);
+      setVerificationStatus("deployed-verifier-accepted");
       return generated;
     } catch (error) {
+      if (!verifierFailure) setVerificationStatus("not-generated");
       const detail = error instanceof Error ? error.message : "The browser proof operation failed.";
       setGenerationError(detail);
       throw error instanceof ProtocolError
@@ -185,6 +228,8 @@ export function useLendingV2EligibilityProof(witness?: DemoCredentialWitness): {
                 ? "The policy-3 Project Test Credential is not yet valid."
                 : state === "issuer-untrusted"
                   ? "The credential issuer no longer has the project registry issuer role."
+                  : state === "verifier-unavailable"
+                    ? "The local proof is valid, but the deployed verifier could not be reached. Retry before taking a protected action."
                   : state === "witness-required"
                     ? "Import the private witness for this policy-3 Project Test Credential."
                     : state === "witness-mismatch"
@@ -196,7 +241,7 @@ export function useLendingV2EligibilityProof(witness?: DemoCredentialWitness): {
     credentialLabel: "Project Test Credential",
     credential,
     proof,
-    verificationStatus: proof ? "locally-verified" : "not-generated",
+    verificationStatus,
     error,
     generateProof,
     refetchCredential,
