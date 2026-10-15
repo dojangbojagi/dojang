@@ -404,6 +404,7 @@ export const robinhoodLendingReputationAbi = parseAbi([
   "function isActiveClaim(address wallet) view returns (bool)",
   "function getClaim(address wallet) view returns ((address wallet,bytes32 commitment,address issuer,uint64 issuedAt,uint64 expiresAt,uint64 credentialVersion,uint64 modelVersion,uint256 observedFromBlock,uint256 observedToBlock,bytes32 evidenceHash,bool revoked) claim)",
   "function recordClaim(address wallet,bytes32 commitment,uint64 expiresAt,uint64 credentialVersion,uint256 observedFromBlock,uint256 observedToBlock,bytes32 evidenceHash)",
+  "error InvalidBlockRange()",
   "function revokeClaim(address wallet)",
   "function unpause()",
   "event ReputationClaimRecorded(address indexed wallet,uint64 indexed credentialVersion,bytes32 indexed commitment,address issuer,uint64 expiresAt,uint256 observedFromBlock,uint256 observedToBlock,bytes32 evidenceHash,bytes32 scoreModelHash)",

@@ -27,6 +27,8 @@ describe("Robinhood production registry defaults", () => {
       "NEXT_PUBLIC_ROBINHOOD_LENDING_V2_ASSET_CONTRACT",
       "NEXT_PUBLIC_ROBINHOOD_LENDING_V2_COLLATERAL_CONTRACT",
       "NEXT_PUBLIC_ROBINHOOD_LENDING_V2_POOL_CONTRACT",
+      "NEXT_PUBLIC_ROBINHOOD_PHASE2_REPUTATION_REGISTRY_CONTRACT",
+      "NEXT_PUBLIC_ROBINHOOD_PHASE2_GOVERNANCE_CONTRACT",
     ];
     const script = `
       for (const key of ${JSON.stringify(keys)}) delete process.env[key];
