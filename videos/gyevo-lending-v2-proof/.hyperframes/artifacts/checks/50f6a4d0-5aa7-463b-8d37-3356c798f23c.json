@@ -1,0 +1,411 @@
+{
+  "ok": true,
+  "strict": false,
+  "browserSkipped": false,
+  "lint": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 2,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "gsap_callback_dom_measurement",
+        "severity": "warning",
+        "message": "Timeline callback reaches DOM measurement (getBoundingClientRect/getTotalLength/getComputedStyle/...). The renderer seeks with suppressEvents=false, so callbacks re-fire on every seek, and a cold render worker runs them against whatever DOM state its own non-linear seek order produced. Measured geometry is seek-order-dependent, and values measured at build time (before the callback ran) are stale or zero.",
+        "selector": "tl.eventCallback(\"onUpdate\", draw)",
+        "dataAttributes": {},
+        "sourceFile": "/Users/fmpangestu/Codingan/WEB3/FIRST PROJECT/Giwa/videos/gyevo-lending-v2-proof/index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Do all measurement and DOM setup synchronously at build time, before registering the timeline, or derive geometry from fixed composition coordinates instead of measuring."
+      },
+      {
+        "code": "composition_file_too_large",
+        "severity": "warning",
+        "message": "This HTML composition file has 481 lines. Smaller sub-compositions are easier to read, iterate on, and diff.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {},
+        "sourceFile": "/Users/fmpangestu/Codingan/WEB3/FIRST PROJECT/Giwa/videos/gyevo-lending-v2-proof/index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Split coherent scenes or layers into separate .html files under compositions/, then mount them from the parent with data-composition-src so each file stays small enough to inspect, revise, and validate independently."
+      }
+    ],
+    "filesScanned": 1
+  },
+  "runtime": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": []
+  },
+  "layout": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 8,
+    "findings": [
+      {
+        "code": "text_box_overflow",
+        "severity": "info",
+        "time": 0.278,
+        "selector": "#w-borrow",
+        "message": "Text extends outside its nearest visual/container box.",
+        "rect": {
+          "left": 115.41,
+          "top": 305.01,
+          "right": 1529.48,
+          "bottom": 589.93,
+          "width": 1414.07,
+          "height": 284.92
+        },
+        "containerSelector": "#type-grp > div:nth-of-type(1)",
+        "text": "BORROW",
+        "fixHint": "Text is 1414px x 285px inside 1414px x 284px and overflows by up to 14px; increase the container height to at least ~298px or shrink font-size from 336px to ~335px, or allow wrapping with max-width/fitTextFontSize.",
+        "containerRect": {
+          "left": 116,
+          "top": 292,
+          "right": 1530.16,
+          "bottom": 575.81,
+          "width": 1414.16,
+          "height": 283.81
+        },
+        "overflow": {
+          "bottom": 14.12
+        },
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 115.41,
+          "y": 305.01,
+          "width": 1414.07,
+          "height": 284.92
+        },
+        "firstSeen": 0.278,
+        "lastSeen": 0.278,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          0.278
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "info",
+        "time": 0.278,
+        "selector": "#w-with-in",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 116,
+          "top": 731.05,
+          "right": 629.48,
+          "bottom": 914.05,
+          "width": 513.48,
+          "height": 183
+        },
+        "containerSelector": "#sculpt",
+        "text": "WITH A",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 1,
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 116,
+          "y": 731.05,
+          "width": 513.48,
+          "height": 183
+        },
+        "firstSeen": 0.278,
+        "lastSeen": 0.278,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          0.278
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "info",
+        "time": 0.278,
+        "selector": "#w-disc",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 629.48,
+          "top": 731.05,
+          "right": 1466.95,
+          "bottom": 914.05,
+          "width": 837.47,
+          "height": 183
+        },
+        "containerSelector": "#sculpt",
+        "text": "DISCLOSURE",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 1,
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 629.48,
+          "y": 731.05,
+          "width": 837.47,
+          "height": 183
+        },
+        "firstSeen": 0.278,
+        "lastSeen": 0.278,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          0.278
+        ]
+      },
+      {
+        "code": "container_overflow",
+        "severity": "info",
+        "time": 0.278,
+        "selector": "#w-borrow",
+        "message": "Element extends outside a clipping layout container.",
+        "rect": {
+          "left": 115.6,
+          "top": 304.47,
+          "right": 1529.29,
+          "bottom": 590.7,
+          "width": 1413.68,
+          "height": 286.24
+        },
+        "containerSelector": "#type-grp > div:nth-of-type(1)",
+        "fixHint": "Resize/reposition the child or container, or mark intentional overflow with data-layout-allow-overflow.",
+        "containerRect": {
+          "left": 116,
+          "top": 292,
+          "right": 1530.16,
+          "bottom": 575.81,
+          "width": 1414.16,
+          "height": 283.81
+        },
+        "overflow": {
+          "bottom": 14.89
+        },
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 115.6,
+          "y": 304.47,
+          "width": 1413.68,
+          "height": 286.24
+        },
+        "firstSeen": 0.278,
+        "lastSeen": 0.278,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          0.278
+        ]
+      },
+      {
+        "code": "container_overflow",
+        "severity": "info",
+        "time": 0.278,
+        "selector": "#w-with-in",
+        "message": "Element extends outside a clipping layout container.",
+        "rect": {
+          "left": 116,
+          "top": 754.05,
+          "right": 1466.95,
+          "bottom": 892.74,
+          "width": 1350.95,
+          "height": 138.69
+        },
+        "containerSelector": "#w-with",
+        "fixHint": "Resize/reposition the child or container, or mark intentional overflow with data-layout-allow-overflow.",
+        "containerRect": {
+          "left": 116,
+          "top": 585.81,
+          "right": 1530.16,
+          "bottom": 739.08,
+          "width": 1414.16,
+          "height": 153.27
+        },
+        "overflow": {
+          "bottom": 153.66
+        },
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 116,
+          "y": 754.05,
+          "width": 1350.95,
+          "height": 138.69
+        },
+        "firstSeen": 0.278,
+        "lastSeen": 0.278,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          0.278
+        ]
+      },
+      {
+        "code": "content_overlap",
+        "severity": "info",
+        "time": 4.125,
+        "selector": "#chip-a",
+        "message": "Two text blocks overlap and may render unreadable.",
+        "rect": {
+          "left": 1325.05,
+          "top": 209.5,
+          "right": 1569.09,
+          "bottom": 243.61,
+          "width": 244.04,
+          "height": 34.11
+        },
+        "containerSelector": "#chip-b",
+        "text": "ACTION REQUIRED",
+        "fixHint": "Give each block its own zone, or put data-layout-allow-overlap on the text or on a container inside the scene. A marker on the scene root does not apply.",
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 1325.05,
+          "y": 209.5,
+          "width": 244.04,
+          "height": 34.11
+        },
+        "firstSeen": 4.125,
+        "lastSeen": 4.125,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          4.125
+        ]
+      },
+      {
+        "code": "content_overlap",
+        "severity": "info",
+        "time": 4.125,
+        "selector": "#bg-a",
+        "message": "Two text blocks overlap and may render unreadable.",
+        "rect": {
+          "left": 491.45,
+          "top": 663.8,
+          "right": 853.31,
+          "bottom": 705.77,
+          "width": 361.86,
+          "height": 41.97
+        },
+        "containerSelector": "#bg-b",
+        "text": "Generate Eligibility Proof",
+        "fixHint": "Give each block its own zone, or put data-layout-allow-overlap on the text or on a container inside the scene. A marker on the scene root does not apply.",
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 491.45,
+          "y": 663.8,
+          "width": 361.86,
+          "height": 41.97
+        },
+        "firstSeen": 4.125,
+        "lastSeen": 4.125,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          4.125
+        ]
+      },
+      {
+        "code": "content_overlap",
+        "severity": "info",
+        "time": 4.375,
+        "selector": "#dv-a",
+        "message": "Two text blocks overlap and may render unreadable.",
+        "rect": {
+          "left": 681.03,
+          "top": 552.91,
+          "right": 883.87,
+          "bottom": 597.38,
+          "width": 202.84,
+          "height": 44.47
+        },
+        "containerSelector": "#dv-b",
+        "text": "Not checked",
+        "fixHint": "Give each block its own zone, or put data-layout-allow-overlap on the text or on a container inside the scene. A marker on the scene root does not apply.",
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 681.03,
+          "y": 552.91,
+          "width": 202.84,
+          "height": 44.47
+        },
+        "firstSeen": 4.375,
+        "lastSeen": 4.375,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          4.375
+        ]
+      }
+    ],
+    "duration": 5,
+    "samples": [
+      0.278,
+      0.833,
+      1.389,
+      1.944,
+      2.5,
+      3.056,
+      3.611,
+      4.167,
+      4.722
+    ],
+    "transitionSamples": [],
+    "transitionSamplesDropped": 0,
+    "tolerance": 2,
+    "totalIssueCount": 8,
+    "truncated": false
+  },
+  "motion": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": false,
+    "samples": 0
+  },
+  "contrast": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": true,
+    "samples": [
+      0.278,
+      1.389,
+      2.5,
+      3.611,
+      4.722
+    ],
+    "checked": 36,
+    "passed": 36
+  },
+  "hdr": {
+    "autoPromotion": null,
+    "inspection": "available"
+  },
+  "snapshots": {
+    "enabled": false,
+    "files": [],
+    "times": [],
+    "findingFiles": []
+  }
+}

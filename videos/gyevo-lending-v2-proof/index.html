@@ -1,0 +1,880 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>GYEVO Lending v2 — design proof (5s)</title>
+    <script src="assets/vendor/gsap.min.js"></script>
+    <style>
+      @font-face {
+        font-family: "Quicksand";
+        src: url("assets/fonts/quicksand-latin-600-normal.woff2") format("woff2");
+        font-weight: 600;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "Quicksand";
+        src: url("assets/fonts/quicksand-latin-700-normal.woff2") format("woff2");
+        font-weight: 700;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "JetBrains Mono";
+        src: url("assets/fonts/jetbrains-mono-latin-400-normal.woff2") format("woff2");
+        font-weight: 400;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "JetBrains Mono";
+        src: url("assets/fonts/jetbrains-mono-latin-500-normal.woff2") format("woff2");
+        font-weight: 500;
+        font-display: block;
+      }
+
+      :root {
+        --ground: #060405;
+        --ink: #f7f3f4;
+        --muted: #a89da1;
+        --dim: #857a7e;
+        --ruby: #c41e3a;
+        --wine: #b81a34;
+        --burgundy: #6d001a;
+        --panel-a: #281d22;
+        --panel-b: #150f12;
+        --line: rgba(255, 255, 255, 0.12);
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--ground);
+      }
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: var(--ground);
+        font-family: "Quicksand", system-ui, sans-serif;
+        color: var(--ink);
+      }
+      .layer {
+        position: absolute;
+        inset: 0;
+      }
+      #bg {
+        background:
+          radial-gradient(120% 100% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.62) 100%),
+          radial-gradient(58% 52% at 14% 112%, rgba(109, 0, 26, 0.62) 0%, transparent 70%),
+          radial-gradient(40% 42% at 92% -6%, rgba(150, 16, 50, 0.2) 0%, transparent 70%);
+      }
+      #sculpt {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1920px;
+        height: 1080px;
+      }
+
+      /* ---- typography ---- */
+      #type-grp {
+        position: absolute;
+        left: 116px;
+        top: 292px;
+        transform-origin: 0 0;
+      }
+      .mask {
+        display: block;
+        overflow: hidden;
+        padding: 0.06em 0.08em 0.04em 0;
+      }
+      .mask > span {
+        display: inline-block;
+        will-change: transform;
+      }
+      #w-borrow {
+        font-weight: 700;
+        font-size: 336px;
+        line-height: 0.84;
+        letter-spacing: -0.045em;
+        text-shadow: 0 0 60px rgba(6, 4, 5, 0.85);
+      }
+      #w-with {
+        font-weight: 700;
+        font-size: 146px;
+        line-height: 0.95;
+        letter-spacing: -0.035em;
+        margin-top: 10px;
+        text-shadow: 0 0 40px rgba(6, 4, 5, 0.9);
+        white-space: nowrap;
+      }
+      #w-with .slot {
+        position: relative;
+        display: inline-block;
+        vertical-align: top;
+      }
+      #w-with .slot > span {
+        display: inline-block;
+      }
+      #w-disc {
+        position: relative;
+      }
+      #strike {
+        position: absolute;
+        left: -10px;
+        right: -10px;
+        top: 52%;
+        height: 12px;
+        background: var(--ruby);
+        border-radius: 6px;
+        box-shadow: 0 0 24px rgba(196, 30, 58, 0.7);
+        transform-origin: 0 50%;
+      }
+      #w-proof {
+        position: absolute;
+        left: 0;
+        top: 0;
+        color: var(--ruby);
+        white-space: nowrap;
+      }
+
+      /* ---- legend ---- */
+      #legend {
+        position: absolute;
+        left: 96px;
+        bottom: 96px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+      .leg {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        font-family: "JetBrains Mono", monospace;
+        font-weight: 500;
+        font-size: 24px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--ink);
+      }
+      .leg i {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--ink);
+      }
+      .leg.priv i {
+        background: var(--ruby);
+        box-shadow: 0 0 16px var(--ruby);
+      }
+
+      /* ---- slab (reconstructed Eligibility card) ---- */
+      #slabwrap {
+        position: absolute;
+        inset: 0;
+        perspective: 2000px;
+        perspective-origin: 50% 50%;
+      }
+      #slab-land {
+        position: absolute;
+        left: 280px;
+        top: 150px;
+        width: 1360px;
+        height: 780px;
+        transform-origin: 50% 50%;
+      }
+      #slab-push {
+        position: absolute;
+        inset: 0;
+      }
+      .card {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        padding: 52px 64px 44px;
+        border-radius: 30px;
+        border: 1px solid var(--line);
+        background: linear-gradient(155deg, var(--panel-a) 0%, var(--panel-b) 100%);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.09),
+          0 0 0 1px rgba(184, 26, 52, 0.22),
+          0 70px 140px -30px rgba(0, 0, 0, 0.96),
+          0 0 140px -20px rgba(109, 0, 26, 0.55);
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+      }
+      .card-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-bottom: 28px;
+      }
+      .card-head h2 {
+        font-size: 60px;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+      }
+      .chips {
+        position: relative;
+        width: 360px;
+        height: 56px;
+      }
+      .chip {
+        position: absolute;
+        right: 0;
+        top: 0;
+        height: 56px;
+        padding: 0 26px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        border-radius: 999px;
+        font-family: "JetBrains Mono", monospace;
+        font-weight: 500;
+        font-size: 22px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+      .chip i {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: currentColor;
+      }
+      .chip.demo {
+        color: #b8aeb1;
+        border: 1.5px solid rgba(184, 174, 177, 0.45);
+      }
+      .chip.pend {
+        color: #d9ced2;
+        border: 1.5px solid rgba(217, 206, 210, 0.55);
+      }
+      .chip.valid {
+        color: var(--ground);
+        background: var(--ink);
+        border: 1.5px solid var(--ink);
+        box-shadow: 0 0 40px rgba(247, 243, 244, 0.35);
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 330px 1fr;
+        align-items: center;
+        min-height: 78px;
+        border-top: 1px dashed rgba(255, 255, 255, 0.14);
+      }
+      .row .k {
+        font-family: "JetBrains Mono", monospace;
+        font-weight: 500;
+        font-size: 21px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .row .v {
+        position: relative;
+        font-size: 34px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        height: 44px;
+      }
+      .row .v > span {
+        position: absolute;
+        left: 0;
+        top: 0;
+        white-space: nowrap;
+      }
+      .actions {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        padding: 26px 0 24px;
+        border-top: 1px dashed rgba(255, 255, 255, 0.14);
+      }
+      .btn {
+        position: relative;
+        height: 84px;
+        border-radius: 22px;
+        font-family: "Quicksand", sans-serif;
+        font-weight: 700;
+        font-size: 32px;
+        letter-spacing: -0.01em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #btn-gen {
+        width: 640px;
+        color: #fff;
+        background: linear-gradient(180deg, #9a1637 0%, #6d001a 55%, #4f0012 100%);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.22),
+          0 0 44px rgba(109, 0, 26, 0.55);
+      }
+      #btn-gen > span {
+        position: absolute;
+        white-space: nowrap;
+      }
+      #btn-clear {
+        width: 300px;
+        color: var(--ink);
+        border: 1.5px solid rgba(255, 255, 255, 0.22);
+      }
+      .note {
+        margin-top: auto;
+        font-size: 24px;
+        font-weight: 600;
+        color: var(--muted);
+        line-height: 1.35;
+      }
+      #seal-ico {
+        position: absolute;
+        left: -96px;
+        top: -2px;
+        width: 60px;
+        height: 60px;
+      }
+
+      /* ---- cursor ---- */
+      #cursor {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 56px;
+        height: 56px;
+        filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.7));
+      }
+      #ripple-wrap {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 0;
+        height: 0;
+        opacity: 0;
+      }
+      #ripple {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 120px;
+        height: 120px;
+        margin: -60px 0 0 -60px;
+        border-radius: 50%;
+        border: 3px solid rgba(247, 243, 244, 0.9);
+      }
+
+      /* ---- fx ---- */
+      #vignette {
+        background: radial-gradient(120% 100% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.62) 100%);
+        pointer-events: none;
+      }
+      #grain {
+        opacity: 0.07;
+        mix-blend-mode: overlay;
+        pointer-events: none;
+      }
+      #flash {
+        background: radial-gradient(42% 46% at 50% 50%, rgba(247, 243, 244, 0.95) 0%, rgba(196, 30, 58, 0.7) 38%, transparent 72%);
+        mix-blend-mode: screen;
+        pointer-events: none;
+        opacity: 0;
+      }
+      #tag {
+        position: absolute;
+        left: 96px;
+        bottom: 64px;
+        font-family: "JetBrains Mono", monospace;
+        font-weight: 500;
+        font-size: 22px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      #fade {
+        background: #000;
+        opacity: 0;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="5"
+      data-width="1920"
+      data-height="1080"
+    >
+      <audio
+        id="proof-audio"
+        src="assets/proof-audio.wav"
+        data-start="0"
+        data-duration="5"
+        data-track-index="1"
+        data-volume="1"
+      ></audio>
+
+      <div id="scene" class="layer">
+        <div id="bg" class="layer"></div>
+        <svg id="grain" class="layer" data-layout-allow-occlusion="true" width="1920" height="1080" aria-hidden="true">
+        <filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="4" stitchTiles="stitch" /></filter>
+        <rect width="100%" height="100%" filter="url(#n)" />
+      </svg>
+        <canvas id="sculpt" width="1920" height="1080" data-layout-allow-overflow="true"></canvas>
+
+        <div id="type-grp">
+          <div class="mask"><span id="w-borrow">BORROW</span></div>
+          <div id="w-with" class="mask">
+            <span id="w-with-in"
+              >WITH A
+              <span class="slot"
+                ><span id="w-disc">DISCLOSURE<i id="strike"></i></span
+                ><span id="w-proof">PROOF.</span></span
+              ></span
+            >
+          </div>
+        </div>
+
+        <div id="legend">
+          <div class="leg pub"><i></i>Public · on-chain</div>
+          <div class="leg priv"><i></i>Private · on your device</div>
+        </div>
+      </div>
+
+      <div id="slabwrap" class="layer">
+        <div id="slab-land">
+          <div id="slab-push">
+            <div class="card" id="card">
+              <div class="card-head">
+                <h2>Eligibility</h2>
+                <div class="chips">
+                  <svg id="seal-ico" viewBox="0 0 60 60" aria-hidden="true">
+                    <circle cx="30" cy="30" r="25" fill="none" stroke="#f7f3f4" stroke-width="3.5" />
+                    <rect x="19" y="19" width="22" height="22" rx="3" fill="#c41e3a" />
+                  </svg>
+                  <div class="chip demo" id="chip-a"><i></i>Action required</div>
+                  <div class="chip pend" id="chip-b"><i id="chip-b-dot"></i>Verifying</div>
+                  <div class="chip valid" id="chip-c">
+                    <i></i>Proof ready
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="k">Authorization</div>
+                <div class="v"><span>GYEVO Project Test Credential, Policy 3</span></div>
+              </div>
+              <div class="row">
+                <div class="k">Threshold</div>
+                <div class="v"><span>Private value of at least 1,000 test units</span></div>
+              </div>
+              <div class="row">
+                <div class="k">Local proof check</div>
+                <div class="v">
+                  <span id="lp-a">Not generated</span>
+                  <span id="lp-b">Generating…</span>
+                  <span id="lp-c">Verified in this browser</span>
+                </div>
+              </div>
+              <div class="row">
+                <div class="k">Deployed verifier</div>
+                <div class="v">
+                  <span id="dv-a">Not checked</span>
+                  <span id="dv-b">Checking…</span>
+                  <span id="dv-c">Accepted by Robinhood Lending verifier</span>
+                </div>
+              </div>
+              <div class="actions">
+                <div class="btn" id="btn-gen">
+                  <span id="bg-a">Generate Eligibility Proof</span>
+                  <span id="bg-b">Generating proof…</span>
+                  <span id="bg-c">Generate a New Eligibility Proof</span>
+                </div>
+                <div class="btn" id="btn-clear">Clear witness</div>
+              </div>
+              <p class="note">A locally verified proof is not an on-chain verification.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <svg id="cursor" viewBox="0 0 56 56" aria-hidden="true">
+        <path d="M6 4 L6 40 L15 32 L22 48 L30 44 L23 29 L36 28 Z" fill="#f7f3f4" stroke="#060405" stroke-width="3" stroke-linejoin="round" />
+      </svg>
+      <div id="ripple-wrap"><div id="ripple"></div></div>
+
+      <div id="flash" class="layer" data-layout-allow-occlusion="true"></div>
+            <div id="tag">Illustrative · reconstructed UI · Robinhood Testnet</div>
+      <div id="fade" class="layer" data-layout-allow-occlusion="true"></div>
+    </div>
+
+    <script>
+      // ------------------------------------------------------------------
+      // Cue grid — identical to scripts/synth-proof-audio.py (120 BPM)
+      // ------------------------------------------------------------------
+      const T = { hit: 0, withIn: 0.5, strike: 1.0, slam: 1.5, legend: 2.0, lock: 3.0, slab: 3.5, click: 4.0, ready: 4.5, end: 5.0 };
+
+      const PAL = {
+        white: [250, 247, 248],
+        silver: [205, 196, 200],
+        ruby: [196, 30, 58],
+        garnet: [206, 38, 66],
+      };
+
+      // ------------------------------------------------------------------
+      // Glyph sculpture — pure functions of S (seekable). Port of the
+      // shape maths in src/components/landing/glyph-solid.tsx (read-only).
+      // ------------------------------------------------------------------
+      const N = 720;
+      const CORE = 150;
+      const GLYPHS = "0123456789ABCDEF";
+      const rnd = (n) => {
+        const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+        return x - Math.floor(x);
+      };
+      const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
+      const ease = (p) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
+
+      const isCore = new Uint8Array(N);
+      for (let i = 0; i < N; i++) isCore[i] = Math.floor(((i + 1) * CORE) / N) > Math.floor((i * CORE) / N) ? 1 : 0;
+
+      const sph = new Float32Array(N * 3);
+      const seal = new Float32Array(N * 3);
+      const ringS = new Uint8Array(N); // strand index for ring points
+      const ringTh = new Float32Array(N); // base angle for ring points
+      const colorIdx = new Uint8Array(N); // 0 white 1 silver 2 ruby 3 garnet
+
+      (function build() {
+        let ci = 0;
+        let ri = 0;
+        const TILT = 0.2;
+        const tc = Math.cos(TILT);
+        const ts = Math.sin(TILT);
+        for (let i = 0; i < N; i++) {
+          const y = 1 - ((i + 0.5) * 2) / N;
+          const r = Math.sqrt(1 - y * y);
+          const th = i * 2.399963229728653;
+          sph[i * 3] = Math.cos(th) * r;
+          sph[i * 3 + 1] = y;
+          sph[i * 3 + 2] = Math.sin(th) * r;
+
+          if (isCore[i]) {
+            const face = ci % 6;
+            const j = (ci / 6) | 0;
+            const a = (j % 5) / 2 - 1;
+            const b = ((j / 5) | 0) / 2 - 1;
+            const h = 0.36;
+            const u = a * h;
+            const v = b * h;
+            let x, yy, z;
+            switch (face) {
+              case 0: x = h; yy = u; z = v; break;
+              case 1: x = -h; yy = u; z = v; break;
+              case 2: x = u; yy = h; z = v; break;
+              case 3: x = u; yy = -h; z = v; break;
+              case 4: x = u; yy = v; z = h; break;
+              default: x = u; yy = v; z = -h;
+            }
+            seal[i * 3] = x;
+            seal[i * 3 + 1] = yy;
+            seal[i * 3 + 2] = z;
+            colorIdx[i] = rnd(i * 5) > 0.82 ? 3 : 2;
+            ci++;
+          } else {
+            const s = ri % 3;
+            const idx = (ri / 3) | 0;
+            const per = (N - CORE) / 3;
+            ringS[i] = s;
+            ringTh[i] = (idx / per) * Math.PI * 2 + s * 0.5;
+            const rr = 1 + (s - 1) * 0.06;
+            const x0 = Math.cos(ringTh[i]) * rr;
+            const y0 = (s - 1) * 0.05;
+            seal[i * 3] = x0 * tc - y0 * ts;
+            seal[i * 3 + 1] = x0 * ts + y0 * tc;
+            seal[i * 3 + 2] = Math.sin(ringTh[i]) * rr;
+            colorIdx[i] = rnd(i * 7) > 0.78 ? 0 : 1;
+            ri++;
+          }
+        }
+      })();
+
+      // the one ruby character we annotate on the exposed sphere
+      let LEAD = 0;
+      (function pick() {
+        let best = 1e9;
+        for (let i = 0; i < N; i++) {
+          if (!isCore[i]) continue;
+          const dx = sph[i * 3] - 0.62;
+          const dy = sph[i * 3 + 1] + 0.3;
+          const dz = sph[i * 3 + 2] - 0.72;
+          const d = dx * dx + dy * dy + dz * dz;
+          if (d < best) {
+            best = d;
+            LEAD = i;
+          }
+        }
+      })();
+
+      const S = {
+        t: 0,
+        morph: 0,
+        spin: 0,
+        yaw: 0.55,
+        pitch: 0.18,
+        cam: 7.4,
+        cx: 1250,
+        cy: 548,
+        R: 420,
+        alpha: 0,
+        leader: 0,
+      };
+
+      const cv = document.getElementById("sculpt");
+      const ctx = cv.getContext("2d");
+      const F = 5; // focal length: depth 0 plane has scale 1 when cam = 5
+
+      function draw() {
+        ctx.clearRect(0, 0, 1920, 1080);
+        if (S.alpha <= 0.002) return;
+        const cy_ = Math.cos(S.yaw), sy_ = Math.sin(S.yaw);
+        const cp_ = Math.cos(S.pitch), sp_ = Math.sin(S.pitch);
+        const pts = [];
+        const flick = Math.floor(S.t * 14);
+        for (let i = 0; i < N; i++) {
+          const delay = isCore[i] ? rnd(i * 3.1) * 0.22 : 0.1 + rnd(i * 3.1) * 0.3;
+          const e = ease(clamp01((S.morph - delay) / (1 - 0.4)));
+          let sx = sph[i * 3], sy = sph[i * 3 + 1], sz = sph[i * 3 + 2];
+          let tx = seal[i * 3], ty = seal[i * 3 + 1], tz = seal[i * 3 + 2];
+          if (!isCore[i]) {
+            // ring spins around its own axis
+            const th = ringTh[i] + S.spin * (ringS[i] === 1 ? 1 : 0.92);
+            const rr = 1 + (ringS[i] - 1) * 0.06;
+            const x0 = Math.cos(th) * rr, y0 = (ringS[i] - 1) * 0.05;
+            tx = x0 * Math.cos(0.2) - y0 * Math.sin(0.2);
+            ty = x0 * Math.sin(0.2) + y0 * Math.cos(0.2);
+            tz = Math.sin(th) * rr;
+          }
+          let x = sx + (tx - sx) * e;
+          let y = sy + (ty - sy) * e;
+          let z = sz + (tz - sz) * e;
+          const bump = Math.sin(Math.PI * e);
+          if (isCore[i]) {
+            const k = 1 - 0.18 * bump;
+            x *= k; y *= k; z *= k;
+          } else {
+            const k = 1 + 0.32 * bump;
+            x *= k; y *= k; z *= k;
+          }
+          // yaw (Y) then pitch (X)
+          let x1 = x * cy_ + z * sy_;
+          let z1 = -x * sy_ + z * cy_;
+          let y1 = y * cp_ - z1 * sp_;
+          let z2 = y * sp_ + z1 * cp_;
+          const d = S.cam + z2;
+          if (d < 0.22) continue;
+          const sc = F / d;
+          pts.push({ i, sx: S.cx + x1 * S.R * sc, sy: S.cy + y1 * S.R * sc, sc, z: z2 });
+        }
+        pts.sort((a, b) => b.z - a.z);
+        const coreFade = clamp01((S.cam - 0.7) / 1.3);
+        for (let k = 0; k < pts.length; k++) {
+          const p = pts[k];
+          const i = p.i;
+          let ci = colorIdx[i];
+          if (!isCore[i] && S.morph < 0.999) {
+            // not yet part of the ring: tinted like a public character
+            ci = colorIdx[i];
+          }
+          if (isCore[i] && S.morph < 0.35) {
+            // exposed private characters flicker
+            const g = (i * 7 + flick * 3) % 16;
+            p.g = g;
+          } else {
+            p.g = (i * 5) % 16;
+          }
+          const depth = clamp01(0.5 - p.z * 0.5);
+          let a = (0.3 + 0.7 * depth) * S.alpha;
+          if (isCore[i]) a *= 0.4 + 0.6 * coreFade;
+          const size = Math.max(6, 25 * p.sc);
+          if (p.sx < -80 || p.sx > 2000 || p.sy < -80 || p.sy > 1160) continue;
+          const c = PAL[["white", "silver", "ruby", "garnet"][ci]];
+          // far characters sink into burgundy
+          const m = 1 - depth;
+          const r = Math.round(c[0] * (1 - 0.35 * m) + 109 * 0.35 * m);
+          const gC = Math.round(c[1] * (1 - 0.35 * m));
+          const bC = Math.round(c[2] * (1 - 0.35 * m) + 26 * 0.35 * m);
+          ctx.fillStyle = `rgba(${r},${gC},${bC},${a.toFixed(3)})`;
+          ctx.font = `500 ${size.toFixed(1)}px "JetBrains Mono"`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(GLYPHS[p.g], p.sx, p.sy);
+        }
+
+        // leader line + label on one exposed private character
+        if (S.leader > 0.01) {
+          const L = pts.find((q) => q.i === LEAD);
+          if (L) {
+            const ey = L.sy + (96 - L.sy) * S.leader;
+            const ex = L.sx - 420 * S.leader;
+            ctx.strokeStyle = `rgba(196,30,58,${S.leader})`;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(L.sx, L.sy);
+            ctx.lineTo(L.sx, ey);
+            ctx.lineTo(ex, ey);
+            ctx.stroke();
+            ctx.fillStyle = `rgba(247,243,244,${S.leader})`;
+            ctx.font = '500 26px "JetBrains Mono"';
+            ctx.textAlign = "left";
+            ctx.textBaseline = "bottom";
+            ctx.fillText("PRIVATE VALUE · EXPOSED", ex, ey - 14);
+            ctx.beginPath();
+            ctx.arc(L.sx, L.sy, 22 * L.sc, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+        }
+      }
+
+      // ------------------------------------------------------------------
+      // Timeline
+      // ------------------------------------------------------------------
+      Promise.all([
+        document.fonts.load('500 24px "JetBrains Mono"'),
+        document.fonts.load('400 24px "JetBrains Mono"'),
+        document.fonts.load('700 100px "Quicksand"'),
+        document.fonts.load('600 34px "Quicksand"'),
+      ]).then(() => {
+        const tl = gsap.timeline({ paused: true });
+        tl.eventCallback("onUpdate", draw);
+
+        // initial states (all via explicit fromTo/set so seeks are deterministic)
+        gsap.set("#slab-land", { transformPerspective: 2000 });
+        gsap.set("#cursor", { x: 1640, y: 250, opacity: 0 });
+                gsap.set("#strike", { scaleX: 0, rotation: -1.2 });
+        gsap.set(["#chip-b", "#chip-c", "#lp-b", "#lp-c", "#dv-b", "#dv-c", "#bg-b", "#bg-c"], { opacity: 0 });
+        gsap.set("#seal-ico", { opacity: 0, scale: 0.6, transformOrigin: "50% 50%" });
+        gsap.set("#tag", { opacity: 0 });
+
+        // --- clock proxy (used for flicker only)
+        tl.to(S, { t: 5, duration: 5, ease: "none" }, 0);
+
+        // --- sculpture: appear, orbit, seal, lock, fly through
+        tl.fromTo(S, { alpha: 0, cam: 7.4 }, { alpha: 1, cam: 5, duration: 0.4, ease: "expo.out" }, T.hit);
+        tl.to(S, { yaw: 1.25, pitch: 0.1, duration: 1.5, ease: "none" }, 0);
+        tl.fromTo(S, { leader: 0 }, { leader: 1, duration: 0.3, ease: "power3.out" }, 0.55);
+        tl.to(S, { leader: 0, duration: 0.2, ease: "power2.in" }, 1.3);
+
+        tl.to(S, { morph: 1, duration: 1.4, ease: "power2.inOut" }, T.slam);
+        tl.to(S, { yaw: 4.1, pitch: -1.28, duration: 1.5, ease: "power2.inOut" }, T.slam);
+        tl.to(S, { cx: 960, R: 380, duration: 0.9, ease: "power3.inOut" }, T.slam + 0.1);
+        tl.to(S, { spin: Math.PI * 2.2, duration: 1.5, ease: "power1.inOut" }, T.slam);
+
+        // lock punch + flythrough: camera dollies through the ring aperture
+        tl.to(S, { cam: 0.55, pitch: -1.5, duration: 0.75, ease: "power3.in" }, T.lock);
+        tl.to(S, { alpha: 0, duration: 0.2, ease: "power1.in" }, T.lock + 0.55);
+
+        // --- type: BORROW, WITH A DISCLOSURE (strike) -> PROOF.
+        tl.fromTo("#w-borrow", { yPercent: 118, rotation: 4 }, { yPercent: 0, rotation: 0, duration: 0.38, ease: "expo.out" }, 0.1);
+        tl.fromTo("#w-with-in", { yPercent: 115 }, { yPercent: 0, duration: 0.42, ease: "power4.out" }, T.withIn);
+        tl.to("#strike", { scaleX: 1, duration: 0.22, ease: "power3.out" }, T.strike);
+        tl.to("#w-disc", { opacity: 0.4, duration: 0.2, ease: "power1.out" }, T.strike + 0.2);
+        tl.to("#w-disc", { yPercent: 70, opacity: 0, duration: 0.16, ease: "power3.in" }, T.slam - 0.04);
+        tl.fromTo(
+          "#w-proof",
+          { yPercent: 130, scale: 1.4, opacity: 0, transformOrigin: "0% 100%" },
+          { yPercent: 0, scale: 1, opacity: 1, duration: 0.3, ease: "expo.out" },
+          T.slam
+        );
+        // slam shake on the whole scene
+        tl.fromTo("#scene", { x: 0, y: 0 }, { x: 9, y: -7, duration: 0.04, ease: "none" }, T.slam);
+        tl.to("#scene", { x: -7, y: 6, duration: 0.05, ease: "none" }, T.slam + 0.04);
+        tl.to("#scene", { x: 4, y: -3, duration: 0.06, ease: "none" }, T.slam + 0.09);
+        tl.to("#scene", { x: 0, y: 0, duration: 0.1, ease: "power2.out" }, T.slam + 0.15);
+
+        // type group steps back to the top-left corner while the seal forms, then clears for the dolly
+        tl.to("#type-grp", { scale: 0.3, x: -20, y: -250, duration: 0.6, ease: "expo.inOut" }, 2.0);
+        tl.to("#type-grp", { opacity: 0, duration: 0.25, ease: "power1.in" }, T.lock + 0.05);
+
+        // legend
+        tl.fromTo(".leg", { opacity: 0, x: -34 }, { opacity: 1, x: 0, duration: 0.35, ease: "power3.out", stagger: 0.12 }, T.legend);
+        tl.to("#legend", { opacity: 0, duration: 0.2, ease: "power1.in" }, T.lock + 0.05);
+
+        // lock flash + punch
+        tl.fromTo("#flash", { opacity: 0 }, { opacity: 1, duration: 0.1, ease: "expo.out" }, T.lock + 0.2);
+        tl.to("#flash", { opacity: 0, duration: 0.45, ease: "power2.out" }, T.lock + 0.32);
+        tl.fromTo("#scene", { scale: 1 }, { scale: 1.035, duration: 0.08, ease: "power2.out", transformOrigin: "50% 50%" }, T.lock);
+        tl.to("#scene", { scale: 1, duration: 0.25, ease: "power2.out" }, T.lock + 0.08);
+
+        // --- slab lands out of the aperture
+        tl.fromTo(
+          "#slab-land",
+          { opacity: 0, rotationY: -28, rotationX: 10, scale: 0.7, y: 70 },
+          { opacity: 1, rotationY: -4, rotationX: 0, scale: 1, y: 0, duration: 0.55, ease: "expo.out" },
+          T.lock + 0.2
+        );
+        tl.to("#slab-land", { rotationY: 0, duration: 1.25, ease: "sine.inOut" }, T.lock + 0.75);
+        tl.fromTo("#tag", { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "power1.out" }, T.slab + 0.1);
+
+        // --- cursor travels to the button, clicks, state flips
+        const card = document.getElementById("card");
+        const btn = document.getElementById("btn-gen");
+        const land = document.getElementById("slab-land");
+        const bx = land.offsetLeft + btn.offsetLeft + btn.offsetWidth * 0.38;
+        const by = land.offsetTop + btn.offsetTop + btn.offsetHeight * 0.5;
+        gsap.set("#ripple-wrap", { left: bx, top: by });
+        document.getElementById("slab-push").style.transformOrigin = bx - land.offsetLeft + "px " + (by - land.offsetTop) + "px";
+
+        tl.fromTo("#cursor", { opacity: 0 }, { opacity: 1, duration: 0.15, ease: "power1.out" }, T.slab - 0.1);
+        tl.fromTo("#cursor", { x: 1640 }, { x: bx, duration: 0.5, ease: "power2.inOut" }, T.slab);
+        tl.fromTo("#cursor", { y: 250 }, { y: by, duration: 0.5, ease: "power3.inOut" }, T.slab);
+        tl.to("#cursor", { scale: 0.86, transformOrigin: "10% 8%", duration: 0.06, ease: "power2.out" }, T.click);
+        tl.to("#cursor", { scale: 1, duration: 0.12, ease: "power2.out" }, T.click + 0.07);
+        tl.to("#cursor", { x: bx + 90, y: by + 70, duration: 0.5, ease: "power2.inOut" }, T.click + 0.25);
+
+        tl.to("#btn-gen", { scale: 0.975, duration: 0.06, ease: "power2.out" }, T.click);
+        tl.to("#btn-gen", { scale: 1, duration: 0.14, ease: "power2.out" }, T.click + 0.07);
+        tl.set("#ripple-wrap", { opacity: 1 }, T.click);
+        tl.fromTo("#ripple", { scale: 0.2, opacity: 0.85 }, { scale: 1.7, opacity: 0, duration: 0.45, ease: "expo.out" }, T.click);
+
+        // slow push toward the control (separate wrapper: no transform conflict)
+        tl.fromTo("#slab-push", { scale: 1 }, { scale: 1.12, duration: 1.0, ease: "power2.inOut" }, T.click - 0.05);
+
+        // chip: action required -> verifying -> proof ready
+        tl.to("#chip-a", { opacity: 0, y: -8, duration: 0.12, ease: "power2.in" }, T.click);
+        tl.fromTo("#chip-b", { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.18, ease: "power2.out" }, T.click + 0.05);
+        tl.fromTo("#chip-b-dot", { opacity: 1 }, { opacity: 0.25, duration: 0.12, ease: "none", yoyo: true, repeat: 3 }, T.click + 0.1);
+        tl.to("#chip-b", { opacity: 0, y: -8, duration: 0.12, ease: "power2.in" }, T.ready - 0.02);
+        tl.fromTo("#chip-c", { opacity: 0, scale: 0.88, y: 8 }, { opacity: 1, scale: 1, y: 0, duration: 0.28, ease: "back.out(2)" }, T.ready);
+        tl.fromTo("#seal-ico", { opacity: 0, scale: 0.5 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2)" }, T.ready + 0.05);
+
+        // rows
+        const swap = (a, b, at, dur) => {
+          tl.to(a, { opacity: 0, duration: 0.1, ease: "power1.in" }, at);
+          tl.fromTo(b, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: dur || 0.18, ease: "power2.out" }, at + 0.04);
+        };
+        swap("#lp-a", "#lp-b", T.click + 0.05);
+        swap("#lp-b", "#lp-c", T.ready - 0.02);
+        swap("#dv-a", "#dv-b", T.click + 0.3);
+        swap("#dv-b", "#dv-c", T.ready - 0.02);
+        swap("#bg-a", "#bg-b", T.click + 0.02);
+        swap("#bg-b", "#bg-c", T.ready - 0.02);
+
+        // end: soft fade to black (audio fades in the same window)
+        tl.fromTo("#fade", { opacity: 0 }, { opacity: 1, duration: 0.15, ease: "power1.in" }, T.end - 0.15);
+
+        draw();
+        window.__timelines["main"] = tl;
+        tl.seek(0);
+      });
+    </script>
+  </body>
+</html>

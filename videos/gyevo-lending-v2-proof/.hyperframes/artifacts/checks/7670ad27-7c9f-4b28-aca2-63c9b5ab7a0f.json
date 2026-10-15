@@ -1,0 +1,1304 @@
+{
+  "ok": false,
+  "strict": false,
+  "browserSkipped": false,
+  "lint": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 2,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "gsap_callback_dom_measurement",
+        "severity": "warning",
+        "message": "Timeline callback reaches DOM measurement (getBoundingClientRect/getTotalLength/getComputedStyle/...). The renderer seeks with suppressEvents=false, so callbacks re-fire on every seek, and a cold render worker runs them against whatever DOM state its own non-linear seek order produced. Measured geometry is seek-order-dependent, and values measured at build time (before the callback ran) are stale or zero.",
+        "selector": "tl.eventCallback(\"onUpdate\", draw)",
+        "dataAttributes": {},
+        "sourceFile": "/Users/fmpangestu/Codingan/WEB3/FIRST PROJECT/Giwa/videos/gyevo-lending-v2-proof/index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Do all measurement and DOM setup synchronously at build time, before registering the timeline, or derive geometry from fixed composition coordinates instead of measuring."
+      },
+      {
+        "code": "composition_file_too_large",
+        "severity": "warning",
+        "message": "This HTML composition file has 483 lines. Smaller sub-compositions are easier to read, iterate on, and diff.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {},
+        "sourceFile": "/Users/fmpangestu/Codingan/WEB3/FIRST PROJECT/Giwa/videos/gyevo-lending-v2-proof/index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Split coherent scenes or layers into separate .html files under compositions/, then mount them from the parent with data-composition-src so each file stays small enough to inspect, revise, and validate independently."
+      }
+    ],
+    "filesScanned": 1
+  },
+  "runtime": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": []
+  },
+  "layout": {
+    "ok": false,
+    "errorCount": 16,
+    "warningCount": 1,
+    "infoCount": 16,
+    "findings": [
+      {
+        "code": "text_occluded",
+        "severity": "error",
+        "time": 0.278,
+        "selector": "#w-borrow",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 115.41,
+          "top": 235.47,
+          "right": 1529.48,
+          "bottom": 659.47,
+          "width": 1414.07,
+          "height": 424
+        },
+        "containerSelector": "#vignette",
+        "text": "BORROW",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 1,
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 115.41,
+          "y": 235.47,
+          "width": 1414.07,
+          "height": 424
+        },
+        "firstSeen": 0.278,
+        "lastSeen": 3.056,
+        "occurrences": 6,
+        "heldMs": 2778,
+        "times": [
+          0.278,
+          0.833,
+          1.389,
+          1.944,
+          2.5,
+          3.056
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "error",
+        "time": 0.278,
+        "selector": "#w-with-in",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 116,
+          "top": 731.05,
+          "right": 629.48,
+          "bottom": 914.05,
+          "width": 513.48,
+          "height": 183
+        },
+        "containerSelector": "#vignette",
+        "text": "WITH A",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 1,
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 116,
+          "y": 731.05,
+          "width": 513.48,
+          "height": 183
+        },
+        "firstSeen": 0.278,
+        "lastSeen": 3.056,
+        "occurrences": 6,
+        "heldMs": 2778,
+        "times": [
+          0.278,
+          0.833,
+          1.389,
+          1.944,
+          2.5,
+          3.056
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "error",
+        "time": 0.278,
+        "selector": "#w-disc",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 629.48,
+          "top": 731.05,
+          "right": 1466.95,
+          "bottom": 914.05,
+          "width": 837.47,
+          "height": 183
+        },
+        "containerSelector": "#vignette",
+        "text": "DISCLOSURE",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 1,
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 629.48,
+          "y": 731.05,
+          "width": 837.47,
+          "height": 183
+        },
+        "firstSeen": 0.278,
+        "lastSeen": 1.389,
+        "occurrences": 3,
+        "heldMs": 1111,
+        "times": [
+          0.278,
+          0.833,
+          1.389
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "error",
+        "time": 1.944,
+        "selector": "#w-proof",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 629.48,
+          "top": 571.56,
+          "right": 1125.75,
+          "bottom": 754.56,
+          "width": 496.27,
+          "height": 183
+        },
+        "containerSelector": "#vignette",
+        "text": "PROOF.",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 1,
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 629.48,
+          "y": 571.56,
+          "width": 496.27,
+          "height": 183
+        },
+        "firstSeen": 1.944,
+        "lastSeen": 3.056,
+        "occurrences": 3,
+        "heldMs": 1112,
+        "times": [
+          1.944,
+          2.5,
+          3.056
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "error",
+        "time": 2.5,
+        "selector": "div.leg.pub",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 128,
+          "top": 904,
+          "right": 421.77,
+          "bottom": 935,
+          "width": 293.77,
+          "height": 31
+        },
+        "containerSelector": "#vignette",
+        "text": "Public · on-chain",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 1,
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 128,
+          "y": 904,
+          "width": 293.77,
+          "height": 31
+        },
+        "firstSeen": 2.5,
+        "lastSeen": 3.056,
+        "occurrences": 2,
+        "heldMs": 556,
+        "times": [
+          2.5,
+          3.056
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "error",
+        "time": 2.5,
+        "selector": "div.leg.priv",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 128,
+          "top": 953,
+          "right": 542.73,
+          "bottom": 984,
+          "width": 414.73,
+          "height": 31
+        },
+        "containerSelector": "#vignette",
+        "text": "Private · on your device",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 1,
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 128,
+          "y": 953,
+          "width": 414.73,
+          "height": 31
+        },
+        "firstSeen": 2.5,
+        "lastSeen": 3.056,
+        "occurrences": 2,
+        "heldMs": 556,
+        "times": [
+          2.5,
+          3.056
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "error",
+        "time": 3.611,
+        "selector": "div.card-head > h2:nth-of-type(1)",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 372.47,
+          "top": 212.08,
+          "right": 595.17,
+          "bottom": 289.21,
+          "width": 222.7,
+          "height": 77.13
+        },
+        "containerSelector": "#vignette",
+        "text": "Eligibility",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 1,
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 372.47,
+          "y": 212.08,
+          "width": 222.7,
+          "height": 77.13
+        },
+        "firstSeen": 3.611,
+        "lastSeen": 4.722,
+        "occurrences": 3,
+        "heldMs": 1111.0000000000002,
+        "times": [
+          3.611,
+          4.167,
+          4.722
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "error",
+        "time": 3.611,
+        "selector": "#card > div:nth-of-type(2) > div:nth-of-type(1)",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 372.45,
+          "top": 338.17,
+          "right": 560,
+          "bottom": 366.78,
+          "width": 187.55,
+          "height": 28.62
+        },
+        "containerSelector": "#vignette",
+        "text": "Authorization",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 1,
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 372.45,
+          "y": 338.17,
+          "width": 187.55,
+          "height": 28.62
+        },
+        "firstSeen": 3.611,
+        "lastSeen": 4.722,
+        "occurrences": 3,
+        "heldMs": 1111.0000000000002,
+        "times": [
+          3.611,
+          4.167,
+          4.722
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "error",
+        "time": 3.611,
+        "selector": "#card > div:nth-of-type(2) > div:nth-of-type(2) > span:nth-of-type(1)",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 681.51,
+          "top": 318.66,
+          "right": 1295.27,
+          "bottom": 370.17,
+          "width": 613.77,
+          "height": 51.52
+        },
+        "containerSelector": "#vignette",
+        "text": "GYEVO Project Test Credential, Policy 3",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 1,
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 681.51,
+          "y": 318.66,
+          "width": 613.77,
+          "height": 51.52
+        },
+        "firstSeen": 3.611,
+        "lastSeen": 4.722,
+        "occurrences": 3,
+        "heldMs": 1111.0000000000002,
+        "times": [
+          3.611,
+          4.167,
+          4.722
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "error",
+        "time": 3.611,
+        "selector": "#card > div:nth-of-type(3) > div:nth-of-type(1)",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 372.43,
+          "top": 414.44,
+          "right": 501.74,
+          "bottom": 441.49,
+          "width": 129.31,
+          "height": 27.05
+        },
+        "containerSelector": "#vignette",
+        "text": "Threshold",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 1,
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 372.43,
+          "y": 414.44,
+          "width": 129.31,
+          "height": 27.05
+        },
+        "firstSeen": 3.611,
+        "lastSeen": 4.722,
+        "occurrences": 3,
+        "heldMs": 1111.0000000000002,
+        "times": [
+          3.611,
+          4.167,
+          4.722
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "error",
+        "time": 3.611,
+        "selector": "#card > div:nth-of-type(3) > div:nth-of-type(2) > span:nth-of-type(1)",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 681.5,
+          "top": 398.33,
+          "right": 1308.3,
+          "bottom": 446.58,
+          "width": 626.81,
+          "height": 48.26
+        },
+        "containerSelector": "#vignette",
+        "text": "Private value of at least 1,000 test units",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 1,
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 681.5,
+          "y": 398.33,
+          "width": 626.81,
+          "height": 48.26
+        },
+        "firstSeen": 3.611,
+        "lastSeen": 4.722,
+        "occurrences": 3,
+        "heldMs": 1111.0000000000002,
+        "times": [
+          3.611,
+          4.167,
+          4.722
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "error",
+        "time": 3.611,
+        "selector": "#card > div:nth-of-type(4) > div:nth-of-type(1)",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 372.41,
+          "top": 489.43,
+          "right": 618.73,
+          "bottom": 516.19,
+          "width": 246.32,
+          "height": 26.76
+        },
+        "containerSelector": "#vignette",
+        "text": "Local proof check",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 1,
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 372.41,
+          "y": 489.43,
+          "width": 246.32,
+          "height": 26.76
+        },
+        "firstSeen": 3.611,
+        "lastSeen": 4.722,
+        "occurrences": 3,
+        "heldMs": 1111.0000000000002,
+        "times": [
+          3.611,
+          4.167,
+          4.722
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "error",
+        "time": 3.611,
+        "selector": "#card > div:nth-of-type(5) > div:nth-of-type(1)",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 372.4,
+          "top": 565.04,
+          "right": 618.72,
+          "bottom": 591.83,
+          "width": 246.32,
+          "height": 26.79
+        },
+        "containerSelector": "#vignette",
+        "text": "Deployed verifier",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 1,
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 372.4,
+          "y": 565.04,
+          "width": 246.32,
+          "height": 26.79
+        },
+        "firstSeen": 3.611,
+        "lastSeen": 4.722,
+        "occurrences": 3,
+        "heldMs": 1111.0000000000002,
+        "times": [
+          3.611,
+          4.167,
+          4.722
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "error",
+        "time": 3.611,
+        "selector": "#dv-a",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 681.48,
+          "top": 557.29,
+          "right": 874.46,
+          "bottom": 600.24,
+          "width": 192.98,
+          "height": 42.96
+        },
+        "containerSelector": "#vignette",
+        "text": "Not checked",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 1,
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 681.48,
+          "y": 557.29,
+          "width": 192.98,
+          "height": 42.96
+        },
+        "firstSeen": 3.611,
+        "lastSeen": 4.167,
+        "occurrences": 2,
+        "heldMs": 555.9999999999997,
+        "times": [
+          3.611,
+          4.167
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "error",
+        "time": 3.611,
+        "selector": "#btn-clear",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 1057.26,
+          "top": 667.95,
+          "right": 1262.53,
+          "bottom": 710.63,
+          "width": 205.27,
+          "height": 42.68
+        },
+        "containerSelector": "#vignette",
+        "text": "Clear witness",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 1,
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 1057.26,
+          "y": 667.95,
+          "width": 205.27,
+          "height": 42.68
+        },
+        "firstSeen": 3.611,
+        "lastSeen": 4.722,
+        "occurrences": 3,
+        "heldMs": 1111.0000000000002,
+        "times": [
+          3.611,
+          4.167,
+          4.722
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "error",
+        "time": 3.611,
+        "selector": "p.note",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 372.33,
+          "top": 840.55,
+          "right": 956.63,
+          "bottom": 883.51,
+          "width": 584.3,
+          "height": 42.95
+        },
+        "containerSelector": "#vignette",
+        "text": "A locally verified proof is not an on-chain verification.",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 1,
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 372.33,
+          "y": 840.55,
+          "width": 584.3,
+          "height": 42.95
+        },
+        "firstSeen": 3.611,
+        "lastSeen": 4.722,
+        "occurrences": 3,
+        "heldMs": 1111.0000000000002,
+        "times": [
+          3.611,
+          4.167,
+          4.722
+        ]
+      },
+      {
+        "code": "canvas_content_at_edge",
+        "severity": "warning",
+        "time": 0.833,
+        "selector": "#sculpt",
+        "message": "Canvas content touches the frame edge (right).",
+        "rect": {
+          "left": 0,
+          "top": 0,
+          "right": 1920,
+          "bottom": 1080,
+          "width": 1920,
+          "height": 1080
+        },
+        "containerSelector": "#root",
+        "fixHint": "Keep drawn text inside the visible part of the canvas, or mark intentional full-bleed art with data-layout-allow-overflow.",
+        "containerRect": {
+          "left": 0,
+          "top": 0,
+          "right": 1920,
+          "bottom": 1080,
+          "width": 1920,
+          "height": 1080
+        },
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "firstSeen": 0.833,
+        "lastSeen": 3.611,
+        "occurrences": 3,
+        "heldMs": 556,
+        "times": [
+          0.833,
+          1.389,
+          3.611
+        ]
+      },
+      {
+        "code": "text_box_overflow",
+        "severity": "info",
+        "time": 0.278,
+        "selector": "#w-borrow",
+        "message": "Text extends outside its nearest visual/container box.",
+        "rect": {
+          "left": 115.41,
+          "top": 305.01,
+          "right": 1529.48,
+          "bottom": 589.93,
+          "width": 1414.07,
+          "height": 284.92
+        },
+        "containerSelector": "#type-grp > div:nth-of-type(1)",
+        "text": "BORROW",
+        "fixHint": "Text is 1414px x 285px inside 1414px x 284px and overflows by up to 14px; increase the container height to at least ~298px or shrink font-size from 336px to ~335px, or allow wrapping with max-width/fitTextFontSize.",
+        "containerRect": {
+          "left": 116,
+          "top": 292,
+          "right": 1530.16,
+          "bottom": 575.81,
+          "width": 1414.16,
+          "height": 283.81
+        },
+        "overflow": {
+          "bottom": 14.12
+        },
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 115.41,
+          "y": 305.01,
+          "width": 1414.07,
+          "height": 284.92
+        },
+        "firstSeen": 0.278,
+        "lastSeen": 0.278,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          0.278
+        ]
+      },
+      {
+        "code": "container_overflow",
+        "severity": "info",
+        "time": 0.278,
+        "selector": "#w-borrow",
+        "message": "Element extends outside a clipping layout container.",
+        "rect": {
+          "left": 115.6,
+          "top": 304.47,
+          "right": 1529.29,
+          "bottom": 590.7,
+          "width": 1413.68,
+          "height": 286.24
+        },
+        "containerSelector": "#type-grp > div:nth-of-type(1)",
+        "fixHint": "Resize/reposition the child or container, or mark intentional overflow with data-layout-allow-overflow.",
+        "containerRect": {
+          "left": 116,
+          "top": 292,
+          "right": 1530.16,
+          "bottom": 575.81,
+          "width": 1414.16,
+          "height": 283.81
+        },
+        "overflow": {
+          "bottom": 14.89
+        },
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 115.6,
+          "y": 304.47,
+          "width": 1413.68,
+          "height": 286.24
+        },
+        "firstSeen": 0.278,
+        "lastSeen": 0.278,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          0.278
+        ]
+      },
+      {
+        "code": "container_overflow",
+        "severity": "info",
+        "time": 0.278,
+        "selector": "#w-with-in",
+        "message": "Element extends outside a clipping layout container.",
+        "rect": {
+          "left": 116,
+          "top": 754.05,
+          "right": 1466.95,
+          "bottom": 892.74,
+          "width": 1350.95,
+          "height": 138.69
+        },
+        "containerSelector": "#w-with",
+        "fixHint": "Resize/reposition the child or container, or mark intentional overflow with data-layout-allow-overflow.",
+        "containerRect": {
+          "left": 116,
+          "top": 585.81,
+          "right": 1530.16,
+          "bottom": 739.08,
+          "width": 1414.16,
+          "height": 153.27
+        },
+        "overflow": {
+          "bottom": 153.66
+        },
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 116,
+          "y": 754.05,
+          "width": 1350.95,
+          "height": 138.69
+        },
+        "firstSeen": 0.278,
+        "lastSeen": 0.278,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          0.278
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "info",
+        "time": 3.611,
+        "selector": "#chip-a",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 1325.06,
+          "top": 212.79,
+          "right": 1571.5,
+          "bottom": 247.99,
+          "width": 246.44,
+          "height": 35.2
+        },
+        "containerSelector": "#vignette",
+        "text": "Action required",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 1,
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 1325.06,
+          "y": 212.79,
+          "width": 246.44,
+          "height": 35.2
+        },
+        "firstSeen": 3.611,
+        "lastSeen": 3.611,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          3.611
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "info",
+        "time": 3.611,
+        "selector": "#lp-a",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 681.49,
+          "top": 479.9,
+          "right": 908.66,
+          "bottom": 523,
+          "width": 227.18,
+          "height": 43.1
+        },
+        "containerSelector": "#vignette",
+        "text": "Not generated",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 1,
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 681.49,
+          "y": 479.9,
+          "width": 227.18,
+          "height": 43.1
+        },
+        "firstSeen": 3.611,
+        "lastSeen": 3.611,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          3.611
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "info",
+        "time": 3.611,
+        "selector": "#bg-a",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 493.07,
+          "top": 662.87,
+          "right": 855.44,
+          "bottom": 705.82,
+          "width": 362.37,
+          "height": 42.94
+        },
+        "containerSelector": "#vignette",
+        "text": "Generate Eligibility Proof",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 1,
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 493.07,
+          "y": 662.87,
+          "width": 362.37,
+          "height": 42.94
+        },
+        "firstSeen": 3.611,
+        "lastSeen": 3.611,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          3.611
+        ]
+      },
+      {
+        "code": "content_overlap",
+        "severity": "info",
+        "time": 4.125,
+        "selector": "#chip-a",
+        "message": "Two text blocks overlap and may render unreadable.",
+        "rect": {
+          "left": 1325.05,
+          "top": 209.5,
+          "right": 1569.09,
+          "bottom": 243.61,
+          "width": 244.04,
+          "height": 34.11
+        },
+        "containerSelector": "#chip-b",
+        "text": "ACTION REQUIRED",
+        "fixHint": "Give each block its own zone, or put data-layout-allow-overlap on the text or on a container inside the scene. A marker on the scene root does not apply.",
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 1325.05,
+          "y": 209.5,
+          "width": 244.04,
+          "height": 34.11
+        },
+        "firstSeen": 4.125,
+        "lastSeen": 4.125,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          4.125
+        ]
+      },
+      {
+        "code": "content_overlap",
+        "severity": "info",
+        "time": 4.125,
+        "selector": "#bg-a",
+        "message": "Two text blocks overlap and may render unreadable.",
+        "rect": {
+          "left": 491.45,
+          "top": 663.8,
+          "right": 853.31,
+          "bottom": 705.77,
+          "width": 361.86,
+          "height": 41.97
+        },
+        "containerSelector": "#bg-b",
+        "text": "Generate Eligibility Proof",
+        "fixHint": "Give each block its own zone, or put data-layout-allow-overlap on the text or on a container inside the scene. A marker on the scene root does not apply.",
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 491.45,
+          "y": 663.8,
+          "width": 361.86,
+          "height": 41.97
+        },
+        "firstSeen": 4.125,
+        "lastSeen": 4.125,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          4.125
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "info",
+        "time": 4.167,
+        "selector": "#chip-b",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 1423.8,
+          "top": 213.98,
+          "right": 1570.84,
+          "bottom": 246.27,
+          "width": 147.04,
+          "height": 32.28
+        },
+        "containerSelector": "#vignette",
+        "text": "Verifying",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 1,
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 1423.8,
+          "y": 213.98,
+          "width": 147.04,
+          "height": 32.28
+        },
+        "firstSeen": 4.167,
+        "lastSeen": 4.167,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          4.167
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "info",
+        "time": 4.167,
+        "selector": "#lp-b",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 679.99,
+          "top": 480.66,
+          "right": 874.39,
+          "bottom": 523.84,
+          "width": 194.4,
+          "height": 43.18
+        },
+        "containerSelector": "#vignette",
+        "text": "Generating…",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 1,
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 679.99,
+          "y": 480.66,
+          "width": 194.4,
+          "height": 43.18
+        },
+        "firstSeen": 4.167,
+        "lastSeen": 4.167,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          4.167
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "info",
+        "time": 4.167,
+        "selector": "#bg-b",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 533.36,
+          "top": 664.75,
+          "right": 809.17,
+          "bottom": 706.44,
+          "width": 275.81,
+          "height": 41.69
+        },
+        "containerSelector": "#vignette",
+        "text": "Generating proof…",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 1,
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 533.36,
+          "y": 664.75,
+          "width": 275.81,
+          "height": 41.69
+        },
+        "firstSeen": 4.167,
+        "lastSeen": 4.167,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          4.167
+        ]
+      },
+      {
+        "code": "content_overlap",
+        "severity": "info",
+        "time": 4.375,
+        "selector": "#dv-a",
+        "message": "Two text blocks overlap and may render unreadable.",
+        "rect": {
+          "left": 681.03,
+          "top": 552.91,
+          "right": 883.87,
+          "bottom": 597.38,
+          "width": 202.84,
+          "height": 44.47
+        },
+        "containerSelector": "#dv-b",
+        "text": "Not checked",
+        "fixHint": "Give each block its own zone, or put data-layout-allow-overlap on the text or on a container inside the scene. A marker on the scene root does not apply.",
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 681.03,
+          "y": 552.91,
+          "width": 202.84,
+          "height": 44.47
+        },
+        "firstSeen": 4.375,
+        "lastSeen": 4.375,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          4.375
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "info",
+        "time": 4.722,
+        "selector": "#chip-c",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 1469.15,
+          "top": 170.8,
+          "right": 1661.91,
+          "bottom": 204.25,
+          "width": 192.76,
+          "height": 33.45
+        },
+        "containerSelector": "#vignette",
+        "text": "Proof ready",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 1,
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 1469.15,
+          "y": 170.8,
+          "width": 192.76,
+          "height": 33.45
+        },
+        "firstSeen": 4.722,
+        "lastSeen": 4.722,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          4.722
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "info",
+        "time": 4.722,
+        "selector": "#lp-c",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 685.6,
+          "top": 456.17,
+          "right": 1088.97,
+          "bottom": 504.2,
+          "width": 403.37,
+          "height": 48.03
+        },
+        "containerSelector": "#vignette",
+        "text": "Verified in this browser",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 1,
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 685.6,
+          "y": 456.17,
+          "width": 403.37,
+          "height": 48.03
+        },
+        "firstSeen": 4.722,
+        "lastSeen": 4.722,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          4.722
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "info",
+        "time": 4.722,
+        "selector": "#dv-c",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 685.6,
+          "top": 543.04,
+          "right": 1397.06,
+          "bottom": 591.09,
+          "width": 711.45,
+          "height": 48.06
+        },
+        "containerSelector": "#vignette",
+        "text": "Accepted by Robinhood Lending verifier",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 1,
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 685.6,
+          "y": 543.04,
+          "width": 711.45,
+          "height": 48.06
+        },
+        "firstSeen": 4.722,
+        "lastSeen": 4.722,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          4.722
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "info",
+        "time": 4.722,
+        "selector": "#bg-c",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 408.68,
+          "top": 664.21,
+          "right": 941.73,
+          "bottom": 709.33,
+          "width": 533.05,
+          "height": 45.12
+        },
+        "containerSelector": "#vignette",
+        "text": "Generate a New Eligibility Proof",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 1,
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 408.68,
+          "y": 664.21,
+          "width": 533.05,
+          "height": 45.12
+        },
+        "firstSeen": 4.722,
+        "lastSeen": 4.722,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          4.722
+        ]
+      }
+    ],
+    "duration": 5,
+    "samples": [
+      0.278,
+      0.833,
+      1.389,
+      1.944,
+      2.5,
+      3.056,
+      3.611,
+      4.167,
+      4.722
+    ],
+    "transitionSamples": [],
+    "transitionSamplesDropped": 0,
+    "tolerance": 2,
+    "totalIssueCount": 33,
+    "truncated": false
+  },
+  "motion": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": false,
+    "samples": 0
+  },
+  "contrast": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": true,
+    "samples": [
+      0.278,
+      1.389,
+      2.5,
+      3.611,
+      4.722
+    ],
+    "checked": 36,
+    "passed": 36
+  },
+  "hdr": {
+    "autoPromotion": null,
+    "inspection": "available"
+  },
+  "snapshots": {
+    "enabled": false,
+    "files": [],
+    "times": [],
+    "findingFiles": []
+  }
+}
