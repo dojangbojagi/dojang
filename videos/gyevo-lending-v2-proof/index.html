@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1920, height=1080" />
-    <title>GYEVO Lending v2 — design proof (5s)</title>
+    <title>GYEVO — Lending &amp; Borrowing (28s)</title>
     <script src="assets/vendor/gsap.min.js"></script>
     <style>
       @font-face {
@@ -39,6 +39,8 @@
         --ruby: #c41e3a;
         --wine: #b81a34;
         --burgundy: #6d001a;
+        --amber: #e0a95a;
+        --red: #ff5c5c;
         --panel-a: #281d22;
         --panel-b: #150f12;
         --line: rgba(255, 255, 255, 0.12);
@@ -74,15 +76,31 @@
           radial-gradient(58% 52% at 14% 112%, rgba(109, 0, 26, 0.62) 0%, transparent 70%),
           radial-gradient(40% 42% at 92% -6%, rgba(150, 16, 50, 0.2) 0%, transparent 70%);
       }
-      #sculpt {
+      #grain {
+        opacity: 0.07;
+        mix-blend-mode: overlay;
+        pointer-events: none;
+      }
+      #sculptB,
+      #sculptF {
         position: absolute;
         left: 0;
         top: 0;
         width: 1920px;
         height: 1080px;
+        pointer-events: none;
+      }
+      #numeral {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 760px;
+        height: 560px;
+        pointer-events: none;
+        opacity: 0;
       }
 
-      /* ---- typography ---- */
+      /* ---- intro typography ---- */
       #type-grp {
         position: absolute;
         left: 116px;
@@ -175,7 +193,65 @@
         box-shadow: 0 0 16px var(--ruby);
       }
 
-      /* ---- slab (reconstructed Eligibility card) ---- */
+      /* ---- giant verbs (behind the page) ---- */
+      #bigword {
+        pointer-events: none;
+      }
+      .bw {
+        position: absolute;
+        left: 84px;
+        top: 22px;
+        font-weight: 700;
+        font-size: 236px;
+        line-height: 0.9;
+        letter-spacing: -0.045em;
+        overflow: hidden;
+        padding: 0.05em 0.1em 0.03em 0;
+        white-space: nowrap;
+        text-shadow: 0 0 50px rgba(6, 4, 5, 0.9);
+      }
+      .bw > span {
+        display: inline-block;
+      }
+      .bw em {
+        font-style: normal;
+        color: var(--ruby);
+      }
+      .bw2 {
+        position: absolute;
+        left: 96px;
+        font-weight: 700;
+        font-size: 136px;
+        line-height: 0.95;
+        letter-spacing: -0.04em;
+        overflow: hidden;
+        padding: 0.05em 0.1em 0.03em 0;
+        white-space: nowrap;
+        text-shadow: 0 0 40px rgba(6, 4, 5, 0.9);
+      }
+      .bw2 > span {
+        display: inline-block;
+      }
+      #bw-enter {
+        top: 40px;
+      }
+      #bw-exit {
+        top: 178px;
+        color: var(--ruby);
+      }
+      #bw-sub {
+        position: absolute;
+        left: 100px;
+        top: 320px;
+        font-family: "JetBrains Mono", monospace;
+        font-weight: 500;
+        font-size: 24px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      /* ---- slab / page ---- */
       #slabwrap {
         position: absolute;
         inset: 0;
@@ -195,9 +271,11 @@
         inset: 0;
       }
       .card {
-        position: relative;
+        position: absolute;
+        left: 0;
+        top: 0;
         width: 100%;
-        height: 100%;
+        height: 780px;
         padding: 52px 64px 44px;
         border-radius: 30px;
         border: 1px solid var(--line);
@@ -209,18 +287,33 @@
           0 0 140px -20px rgba(109, 0, 26, 0.55);
         display: flex;
         flex-direction: column;
-        gap: 0;
+        overflow: hidden;
       }
       .card-head {
         display: flex;
         align-items: center;
         justify-content: space-between;
         padding-bottom: 28px;
+        flex: none;
       }
       .card-head h2 {
         font-size: 60px;
         font-weight: 700;
         letter-spacing: -0.03em;
+      }
+      .eyebrow {
+        font-family: "JetBrains Mono", monospace;
+        font-weight: 500;
+        font-size: 20px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 6px;
+        white-space: nowrap;
+      }
+      .eyebrow b {
+        font-weight: 500;
+        color: var(--ruby);
       }
       .chips {
         position: relative;
@@ -270,6 +363,7 @@
         align-items: center;
         min-height: 78px;
         border-top: 1px dashed rgba(255, 255, 255, 0.14);
+        flex: none;
       }
       .row .k {
         font-family: "JetBrains Mono", monospace;
@@ -298,6 +392,7 @@
         gap: 22px;
         padding: 26px 0 24px;
         border-top: 1px dashed rgba(255, 255, 255, 0.14);
+        flex: none;
       }
       .btn {
         position: relative;
@@ -335,6 +430,7 @@
         font-weight: 600;
         color: var(--muted);
         line-height: 1.35;
+        flex: none;
       }
       #seal-ico {
         position: absolute;
@@ -342,6 +438,485 @@
         top: -2px;
         width: 60px;
         height: 60px;
+      }
+
+      /* ---- tabs + panels (the real Lending V2 structure) ---- */
+      #below {
+        position: absolute;
+        left: 0;
+        top: 190px;
+        width: 100%;
+        height: 590px;
+        opacity: 0;
+      }
+      #tabs {
+        position: relative;
+        display: flex;
+        gap: 12px;
+        height: 64px;
+      }
+      .tab {
+        position: relative;
+        z-index: 1;
+        height: 64px;
+        padding: 0 32px;
+        display: flex;
+        align-items: center;
+        border-radius: 999px;
+        font-weight: 700;
+        font-size: 28px;
+        letter-spacing: -0.01em;
+        color: var(--muted);
+        border: 1.5px solid rgba(255, 255, 255, 0.1);
+      }
+      #tab-ind {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 64px;
+        width: 160px;
+        border-radius: 999px;
+        background: linear-gradient(180deg, #9a1637 0%, #6d001a 55%, #4f0012 100%);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 0 36px rgba(109, 0, 26, 0.6);
+        opacity: 0;
+      }
+      #panels {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 84px;
+        height: 500px;
+      }
+      .panel {
+        position: absolute;
+        inset: 0;
+        border-radius: 30px;
+        border: 1px solid var(--line);
+        background: linear-gradient(155deg, var(--panel-a) 0%, var(--panel-b) 100%);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.09),
+          0 0 0 1px rgba(184, 26, 52, 0.22),
+          0 60px 120px -30px rgba(0, 0, 0, 0.96),
+          0 0 120px -20px rgba(109, 0, 26, 0.5);
+        padding: 34px 52px 30px;
+        overflow: hidden;
+        opacity: 0;
+      }
+      .step {
+        position: absolute;
+        inset: 34px 52px 30px;
+      }
+      .ph {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 62px;
+        margin-bottom: 10px;
+      }
+      .ph h3 {
+        font-size: 50px;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+      }
+      .ph h3 .num {
+        display: inline-flex;
+        width: 52px;
+        height: 52px;
+        margin-right: 14px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        border: 2px solid var(--ruby);
+        color: var(--ink);
+        font-size: 30px;
+        vertical-align: middle;
+      }
+      .mchips {
+        position: relative;
+        width: 520px;
+        height: 54px;
+      }
+      .mchip {
+        position: absolute;
+        right: 0;
+        top: 0;
+        height: 54px;
+        padding: 0 24px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-radius: 999px;
+        font-family: "JetBrains Mono", monospace;
+        font-weight: 500;
+        font-size: 21px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+      .mchip i {
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        background: currentColor;
+      }
+      .mchip.valid {
+        color: var(--ground);
+        background: var(--ink);
+        box-shadow: 0 0 32px rgba(247, 243, 244, 0.3);
+      }
+      .mchip.warn {
+        color: var(--amber);
+        border: 1.5px solid rgba(224, 169, 90, 0.7);
+      }
+      .mchip.neu {
+        color: #b8aeb1;
+        border: 1.5px solid rgba(184, 174, 177, 0.45);
+      }
+      .pcopy {
+        font-size: 24px;
+        font-weight: 600;
+        line-height: 1.34;
+        color: var(--muted);
+        margin-bottom: 18px;
+      }
+      .pcopy.sm {
+        font-size: 23px;
+        margin-bottom: 14px;
+      }
+      .pcopy u {
+        text-decoration: none;
+        color: var(--ink);
+      }
+      .cols {
+        display: grid;
+        grid-template-columns: 470px 1fr;
+        column-gap: 46px;
+      }
+      .fl {
+        font-family: "JetBrains Mono", monospace;
+        font-weight: 500;
+        font-size: 20px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 10px;
+      }
+      .field {
+        position: relative;
+        height: 92px;
+        border-radius: 20px;
+        border: 1.5px solid rgba(255, 255, 255, 0.22);
+        background: rgba(3, 2, 3, 0.5);
+        display: flex;
+        align-items: center;
+        padding: 0 24px;
+        gap: 14px;
+        margin-bottom: 22px;
+      }
+      .field .val {
+        position: relative;
+        width: 170px;
+        height: 60px;
+        font-family: "JetBrains Mono", monospace;
+        font-weight: 500;
+        font-size: 48px;
+      }
+      .field .val > div {
+        position: absolute;
+        left: 0;
+        top: 0;
+        white-space: nowrap;
+      }
+      .field .val .c {
+        opacity: 0;
+      }
+      .field .sym {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 26px;
+        color: var(--muted);
+      }
+      .field .max {
+        margin-left: auto;
+        height: 46px;
+        padding: 0 20px;
+        display: flex;
+        align-items: center;
+        border-radius: 999px;
+        border: 1.5px solid rgba(255, 255, 255, 0.28);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 22px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+      .pbtn {
+        position: relative;
+        height: 84px;
+        border-radius: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 32px;
+        color: #fff;
+        background: linear-gradient(180deg, #9a1637 0%, #6d001a 55%, #4f0012 100%);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 0 40px rgba(109, 0, 26, 0.5);
+      }
+      .pbtn.alt {
+        background: transparent;
+        border: 1.5px solid rgba(255, 255, 255, 0.28);
+        box-shadow: none;
+      }
+      .pbtn > span {
+        position: absolute;
+        white-space: nowrap;
+      }
+      .rev {
+        border-radius: 22px;
+        border: 1.5px dashed rgba(255, 255, 255, 0.2);
+        padding: 20px 26px 18px;
+      }
+      .rev .rt {
+        font-family: "JetBrains Mono", monospace;
+        font-weight: 500;
+        font-size: 20px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 10px;
+      }
+      .rr {
+        display: grid;
+        grid-template-columns: 230px 1fr;
+        column-gap: 18px;
+        padding: 9px 0;
+        border-top: 1px dashed rgba(255, 255, 255, 0.12);
+        font-size: 23px;
+        font-weight: 600;
+        line-height: 1.25;
+      }
+      .rr .k {
+        color: var(--muted);
+      }
+      .rr .v {
+        position: relative;
+        min-height: 31px;
+      }
+      .rr .v > span {
+        position: absolute;
+        left: 0;
+        top: 0;
+      }
+      .rr .v > span.f {
+        position: static;
+      }
+      .steps {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 19px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--dim);
+      }
+      .steps b {
+        font-weight: 500;
+        padding: 6px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+      }
+      .callout {
+        position: absolute;
+        left: 0;
+        right: 0;
+        margin-top: 14px;
+        font-size: 22px;
+        font-weight: 600;
+        line-height: 1.3;
+      }
+      .scall {
+        position: absolute;
+        left: 1250px;
+        top: 988px;
+        width: 620px;
+        font-size: 23px;
+        font-weight: 600;
+        line-height: 1.3;
+      }
+      .scall.c1 {
+        color: var(--amber);
+      }
+      .scall.c2 {
+        color: var(--red);
+      }
+      .met {
+        display: grid;
+        grid-template-columns: 250px 1fr;
+        align-items: center;
+        height: 62px;
+        border-top: 1px dashed rgba(255, 255, 255, 0.14);
+      }
+      .met .k {
+        font-family: "JetBrains Mono", monospace;
+        font-weight: 500;
+        font-size: 20px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .met .v {
+        position: relative;
+        height: 44px;
+        font-size: 36px;
+        font-weight: 700;
+      }
+      .met .v > span {
+        position: absolute;
+        left: 0;
+        top: 0;
+        white-space: nowrap;
+      }
+      .met .nt {
+        font-size: 21px;
+        font-weight: 600;
+        color: var(--muted);
+      }
+
+      /* ---- numeral zone ---- */
+      #num-wrap {
+        pointer-events: none;
+        opacity: 0;
+      }
+      #num-label {
+        position: absolute;
+        left: 1250px;
+        top: 300px;
+        font-family: "JetBrains Mono", monospace;
+        font-weight: 500;
+        font-size: 26px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--ink);
+        white-space: nowrap;
+      }
+      #num-tag {
+        position: absolute;
+        left: 1250px;
+        top: 346px;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 20px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--dim);
+      }
+      #num-meter {
+        position: absolute;
+        left: 1250px;
+        top: 840px;
+        width: 610px;
+      }
+      #num-meter .mk {
+        font-family: "JetBrains Mono", monospace;
+        font-weight: 500;
+        font-size: 22px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 16px;
+      }
+      #num-meter .track {
+        position: relative;
+        height: 18px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.1);
+      }
+      #num-meter .fill {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--burgundy), var(--ruby));
+        transform-origin: 0 50%;
+        box-shadow: 0 0 22px rgba(196, 30, 58, 0.55);
+      }
+      #num-meter .lim {
+        position: absolute;
+        right: 0;
+        top: -14px;
+        width: 4px;
+        height: 46px;
+        border-radius: 2px;
+        background: var(--ink);
+      }
+      #num-meter .pct {
+        position: relative;
+        height: 52px;
+        margin-top: 12px;
+        font-family: "Quicksand", sans-serif;
+        font-size: 44px;
+        font-weight: 700;
+      }
+      #num-meter .pct > span {
+        position: absolute;
+        left: 0;
+        top: 0;
+      }
+      #num2-label {
+        position: absolute;
+        left: 96px;
+        top: 468px;
+        font-family: "JetBrains Mono", monospace;
+        font-weight: 500;
+        font-size: 26px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--ink);
+        opacity: 0;
+      }
+      #attach {
+        position: absolute;
+        left: 0;
+        top: 0;
+        font-family: "JetBrains Mono", monospace;
+        font-weight: 500;
+        font-size: 24px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--ink);
+        white-space: nowrap;
+        opacity: 0;
+        padding: 12px 20px;
+        border-radius: 999px;
+        border: 1.5px solid rgba(196, 30, 58, 0.8);
+        background: rgba(6, 4, 5, 0.7);
+      }
+      #linkcap {
+        position: absolute;
+        left: 100px;
+        top: 246px;
+        font-size: 42px;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        opacity: 0;
+      }
+      #linkcap em {
+        font-style: normal;
+        color: var(--ruby);
+      }
+      #ink {
+        pointer-events: none;
+      }
+      #ink path {
+        fill: none;
+        stroke: var(--ruby);
+        stroke-width: 6;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        filter: drop-shadow(0 0 10px rgba(196, 30, 58, 0.7));
       }
 
       /* ---- cursor ---- */
@@ -370,18 +945,137 @@
         margin: -60px 0 0 -60px;
         border-radius: 50%;
         border: 3px solid rgba(247, 243, 244, 0.9);
+        opacity: 0;
+      }
+
+      /* ---- montage ---- */
+      #mont {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .mw {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+      }
+      .mwb {
+        font-weight: 700;
+        line-height: 0.88;
+        letter-spacing: -0.05em;
+        white-space: nowrap;
+        text-shadow: 0 0 70px rgba(6, 4, 5, 0.9);
+      }
+      .mwb em {
+        font-style: normal;
+        color: var(--ruby);
+      }
+      .mwf {
+        margin-top: 34px;
+        height: 96px;
+        padding: 0 54px;
+        display: flex;
+        align-items: center;
+        border-radius: 28px;
+        font-size: 52px;
+        font-weight: 700;
+        color: #fff;
+        background: linear-gradient(180deg, #9a1637 0%, #6d001a 55%, #4f0012 100%);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 0 70px rgba(109, 0, 26, 0.7);
+      }
+      #mleg {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding-left: 180px;
+        gap: 46px;
+        opacity: 0;
+      }
+      .ml {
+        display: flex;
+        align-items: baseline;
+        gap: 34px;
+      }
+      .ml b {
+        font-size: 150px;
+        font-weight: 700;
+        letter-spacing: -0.045em;
+        line-height: 0.9;
+      }
+      .ml small {
+        font-family: "JetBrains Mono", monospace;
+        font-weight: 500;
+        font-size: 34px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .ml.r b {
+        color: var(--ruby);
+      }
+
+      /* ---- brand ---- */
+      #brand {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #br-word {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 650px;
+        text-align: center;
+        font-size: 210px;
+        font-weight: 700;
+        letter-spacing: -0.05em;
+        line-height: 0.9;
+      }
+      #br-line {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 880px;
+        text-align: center;
+        font-size: 50px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+      #br-line em {
+        font-style: normal;
+        color: var(--ruby);
+      }
+      #br-url {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 962px;
+        text-align: center;
+        font-family: "JetBrains Mono", monospace;
+        font-weight: 500;
+        font-size: 30px;
+        letter-spacing: 0.12em;
+      }
+      #br-disc {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 1014px;
+        text-align: center;
+        font-family: "JetBrains Mono", monospace;
+        font-weight: 400;
+        font-size: 19px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--muted);
       }
 
       /* ---- fx ---- */
-      #vignette {
-        background: radial-gradient(120% 100% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.62) 100%);
-        pointer-events: none;
-      }
-      #grain {
-        opacity: 0.07;
-        mix-blend-mode: overlay;
-        pointer-events: none;
-      }
       #flash {
         background: radial-gradient(42% 46% at 50% 50%, rgba(247, 243, 244, 0.95) 0%, rgba(196, 30, 58, 0.7) 38%, transparent 72%);
         mix-blend-mode: screen;
@@ -391,13 +1085,14 @@
       #tag {
         position: absolute;
         left: 96px;
-        bottom: 64px;
+        bottom: 34px;
         font-family: "JetBrains Mono", monospace;
         font-weight: 500;
-        font-size: 22px;
+        font-size: 20px;
         letter-spacing: 0.14em;
         text-transform: uppercase;
         color: var(--muted);
+        opacity: 0;
       }
       #fade {
         background: #000;
@@ -411,15 +1106,15 @@
       id="root"
       data-composition-id="main"
       data-start="0"
-      data-duration="5"
+      data-duration="28"
       data-width="1920"
       data-height="1080"
     >
       <audio
-        id="proof-audio"
-        src="assets/proof-audio.wav"
+        id="film-audio"
+        src="assets/film-audio.wav"
         data-start="0"
-        data-duration="5"
+        data-duration="28"
         data-track-index="1"
         data-volume="1"
       ></audio>
@@ -427,10 +1122,10 @@
       <div id="scene" class="layer">
         <div id="bg" class="layer"></div>
         <svg id="grain" class="layer" data-layout-allow-occlusion="true" width="1920" height="1080" aria-hidden="true">
-        <filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="4" stitchTiles="stitch" /></filter>
-        <rect width="100%" height="100%" filter="url(#n)" />
-      </svg>
-        <canvas id="sculpt" width="1920" height="1080" data-layout-allow-overflow="true"></canvas>
+          <filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="4" stitchTiles="stitch" /></filter>
+          <rect width="100%" height="100%" filter="url(#n)" />
+        </svg>
+        <canvas id="sculptB" width="1920" height="1080" data-layout-ignore="true" data-layout-allow-overflow="true"></canvas>
 
         <div id="type-grp">
           <div class="mask"><span id="w-borrow">BORROW</span></div>
@@ -451,12 +1146,24 @@
         </div>
       </div>
 
-      <div id="slabwrap" class="layer">
+      <div id="bigword" class="layer" data-layout-allow-occlusion="true">
+        <div class="bw" id="bw-supply"><span>SUPPLY<em>.</em></span></div>
+        <div class="bw" id="bw-coll"><span>COLLATERAL<em>.</em></span></div>
+        <div class="bw" id="bw-bor"><span>BORROW<em>.</em></span></div>
+        <div class="bw2" id="bw-enter"><span>PROOF TO ENTER.</span></div>
+        <div class="bw2" id="bw-exit"><span>NEVER TO EXIT.</span></div>
+        <div id="bw-sub">Repaying and withdrawing never need a current credential or a proof.</div>
+      </div>
+
+      <div id="slabwrap" class="layer" data-layout-allow-occlusion="true">
         <div id="slab-land">
           <div id="slab-push">
             <div class="card" id="card">
               <div class="card-head">
-                <h2>Eligibility</h2>
+                <div class="hd">
+                  <div class="eyebrow"><b>DOJANG</b> credential &nbsp;→&nbsp; <b>BOJAGI</b> proof · in your browser</div>
+                  <h2>Eligibility</h2>
+                </div>
                 <div class="chips">
                   <svg id="seal-ico" viewBox="0 0 60 60" aria-hidden="true">
                     <circle cx="30" cy="30" r="25" fill="none" stroke="#f7f3f4" stroke-width="3.5" />
@@ -464,20 +1171,18 @@
                   </svg>
                   <div class="chip demo" id="chip-a"><i></i>Action required</div>
                   <div class="chip pend" id="chip-b"><i id="chip-b-dot"></i>Verifying</div>
-                  <div class="chip valid" id="chip-c">
-                    <i></i>Proof ready
-                  </div>
+                  <div class="chip valid" id="chip-c"><i></i>Proof ready</div>
                 </div>
               </div>
-              <div class="row">
+              <div class="row" id="rows-a">
                 <div class="k">Authorization</div>
                 <div class="v"><span>GYEVO Project Test Credential, Policy 3</span></div>
               </div>
-              <div class="row">
+              <div class="row" id="rows-b">
                 <div class="k">Threshold</div>
                 <div class="v"><span>Private value of at least 1,000 test units</span></div>
               </div>
-              <div class="row">
+              <div class="row" id="rows-c">
                 <div class="k">Local proof check</div>
                 <div class="v">
                   <span id="lp-a">Not generated</span>
@@ -485,7 +1190,7 @@
                   <span id="lp-c">Verified in this browser</span>
                 </div>
               </div>
-              <div class="row">
+              <div class="row" id="rows-d">
                 <div class="k">Deployed verifier</div>
                 <div class="v">
                   <span id="dv-a">Not checked</span>
@@ -493,7 +1198,7 @@
                   <span id="dv-c">Accepted by Robinhood Lending verifier</span>
                 </div>
               </div>
-              <div class="actions">
+              <div class="actions" id="actions">
                 <div class="btn" id="btn-gen">
                   <span id="bg-a">Generate Eligibility Proof</span>
                   <span id="bg-b">Generating proof…</span>
@@ -501,42 +1206,219 @@
                 </div>
                 <div class="btn" id="btn-clear">Clear witness</div>
               </div>
-              <p class="note">A locally verified proof is not an on-chain verification.</p>
+              <p class="note" id="elig-note">A locally verified proof is not an on-chain verification.</p>
+            </div>
+
+            <div id="below">
+              <div id="tabs">
+                <div id="tab-ind"></div>
+                <div class="tab" id="tab-markets">Markets</div>
+                <div class="tab" id="tab-supply">Supply</div>
+                <div class="tab" id="tab-borrow">Borrow</div>
+                <div class="tab" id="tab-pos">Your position</div>
+              </div>
+              <div id="panels">
+                <!-- SUPPLY -->
+                <div class="panel" id="p-supply">
+                  <div class="ph">
+                    <h3>Supply rUSD2</h3>
+                    <div class="mchips"><span class="mchip valid"><i></i>Proof ready</span></div>
+                  </div>
+                  <p class="pcopy">
+                    Supplying needs your wallet, an exact-amount token approval, and a policy-3 proof; withdrawing needs neither a proof nor a current credential.
+                  </p>
+                  <div class="cols">
+                    <div class="cl">
+                      <div class="fl">Amount to supply</div>
+                      <div class="field" id="fld-sup">
+                        <div class="val" id="val-sup"><div class="c" id="sup-txt">100</div></div>
+                        <div class="sym">rUSD2</div>
+                        <div class="max">Max</div>
+                      </div>
+                      <div class="pbtn" id="btn-sup"><span>Confirm supply</span></div>
+                    </div>
+                    <div class="cr">
+                      <div class="rev" id="rev-sup">
+                        <div class="rt">Review before the wallet</div>
+                        <div class="rr" id="rs1"><span class="k">You supply</span><span class="v"><span class="f">100 rUSD2</span></span></div>
+                        <div class="rr" id="rs2"><span class="k">Authorization</span><span class="v"><span class="f">Policy-3 Project Test Credential proof, verified again by the pool</span></span></div>
+                        <div class="steps" id="st-sup"><b>Review</b><b>Approve rUSD2</b><b>Confirm</b></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- BORROW (collateral + borrow) -->
+                <div class="panel" id="p-borrow">
+                  <div class="step" id="b-coll" data-layout-allow-overlap="true">
+                    <div class="ph">
+                      <h3><span class="num">1</span>Collateral</h3>
+                      <div class="mchips">
+                        <span class="mchip neu" id="cc-a"><i></i>None deposited</span>
+                        <span class="mchip warn" id="cc-b"><i></i>Deposited, not enabled</span>
+                        <span class="mchip valid" id="cc-c"><i></i>Enabled as collateral</span>
+                      </div>
+                    </div>
+                    <p class="pcopy">
+                      Depositing collateral needs no proof. <u id="does-w">Enabling it for borrowing does</u>, because it adds borrowing capacity. Collateral stays yours: withdraw it any time the pool’s health check allows.
+                    </p>
+                    <div class="cols">
+                      <div class="cl">
+                        <div class="fl">Collateral to deposit</div>
+                        <div class="field" id="fld-dep">
+                          <div class="val" id="val-dep"><div class="c" id="dep-txt">10</div></div>
+                          <div class="sym">rCOL2</div>
+                          <div class="max">Max</div>
+                        </div>
+                        <div class="pbtn alt" id="btn-dep"><span>Confirm deposit</span></div>
+                      </div>
+                      <div class="cr">
+                        <div class="fl">Enable as collateral</div>
+                        <p class="pcopy sm">Turns your deposited collateral into borrowing capacity. Needs a locally verified policy-3 proof; the pool verifies it again.</p>
+                        <div class="pbtn" id="btn-ena"><span id="ena-a">Enable rCOL2 as collateral</span><span id="ena-b">rCOL2 counts toward your borrowing</span></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="step" id="b-borrow">
+                    <div class="ph">
+                      <h3><span class="num">2</span>Borrow rUSD2</h3>
+                      <div class="mchips">
+                        <span class="mchip valid" id="rk-a"><i></i>Within the borrowing limit</span>
+                        <span class="mchip warn" id="rk-b"><i></i>Above the borrowing limit</span>
+                      </div>
+                    </div>
+                    <div class="cols">
+                      <div class="cl">
+                        <div class="fl">Amount to borrow</div>
+                        <div class="field" id="fld-bor">
+                          <div class="val" id="val-bor">
+                            <div class="c" id="bor-3">3</div>
+                            <div class="c" id="bor-9">9</div>
+                            <div class="c" id="bor-14">14</div>
+                            <div class="c" id="bor-3b">3</div>
+                          </div>
+                          <div class="sym">rUSD2</div>
+                          <div class="max">Max</div>
+                        </div>
+                        <div class="pbtn" id="btn-bor"><span>Confirm borrow</span></div>
+                      </div>
+                      <div class="cr" style="position: relative">
+                        <div class="rev" id="rev-bor">
+                          <div class="rt">Review before the wallet</div>
+                          <div class="rr"><span class="k">You borrow</span><span class="v"><span id="rb-3">3 rUSD2</span><span id="rb-9">9 rUSD2</span><span id="rb-14">14 rUSD2</span><span id="rb-3b">3 rUSD2</span></span></div>
+                          <div class="rr"><span class="k">Health factor after (estimate)</span><span class="v"><span id="hf-3">2.40</span><span id="hf-9">1.08</span><span id="hf-14">0.92</span><span id="hf-3b">2.40</span></span></div>
+                          <div class="rr"><span class="k">Borrowing limit used after (estimate)</span><span class="v"><span id="bl-3">40%</span><span id="bl-9">92%</span><span id="bl-14">104%</span><span id="bl-3b">40%</span></span></div>
+                          <div class="rr"><span class="k">Authorization</span><span class="v"><span class="f">Policy-3 Project Test Credential proof, verified again by the pool</span></span></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- YOUR POSITION -->
+                <div class="panel" id="p-pos">
+                  <div class="ph">
+                    <h3>Your position</h3>
+                    <div class="mchips">
+                      <span class="mchip valid" id="ps-a"><i></i>Within the borrowing limit</span>
+                      <span class="mchip valid" id="ps-b"><i></i>No debt</span>
+                    </div>
+                  </div>
+                  <div class="cols">
+                    <div class="cl">
+                      <div class="met"><span class="k">Your rUSD2 debt</span><span class="v"><span id="debt-a">3 rUSD2</span><span id="debt-b">0 rUSD2</span></span></div>
+                      <div class="met"><span class="k">Health factor</span><span class="v"><span id="phf-a">2.40</span><span id="phf-b">No debt</span></span></div>
+                      <p class="pcopy sm" style="margin: 10px 0 6px">Below 1.0 the position can be liquidated.</p>
+                      <div class="fl" style="margin-top: 14px">Amount to repay</div>
+                      <div class="field" id="fld-rep" style="margin-bottom: 0">
+                        <div class="val" id="val-rep" style="width: 70px"><div class="c" id="rep-txt">3</div></div>
+                        <div class="sym">rUSD2</div>
+                        <div class="max" id="max-rep">Repay in full</div>
+                      </div>
+                    </div>
+                    <div class="cr">
+                      <div class="rev" id="rev-rep">
+                        <div class="rt">Review before the wallet</div>
+                        <div class="rr" id="rp1"><span class="k">You repay in full</span><span class="v"><span class="f">3 rUSD2 and any interest accrued until it confirms</span></span></div>
+                        <div class="rr" id="rp2"><span class="k">Needs a proof or credential</span><span class="v"><span class="f" id="rep-no">No. Repaying is always open.</span></span></div>
+                      </div>
+                      <div class="pbtn" id="btn-rep" style="margin-top: 22px"><span>Confirm repayment</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      <canvas id="sculptF" width="1920" height="1080" data-layout-ignore="true" data-layout-allow-overflow="true"></canvas>
+
+      <div id="num-wrap" class="layer">
+        <div id="num-label">Health factor after (estimate)</div>
+        <div id="num-tag">Illustrative estimate</div>
+        <div id="num-meter">
+          <div class="mk">Borrowing limit used after (estimate)</div>
+          <div class="track"><div class="fill" id="m-fill"></div><i class="lim" id="m-lim"></i></div>
+          <div class="pct"><span id="pc-3">40%</span><span id="pc-9">92%</span><span id="pc-14">104%</span><span id="pc-3b">40%</span></div>
+        </div>
+        <p class="scall c1" id="call-caution">This uses 92% of your borrowing limit. A small price move could make the position liquidatable.</p>
+        <p class="scall c2" id="call-rej">This would take debt above your borrowing limit. The pool will reject it.</p>
+      </div>
+      <div id="num2-label">Your rUSD2 debt</div>
+      <canvas id="numeral" width="760" height="560" data-layout-ignore="true" data-layout-allow-overflow="true"></canvas>
+
+      <div id="attach">Policy 3 proof attached</div>
+      <div id="linkcap">Supply and borrow, <em>linked by a proof.</em></div>
+
+      <svg id="ink" class="layer" width="1920" height="1080" viewBox="0 0 1920 1080" aria-hidden="true"></svg>
 
       <svg id="cursor" viewBox="0 0 56 56" aria-hidden="true">
         <path d="M6 4 L6 40 L15 32 L22 48 L30 44 L23 29 L36 28 Z" fill="#f7f3f4" stroke="#060405" stroke-width="3" stroke-linejoin="round" />
       </svg>
       <div id="ripple-wrap"><div id="ripple"></div></div>
 
+      <div id="mont" class="layer">
+        <div class="mw" id="mw1"><div class="mwb" style="font-size: 410px">SUPPLY<em>.</em></div><div class="mwf">Confirm supply</div></div>
+        <div class="mw" id="mw2"><div class="mwb" style="font-size: 262px">COLLATERAL<em>.</em></div><div class="mwf">Enable rCOL2 as collateral</div></div>
+        <div class="mw" id="mw3"><div class="mwb" style="font-size: 410px">BORROW<em>.</em></div><div class="mwf">Confirm borrow</div></div>
+        <div class="mw" id="mw4"><div class="mwb" style="font-size: 430px">REPAY<em>.</em></div><div class="mwf">Repay in full · No proof needed</div></div>
+        <div id="mleg">
+          <div class="ml"><b>PUBLIC</b><small>wallets · amounts · positions</small></div>
+          <div class="ml r"><b>PRIVATE</b><small>only the eligibility value</small></div>
+        </div>
+      </div>
+
+      <div id="brand" class="layer">
+        <div id="br-word">GYEVO</div>
+        <div id="br-line">Borrow with a proof, <em>not a disclosure.</em></div>
+        <div id="br-url">gyevo.tech</div>
+        <div id="br-disc">Robinhood Testnet demonstration · Synthetic test assets · Mainnet Lending paused · Not audited · Independent project</div>
+      </div>
+
       <div id="flash" class="layer" data-layout-allow-occlusion="true"></div>
-            <div id="tag">Illustrative · reconstructed UI · Robinhood Testnet</div>
+      <div id="tag">Illustrative · reconstructed UI · Robinhood Testnet</div>
       <div id="fade" class="layer" data-layout-allow-occlusion="true"></div>
     </div>
 
     <script>
-      // ------------------------------------------------------------------
-      // Cue grid — identical to scripts/synth-proof-audio.py (120 BPM)
-      // ------------------------------------------------------------------
-      const T = { hit: 0, withIn: 0.5, strike: 1.0, slam: 1.5, legend: 2.0, lock: 3.0, slab: 3.5, click: 4.0, ready: 4.5, end: 5.0 };
-
-      const PAL = {
-        white: [250, 247, 248],
-        silver: [205, 196, 200],
-        ruby: [196, 30, 58],
-        garnet: [206, 38, 66],
+      // ==================================================================
+      // Cue grid — identical to scripts/synth-film-audio.py (120 BPM)
+      // ==================================================================
+      const T = {
+        // approved 5s opening
+        hit: 0, withIn: 0.5, strike: 1.0, slam: 1.5, legend: 2.0, lock: 3.0, slab: 3.5, click: 4.0, ready: 4.5,
+        // product
+        collapse: 5.5, tabSupply: 6.0, supply: 6.5, supType: 7.25, supReview: 8.0, supConfirm: 9.0,
+        coll: 10.0, depType: 10.5, depConfirm: 11.0, enable: 12.0, link: 13.0,
+        borrow: 14.0, bor3: 14.625, bor9: 15.5, caution: 16.0, bor14: 16.5, reject: 17.0, bor3b: 18.0, borConfirm: 19.0,
+        enter: 20.0, exit: 21.0, repMax: 22.0, repConfirm: 22.75,
+        mont: 23.5, legend2: 25.5, brand: 26.0, end: 28.0,
       };
 
-      // ------------------------------------------------------------------
-      // Glyph sculpture — pure functions of S (seekable). Port of the
-      // shape maths in src/components/landing/glyph-solid.tsx (read-only).
-      // ------------------------------------------------------------------
-      const N = 720;
-      const CORE = 150;
       const GLYPHS = "0123456789ABCDEF";
+      const PAL = { white: [250, 247, 248], silver: [205, 196, 200], ruby: [196, 30, 58], garnet: [206, 38, 66] };
       const rnd = (n) => {
         const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
         return x - Math.floor(x);
@@ -544,21 +1426,35 @@
       const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
       const ease = (p) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
 
+      // ==================================================================
+      // Glyph sculpture — pure functions of S (seekable).
+      // Port of the shape maths in src/components/landing/glyph-solid.tsx.
+      //   state 0 sphere (exposed) -> 1 seal (core + ring) -> 2 supply ring
+      //   (upright, core kept) -> 3 two linked rings (supply + borrow)
+      // ==================================================================
+      const N = 720;
+      const CORE = 150;
+      const PARKED = 210;
       const isCore = new Uint8Array(N);
-      for (let i = 0; i < N; i++) isCore[i] = Math.floor(((i + 1) * CORE) / N) > Math.floor((i * CORE) / N) ? 1 : 0;
-
+      const role = new Uint8Array(N); // 0 ringA, 1 core, 2 parked
       const sph = new Float32Array(N * 3);
       const seal = new Float32Array(N * 3);
-      const ringS = new Uint8Array(N); // strand index for ring points
-      const ringTh = new Float32Array(N); // base angle for ring points
-      const colorIdx = new Uint8Array(N); // 0 white 1 silver 2 ruby 3 garnet
+      const ringS = new Uint8Array(N);
+      const ringTh = new Float32Array(N);
+      const aTh = new Float32Array(N);
+      const aS = new Uint8Array(N);
+      const bTh = new Float32Array(N);
+      const bS = new Uint8Array(N);
+      const park = new Float32Array(N * 3);
+      const baseCol = new Uint8Array(N);
 
       (function build() {
-        let ci = 0;
-        let ri = 0;
+        for (let i = 0; i < N; i++) isCore[i] = Math.floor(((i + 1) * CORE) / N) > Math.floor((i * CORE) / N) ? 1 : 0;
+        const RINGPTS = N - CORE;
+        let ci = 0, ri = 0, ai = 0, bi = 0;
         const TILT = 0.2;
-        const tc = Math.cos(TILT);
-        const ts = Math.sin(TILT);
+        const tc = Math.cos(TILT), ts = Math.sin(TILT);
+        const A_COUNT = RINGPTS - PARKED; // 360
         for (let i = 0; i < N; i++) {
           const y = 1 - ((i + 0.5) * 2) / N;
           const r = Math.sqrt(1 - y * y);
@@ -572,9 +1468,8 @@
             const j = (ci / 6) | 0;
             const a = (j % 5) / 2 - 1;
             const b = ((j / 5) | 0) / 2 - 1;
-            const h = 0.36;
-            const u = a * h;
-            const v = b * h;
+            const h = 0.4;
+            const u = a * h, v = b * h;
             let x, yy, z;
             switch (face) {
               case 0: x = h; yy = u; z = v; break;
@@ -584,169 +1479,282 @@
               case 4: x = u; yy = v; z = h; break;
               default: x = u; yy = v; z = -h;
             }
-            seal[i * 3] = x;
-            seal[i * 3 + 1] = yy;
-            seal[i * 3 + 2] = z;
-            colorIdx[i] = rnd(i * 5) > 0.82 ? 3 : 2;
+            seal[i * 3] = x; seal[i * 3 + 1] = yy; seal[i * 3 + 2] = z;
+            baseCol[i] = rnd(i * 5) > 0.82 ? 3 : 2;
+            role[i] = 1;
             ci++;
           } else {
             const s = ri % 3;
             const idx = (ri / 3) | 0;
-            const per = (N - CORE) / 3;
             ringS[i] = s;
-            ringTh[i] = (idx / per) * Math.PI * 2 + s * 0.5;
+            ringTh[i] = (idx / (RINGPTS / 3)) * Math.PI * 2 + s * 0.5;
             const rr = 1 + (s - 1) * 0.06;
             const x0 = Math.cos(ringTh[i]) * rr;
             const y0 = (s - 1) * 0.05;
             seal[i * 3] = x0 * tc - y0 * ts;
             seal[i * 3 + 1] = x0 * ts + y0 * tc;
             seal[i * 3 + 2] = Math.sin(ringTh[i]) * rr;
-            colorIdx[i] = rnd(i * 7) > 0.78 ? 0 : 1;
+            baseCol[i] = rnd(i * 7) > 0.78 ? 0 : 1;
+            const isPark = Math.floor((ri + 1) * PARKED / RINGPTS) > Math.floor(ri * PARKED / RINGPTS);
+            if (isPark) {
+              role[i] = 2;
+            } else {
+              role[i] = 0;
+              aS[i] = ai % 3;
+              aTh[i] = ((ai / 3) | 0) / (A_COUNT / 3) * Math.PI * 2 + aS[i] * 0.5;
+              ai++;
+            }
             ri++;
           }
+          if (role[i] !== 0) {
+            bS[i] = bi % 3;
+            bTh[i] = ((bi / 3) | 0) / ((CORE + PARKED) / 3) * Math.PI * 2 + bS[i] * 0.5;
+            bi++;
+          }
+          // parked points collapse into the core
+          park[i * 3] = (rnd(i * 2.1) - 0.5) * 0.18;
+          park[i * 3 + 1] = (rnd(i * 3.3) - 0.5) * 0.18;
+          park[i * 3 + 2] = (rnd(i * 4.7) - 0.5) * 0.18;
         }
       })();
 
-      // the one ruby character we annotate on the exposed sphere
       let LEAD = 0;
       (function pick() {
         let best = 1e9;
         for (let i = 0; i < N; i++) {
           if (!isCore[i]) continue;
-          const dx = sph[i * 3] - 0.62;
-          const dy = sph[i * 3 + 1] + 0.3;
-          const dz = sph[i * 3 + 2] - 0.72;
+          const dx = sph[i * 3] - 0.62, dy = sph[i * 3 + 1] + 0.3, dz = sph[i * 3 + 2] - 0.72;
           const d = dx * dx + dy * dy + dz * dz;
-          if (d < best) {
-            best = d;
-            LEAD = i;
-          }
+          if (d < best) { best = d; LEAD = i; }
         }
       })();
 
       const S = {
-        t: 0,
-        morph: 0,
-        spin: 0,
-        yaw: 0.55,
-        pitch: 0.18,
-        cam: 7.4,
-        cx: 1250,
-        cy: 548,
-        R: 420,
-        alpha: 0,
-        leader: 0,
+        t: 0, morph: 0, m12: 0, m23: 0, spin: 0, yaw: 0.55, pitch: 0.18, cam: 7.4,
+        cx: 1250, cy: 548, R: 420, alpha: 0, leader: 0, split: 0, frontA: 0.6, pulse: 0,
       };
 
-      const cv = document.getElementById("sculpt");
-      const ctx = cv.getContext("2d");
-      const F = 5; // focal length: depth 0 plane has scale 1 when cam = 5
+      const cvB = document.getElementById("sculptB");
+      const cvF = document.getElementById("sculptF");
+      const ctxB = cvB.getContext("2d");
+      const ctxF = cvF.getContext("2d");
+      const F = 5;
 
-      function draw() {
-        ctx.clearRect(0, 0, 1920, 1080);
+      function drawSculpt() {
+        ctxB.clearRect(0, 0, 1920, 1080);
+        ctxF.clearRect(0, 0, 1920, 1080);
         if (S.alpha <= 0.002) return;
-        const cy_ = Math.cos(S.yaw), sy_ = Math.sin(S.yaw);
-        const cp_ = Math.cos(S.pitch), sp_ = Math.sin(S.pitch);
+        const cyw = Math.cos(S.yaw), syw = Math.sin(S.yaw);
+        const cpt = Math.cos(S.pitch), spt = Math.sin(S.pitch);
         const pts = [];
         const flick = Math.floor(S.t * 14);
+        const Rr = S.R * (1 + 0.05 * S.pulse);
         for (let i = 0; i < N; i++) {
-          const delay = isCore[i] ? rnd(i * 3.1) * 0.22 : 0.1 + rnd(i * 3.1) * 0.3;
-          const e = ease(clamp01((S.morph - delay) / (1 - 0.4)));
-          let sx = sph[i * 3], sy = sph[i * 3 + 1], sz = sph[i * 3 + 2];
+          const rl = role[i];
+          const d1 = isCore[i] ? rnd(i * 3.1) * 0.22 : 0.1 + rnd(i * 3.1) * 0.3;
+          const e01 = ease(clamp01((S.morph - d1) / 0.6));
+          const e12 = ease(clamp01((S.m12 - rnd(i * 1.9) * 0.3) / 0.7));
+          const e23 = ease(clamp01((S.m23 - rnd(i * 2.9) * 0.3) / 0.7));
+
+          // state 0 -> 1
+          const sx = sph[i * 3], sy = sph[i * 3 + 1], sz = sph[i * 3 + 2];
           let tx = seal[i * 3], ty = seal[i * 3 + 1], tz = seal[i * 3 + 2];
-          if (!isCore[i]) {
-            // ring spins around its own axis
+          if (rl !== 1) {
             const th = ringTh[i] + S.spin * (ringS[i] === 1 ? 1 : 0.92);
             const rr = 1 + (ringS[i] - 1) * 0.06;
             const x0 = Math.cos(th) * rr, y0 = (ringS[i] - 1) * 0.05;
-            tx = x0 * Math.cos(0.2) - y0 * Math.sin(0.2);
-            ty = x0 * Math.sin(0.2) + y0 * Math.cos(0.2);
+            tx = x0 * 0.98 - y0 * 0.199;
+            ty = x0 * 0.199 + y0 * 0.98;
             tz = Math.sin(th) * rr;
           }
-          let x = sx + (tx - sx) * e;
-          let y = sy + (ty - sy) * e;
-          let z = sz + (tz - sz) * e;
-          const bump = Math.sin(Math.PI * e);
-          if (isCore[i]) {
-            const k = 1 - 0.18 * bump;
-            x *= k; y *= k; z *= k;
-          } else {
-            const k = 1 + 0.32 * bump;
-            x *= k; y *= k; z *= k;
+          let x = sx + (tx - sx) * e01;
+          let y = sy + (ty - sy) * e01;
+          let z = sz + (tz - sz) * e01;
+          const bump = Math.sin(Math.PI * e01);
+          const k01 = rl === 1 ? 1 - 0.18 * bump : 1 + 0.32 * bump;
+          x *= k01; y *= k01; z *= k01;
+
+          // state 1 -> 2 : supply ring upright, core kept, parked collapse
+          if (e12 > 0) {
+            let px, py, pz;
+            if (rl === 0) {
+              const th = aTh[i] + S.spin;
+              const rr = 0.98 + (aS[i] - 1) * 0.05;
+              px = Math.cos(th) * rr; py = Math.sin(th) * rr; pz = (aS[i] - 1) * 0.05;
+            } else if (rl === 1) {
+              px = seal[i * 3] * 0.9; py = seal[i * 3 + 1] * 0.9; pz = seal[i * 3 + 2] * 0.9;
+            } else {
+              px = park[i * 3]; py = park[i * 3 + 1]; pz = park[i * 3 + 2];
+            }
+            x += (px - x) * e12; y += (py - y) * e12; z += (pz - z) * e12;
           }
-          // yaw (Y) then pitch (X)
-          let x1 = x * cy_ + z * sy_;
-          let z1 = -x * sy_ + z * cy_;
-          let y1 = y * cp_ - z1 * sp_;
-          let z2 = y * sp_ + z1 * cp_;
+
+          // state 2 -> 3 : linked rings
+          if (e23 > 0) {
+            let qx, qy, qz;
+            if (rl === 0) {
+              const th = aTh[i] + S.spin;
+              const rr = 0.78 + (aS[i] - 1) * 0.05;
+              qx = -0.39 + Math.cos(th) * rr; qy = Math.sin(th) * rr; qz = (aS[i] - 1) * 0.04;
+            } else {
+              const th = bTh[i] - S.spin * 0.8;
+              const rr = 0.78 + (bS[i] - 1) * 0.05;
+              qx = 0.39 + Math.cos(th) * rr; qy = (bS[i] - 1) * 0.04; qz = Math.sin(th) * rr;
+            }
+            x += (qx - x) * e23; y += (qy - y) * e23; z += (qz - z) * e23;
+          }
+
+          const x1 = x * cyw + z * syw;
+          const z1 = -x * syw + z * cyw;
+          const y1 = y * cpt - z1 * spt;
+          const z2 = y * spt + z1 * cpt;
           const d = S.cam + z2;
           if (d < 0.22) continue;
           const sc = F / d;
-          pts.push({ i, sx: S.cx + x1 * S.R * sc, sy: S.cy + y1 * S.R * sc, sc, z: z2 });
+          let vis = 1;
+          if (rl === 2) vis = (1 - e12) + e12 * e23;
+          if (vis < 0.02) continue;
+          pts.push({ i, sx: S.cx + x1 * Rr * sc, sy: S.cy + y1 * Rr * sc, sc, z: z2, vis, e23, rl });
         }
         pts.sort((a, b) => b.z - a.z);
         const coreFade = clamp01((S.cam - 0.7) / 1.3);
         for (let k = 0; k < pts.length; k++) {
           const p = pts[k];
           const i = p.i;
-          let ci = colorIdx[i];
-          if (!isCore[i] && S.morph < 0.999) {
-            // not yet part of the ring: tinted like a public character
-            ci = colorIdx[i];
-          }
-          if (isCore[i] && S.morph < 0.35) {
-            // exposed private characters flicker
-            const g = (i * 7 + flick * 3) % 16;
-            p.g = g;
-          } else {
-            p.g = (i * 5) % 16;
-          }
+          let g;
+          if (isCore[i] && S.morph < 0.35) g = (i * 7 + flick * 3) % 16;
+          else g = (i * 5) % 16;
           const depth = clamp01(0.5 - p.z * 0.5);
-          let a = (0.3 + 0.7 * depth) * S.alpha;
-          if (isCore[i]) a *= 0.4 + 0.6 * coreFade;
+          let a = (0.3 + 0.7 * depth) * S.alpha * p.vis;
+          if (p.rl === 1) a *= 0.4 + 0.6 * coreFade;
           const size = Math.max(6, 25 * p.sc);
           if (p.sx < -80 || p.sx > 2000 || p.sy < -80 || p.sy > 1160) continue;
-          const c = PAL[["white", "silver", "ruby", "garnet"][ci]];
-          // far characters sink into burgundy
+          let c = PAL[["white", "silver", "ruby", "garnet"][baseCol[i]]];
+          if (p.rl === 2) {
+            // parked points turn ruby as they become the borrow ring
+            const w = p.e23;
+            c = [c[0] + (196 - c[0]) * w, c[1] + (30 - c[1]) * w, c[2] + (58 - c[2]) * w];
+          }
           const m = 1 - depth;
-          const r = Math.round(c[0] * (1 - 0.35 * m) + 109 * 0.35 * m);
-          const gC = Math.round(c[1] * (1 - 0.35 * m));
-          const bC = Math.round(c[2] * (1 - 0.35 * m) + 26 * 0.35 * m);
-          ctx.fillStyle = `rgba(${r},${gC},${bC},${a.toFixed(3)})`;
+          const pu = S.pulse * 0.5;
+          let r = c[0] * (1 - 0.35 * m) + 109 * 0.35 * m;
+          let gg = c[1] * (1 - 0.35 * m);
+          let bb = c[2] * (1 - 0.35 * m) + 26 * 0.35 * m;
+          r += (255 - r) * pu; gg += (255 - gg) * pu; bb += (255 - bb) * pu;
+          const front = S.split > 0.5 && p.z <= 0;
+          const ctx = front ? ctxF : ctxB;
+          if (front) a *= S.frontA;
+          ctx.fillStyle = `rgba(${Math.round(r)},${Math.round(gg)},${Math.round(bb)},${a.toFixed(3)})`;
           ctx.font = `500 ${size.toFixed(1)}px "JetBrains Mono"`;
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
-          ctx.fillText(GLYPHS[p.g], p.sx, p.sy);
+          ctx.fillText(GLYPHS[g], p.sx, p.sy);
         }
 
-        // leader line + label on one exposed private character
         if (S.leader > 0.01) {
           const L = pts.find((q) => q.i === LEAD);
           if (L) {
             const ey = L.sy + (96 - L.sy) * S.leader;
             const ex = L.sx - 420 * S.leader;
-            ctx.strokeStyle = `rgba(196,30,58,${S.leader})`;
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(L.sx, L.sy);
-            ctx.lineTo(L.sx, ey);
-            ctx.lineTo(ex, ey);
-            ctx.stroke();
-            ctx.fillStyle = `rgba(247,243,244,${S.leader})`;
-            ctx.font = '500 26px "JetBrains Mono"';
-            ctx.textAlign = "left";
-            ctx.textBaseline = "bottom";
-            ctx.fillText("PRIVATE VALUE · EXPOSED", ex, ey - 14);
-            ctx.beginPath();
-            ctx.arc(L.sx, L.sy, 22 * L.sc, 0, Math.PI * 2);
-            ctx.stroke();
+            ctxB.strokeStyle = `rgba(196,30,58,${S.leader})`;
+            ctxB.lineWidth = 3;
+            ctxB.beginPath();
+            ctxB.moveTo(L.sx, L.sy);
+            ctxB.lineTo(L.sx, ey);
+            ctxB.lineTo(ex, ey);
+            ctxB.stroke();
+            ctxB.fillStyle = `rgba(247,243,244,${S.leader})`;
+            ctxB.font = '500 26px "JetBrains Mono"';
+            ctxB.textAlign = "left";
+            ctxB.textBaseline = "bottom";
+            ctxB.fillText("PRIVATE VALUE · EXPOSED", ex, ey - 14);
+            ctxB.beginPath();
+            ctxB.arc(L.sx, L.sy, 22 * L.sc, 0, Math.PI * 2);
+            ctxB.stroke();
           }
         }
       }
 
-      // ------------------------------------------------------------------
-      // Timeline
-      // ------------------------------------------------------------------
+      // ==================================================================
+      // Numerals built out of the same hex characters
+      // ==================================================================
+      const NUMM = 560;
+      const NUM_KEYS = ["src", "2.40", "1.08", "0.92", "2.40", "3", "0"];
+      const NUM_FS = { "2.40": 300, "1.08": 300, "0.92": 300, "3": 380, "0": 380 };
+      const NUM_T = {};
+      const NS = { u: 0, vis: 0, x: 380, y: 290, ruby: 0 };
+      const nctx = document.getElementById("numeral").getContext("2d");
+
+      function sampleStr(str, fs) {
+        const W = 1000, H = 560;
+        const c = document.createElement("canvas");
+        c.width = W; c.height = H;
+        const g = c.getContext("2d");
+        g.fillStyle = "#fff";
+        g.font = `700 ${fs}px "Quicksand"`;
+        g.textAlign = "center";
+        g.textBaseline = "alphabetic";
+        g.fillText(str, W / 2, H / 2 + fs * 0.34);
+        const d = g.getImageData(0, 0, W, H).data;
+        let cand = [];
+        for (const st of [9, 8, 7, 6, 5, 4]) {
+          cand = [];
+          for (let y = 0; y < H; y += st) for (let x = 0; x < W; x += st) if (d[(y * W + x) * 4 + 3] > 140) cand.push([x - W / 2, y - H / 2]);
+          if (cand.length >= NUMM * 1.15) break;
+        }
+        const order = cand.map((_, i) => i).sort((a, b) => rnd(a * 1.37 + 5) - rnd(b * 1.37 + 5));
+        const pick = [];
+        for (let i = 0; i < NUMM; i++) {
+          const q = cand[order[i % order.length]];
+          pick.push(i < order.length ? q : [q[0] + (rnd(i) - 0.5) * 6, q[1] + (rnd(i * 2) - 0.5) * 6]);
+        }
+        pick.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+        const out = new Float32Array(NUMM * 2);
+        pick.forEach((p, i) => { out[i * 2] = p[0]; out[i * 2 + 1] = p[1]; });
+        return out;
+      }
+
+      function drawNumeral() {
+        nctx.clearRect(0, 0, 760, 560);
+        if (NS.vis <= 0.003) return;
+        const last = NUM_KEYS.length - 1;
+        const a = Math.min(Math.floor(NS.u), last);
+        const b = Math.min(a + 1, last);
+        const p = NS.u - a;
+        const A = NUM_T[NUM_KEYS[a]];
+        const B = NUM_T[NUM_KEYS[b]];
+        const flick = Math.floor(S.t * 18);
+        nctx.textAlign = "center";
+        nctx.textBaseline = "middle";
+        nctx.font = '500 15px "JetBrains Mono"';
+        for (let i = 0; i < NUMM; i++) {
+          const dl = rnd(i * 1.7) * 0.35;
+          const e = ease(clamp01((p - dl) / 0.65));
+          let x = A[i * 2] + (B[i * 2] - A[i * 2]) * e;
+          let y = A[i * 2 + 1] + (B[i * 2 + 1] - A[i * 2 + 1]) * e;
+          const arc = Math.sin(Math.PI * e) * 90 * (rnd(i * 2.3) - 0.5) * 2;
+          x += arc * 0.7;
+          y += arc * 0.45;
+          const flying = e > 0.02 && e < 0.98;
+          const g = flying ? (i * 3 + flick) % 16 : (i * 7) % 16;
+          const w = NS.ruby;
+          const r = Math.round(250 + (196 - 250) * w);
+          const gg = Math.round(247 + (30 - 247) * w);
+          const bb = Math.round(248 + (58 - 248) * w);
+          const al = NS.vis * (flying ? 0.75 : 0.95);
+          nctx.fillStyle = `rgba(${r},${gg},${bb},${al.toFixed(3)})`;
+          nctx.fillText(GLYPHS[g], NS.x + x, NS.y + y);
+        }
+      }
+
+      function drawAll() {
+        drawSculpt();
+        drawNumeral();
+      }
+
+      // ==================================================================
+      // Build the timeline (after fonts are ready)
+      // ==================================================================
       Promise.all([
         document.fonts.load('500 24px "JetBrains Mono"'),
         document.fonts.load('400 24px "JetBrains Mono"'),
@@ -754,23 +1762,65 @@
         document.fonts.load('600 34px "Quicksand"'),
       ]).then(() => {
         const tl = gsap.timeline({ paused: true });
-        tl.eventCallback("onUpdate", draw);
+        tl.eventCallback("onUpdate", drawAll);
 
-        // initial states (all via explicit fromTo/set so seeks are deterministic)
-        gsap.set("#slab-land", { transformPerspective: 2000 });
+        // numerals (needs fonts) + typed characters
+        NUM_KEYS.forEach((k) => {
+          if (k !== "src" && !NUM_T[k]) NUM_T[k] = sampleStr(k, NUM_FS[k]);
+        });
+
+        // ---- geometry of the page, per beat (stage coordinates) ----
+        const BT = {
+          elig: { s: 1, x: 0, y: 0 },
+          sup: { s: 0.96, x: 60, y: 128 },
+          col: { s: 0.96, x: 0, y: 128 },
+          bor: { s: 0.88, x: -320, y: 115 },
+          rep: { s: 0.86, x: 260, y: 140 },
+        };
+        const pushEl = document.getElementById("slab-push");
+        const land = document.getElementById("slab-land");
+        function local(el) {
+          let x = 0, y = 0, e = el;
+          while (e && e !== pushEl) { x += e.offsetLeft; y += e.offsetTop; e = e.offsetParent; }
+          return { x, y, w: el.offsetWidth, h: el.offsetHeight };
+        }
+        function stage(el, beat, fx = 0.5, fy = 0.5) {
+          const l = local(el);
+          const b = BT[beat];
+          return {
+            x: 960 + b.x + (l.x + l.w * fx - 680) * b.s,
+            y: 540 + b.y + (l.y + l.h * fy - 390) * b.s,
+            w: l.w * b.s,
+            h: l.h * b.s,
+          };
+        }
+
+        // ---- initial states ----
+        gsap.set(land, { transformPerspective: 2000, filter: "blur(0px)" });
         gsap.set("#cursor", { x: 1640, y: 250, opacity: 0 });
-                gsap.set("#strike", { scaleX: 0, rotation: -1.2 });
+        gsap.set("#strike", { scaleX: 0, rotation: -1.2 });
         gsap.set(["#chip-b", "#chip-c", "#lp-b", "#lp-c", "#dv-b", "#dv-c", "#bg-b", "#bg-c"], { opacity: 0 });
         gsap.set("#seal-ico", { opacity: 0, scale: 0.6, transformOrigin: "50% 50%" });
-        gsap.set("#tag", { opacity: 0 });
+        gsap.set(["#cc-b", "#cc-c", "#ena-b", "#rk-b", "#ps-b", "#phf-b", "#debt-b", "#call-caution", "#call-rej"], { opacity: 0 });
+        gsap.set(["#rb-9", "#rb-14", "#rb-3b", "#hf-9", "#hf-14", "#hf-3b", "#bl-9", "#bl-14", "#bl-3b", "#pc-9", "#pc-14", "#pc-3b"], { opacity: 0 });
+        gsap.set("#b-borrow", { yPercent: 108 });
+        gsap.set("#rev-bor", { opacity: 0 });
+        gsap.set(["#rs1", "#rs2", "#st-sup", "#rp1", "#rp2", "#btn-rep"], { opacity: 0 });
+        gsap.set(["#bw-supply", "#bw-coll", "#bw-bor", "#bw-enter", "#bw-exit", "#bw-sub"], { opacity: 0 });
+        gsap.set(["#bw-supply > span", "#bw-coll > span", "#bw-bor > span", "#bw-enter > span", "#bw-exit > span"], { yPercent: 115 });
+        gsap.set(["#p-supply", "#p-borrow", "#p-pos"], { opacity: 0 });
+        gsap.set(["#mw1", "#mw2", "#mw3", "#mw4"], { opacity: 0 });
+        gsap.set("#m-fill", { scaleX: 0.0 });
 
-        // --- clock proxy (used for flicker only)
-        tl.to(S, { t: 5, duration: 5, ease: "none" }, 0);
+        // ---- clock ----
+        tl.to(S, { t: 28, duration: 28, ease: "none" }, 0);
 
-        // --- sculpture: appear, orbit, seal, lock, fly through
+        // ==============================================================
+        // 0.0–5.0  APPROVED OPENING (unchanged)
+        // ==============================================================
         tl.fromTo(S, { alpha: 0, cam: 7.4 }, { alpha: 1, cam: 5, duration: 0.4, ease: "expo.out" }, T.hit);
         tl.to(S, { yaw: 1.25, pitch: 0.1, duration: 1.5, ease: "none" }, 0);
-        tl.fromTo(S, { leader: 0 }, { leader: 1, duration: 0.3, ease: "power3.out" }, 0.55);
+        tl.fromTo(S, { leader: 0 }, { leader: 1, duration: 0.3, ease: "power3.out", immediateRender: false }, 0.55);
         tl.to(S, { leader: 0, duration: 0.2, ease: "power2.in" }, 1.3);
 
         tl.to(S, { morph: 1, duration: 1.4, ease: "power2.inOut" }, T.slam);
@@ -778,11 +1828,9 @@
         tl.to(S, { cx: 960, R: 380, duration: 0.9, ease: "power3.inOut" }, T.slam + 0.1);
         tl.to(S, { spin: Math.PI * 2.2, duration: 1.5, ease: "power1.inOut" }, T.slam);
 
-        // lock punch + flythrough: camera dollies through the ring aperture
         tl.to(S, { cam: 0.55, pitch: -1.5, duration: 0.75, ease: "power3.in" }, T.lock);
         tl.to(S, { alpha: 0, duration: 0.2, ease: "power1.in" }, T.lock + 0.55);
 
-        // --- type: BORROW, WITH A DISCLOSURE (strike) -> PROOF.
         tl.fromTo("#w-borrow", { yPercent: 118, rotation: 4 }, { yPercent: 0, rotation: 0, duration: 0.38, ease: "expo.out" }, 0.1);
         tl.fromTo("#w-with-in", { yPercent: 115 }, { yPercent: 0, duration: 0.42, ease: "power4.out" }, T.withIn);
         tl.to("#strike", { scaleX: 1, duration: 0.22, ease: "power3.out" }, T.strike);
@@ -794,72 +1842,70 @@
           { yPercent: 0, scale: 1, opacity: 1, duration: 0.3, ease: "expo.out" },
           T.slam
         );
-        // slam shake on the whole scene
         tl.fromTo("#scene", { x: 0, y: 0 }, { x: 9, y: -7, duration: 0.04, ease: "none" }, T.slam);
         tl.to("#scene", { x: -7, y: 6, duration: 0.05, ease: "none" }, T.slam + 0.04);
         tl.to("#scene", { x: 4, y: -3, duration: 0.06, ease: "none" }, T.slam + 0.09);
         tl.to("#scene", { x: 0, y: 0, duration: 0.1, ease: "power2.out" }, T.slam + 0.15);
 
-        // type group steps back to the top-left corner while the seal forms, then clears for the dolly
         tl.to("#type-grp", { scale: 0.3, x: -20, y: -250, duration: 0.6, ease: "expo.inOut" }, 2.0);
         tl.to("#type-grp", { opacity: 0, duration: 0.25, ease: "power1.in" }, T.lock + 0.05);
 
-        // legend
         tl.fromTo(".leg", { opacity: 0, x: -34 }, { opacity: 1, x: 0, duration: 0.35, ease: "power3.out", stagger: 0.12 }, T.legend);
         tl.to("#legend", { opacity: 0, duration: 0.2, ease: "power1.in" }, T.lock + 0.05);
 
-        // lock flash + punch
         tl.fromTo("#flash", { opacity: 0 }, { opacity: 1, duration: 0.1, ease: "expo.out" }, T.lock + 0.2);
         tl.to("#flash", { opacity: 0, duration: 0.45, ease: "power2.out" }, T.lock + 0.32);
-        tl.fromTo("#scene", { scale: 1 }, { scale: 1.035, duration: 0.08, ease: "power2.out", transformOrigin: "50% 50%" }, T.lock);
+        tl.fromTo("#scene", { scale: 1 }, { scale: 1.035, duration: 0.08, ease: "power2.out", transformOrigin: "50% 50%", immediateRender: false }, T.lock);
         tl.to("#scene", { scale: 1, duration: 0.25, ease: "power2.out" }, T.lock + 0.08);
 
-        // --- slab lands out of the aperture
         tl.fromTo(
-          "#slab-land",
+          land,
           { opacity: 0, rotationY: -28, rotationX: 10, scale: 0.7, y: 70 },
           { opacity: 1, rotationY: -4, rotationX: 0, scale: 1, y: 0, duration: 0.55, ease: "expo.out" },
           T.lock + 0.2
         );
-        tl.to("#slab-land", { rotationY: 0, duration: 1.25, ease: "sine.inOut" }, T.lock + 0.75);
-        tl.fromTo("#tag", { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "power1.out" }, T.slab + 0.1);
+        tl.to(land, { rotationY: 0, duration: 1.25, ease: "sine.inOut" }, T.lock + 0.75);
+        tl.to("#tag", { opacity: 1, duration: 0.3, ease: "power1.out" }, T.slab + 0.1);
 
-        // --- cursor travels to the button, clicks, state flips
-        const card = document.getElementById("card");
+        // cursor -> Generate Eligibility Proof
         const btn = document.getElementById("btn-gen");
-        const land = document.getElementById("slab-land");
         const bx = land.offsetLeft + btn.offsetLeft + btn.offsetWidth * 0.38;
         const by = land.offsetTop + btn.offsetTop + btn.offsetHeight * 0.5;
-        gsap.set("#ripple-wrap", { left: bx, top: by });
-        document.getElementById("slab-push").style.transformOrigin = bx - land.offsetLeft + "px " + (by - land.offsetTop) + "px";
+        pushEl.style.transformOrigin = bx - land.offsetLeft + "px " + (by - land.offsetTop) + "px";
 
         tl.fromTo("#cursor", { opacity: 0 }, { opacity: 1, duration: 0.15, ease: "power1.out" }, T.slab - 0.1);
         tl.fromTo("#cursor", { x: 1640 }, { x: bx, duration: 0.5, ease: "power2.inOut" }, T.slab);
         tl.fromTo("#cursor", { y: 250 }, { y: by, duration: 0.5, ease: "power3.inOut" }, T.slab);
-        tl.to("#cursor", { scale: 0.86, transformOrigin: "10% 8%", duration: 0.06, ease: "power2.out" }, T.click);
-        tl.to("#cursor", { scale: 1, duration: 0.12, ease: "power2.out" }, T.click + 0.07);
-        tl.to("#cursor", { x: bx + 90, y: by + 70, duration: 0.5, ease: "power2.inOut" }, T.click + 0.25);
+
+        // generic click helper: cursor press + ripple at the pointer tip
+        let clickN = 0;
+        function click(at, x, y) {
+          clickN++;
+          tl.set("#ripple-wrap", { left: x, top: y, opacity: 1 }, at);
+          tl.fromTo("#ripple", { scale: 0.2, opacity: 0.85 }, { scale: 1.7, opacity: 0, duration: 0.45, ease: "expo.out", immediateRender: false }, at);
+          tl.to("#cursor", { scale: 0.86, transformOrigin: "10% 8%", duration: 0.06, ease: "power2.out" }, at);
+          tl.to("#cursor", { scale: 1, duration: 0.12, ease: "power2.out" }, at + 0.07);
+        }
+        function curTo(at, dur, x, y) {
+          tl.to("#cursor", { x: x - 6, duration: dur, ease: "power2.inOut" }, at);
+          tl.to("#cursor", { y: y - 4, duration: dur, ease: "power3.inOut" }, at);
+        }
+        click(T.click, bx, by);
 
         tl.to("#btn-gen", { scale: 0.975, duration: 0.06, ease: "power2.out" }, T.click);
         tl.to("#btn-gen", { scale: 1, duration: 0.14, ease: "power2.out" }, T.click + 0.07);
-        tl.set("#ripple-wrap", { opacity: 1 }, T.click);
-        tl.fromTo("#ripple", { scale: 0.2, opacity: 0.85 }, { scale: 1.7, opacity: 0, duration: 0.45, ease: "expo.out" }, T.click);
+        tl.fromTo("#slab-push", { scale: 1 }, { scale: 1.12, duration: 1.0, ease: "power2.inOut", immediateRender: false }, T.click - 0.05);
 
-        // slow push toward the control (separate wrapper: no transform conflict)
-        tl.fromTo("#slab-push", { scale: 1 }, { scale: 1.12, duration: 1.0, ease: "power2.inOut" }, T.click - 0.05);
-
-        // chip: action required -> verifying -> proof ready
         tl.to("#chip-a", { opacity: 0, y: -8, duration: 0.12, ease: "power2.in" }, T.click);
-        tl.fromTo("#chip-b", { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.18, ease: "power2.out" }, T.click + 0.05);
+        tl.fromTo("#chip-b", { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.18, ease: "power2.out", immediateRender: false }, T.click + 0.05);
         tl.fromTo("#chip-b-dot", { opacity: 1 }, { opacity: 0.25, duration: 0.12, ease: "none", yoyo: true, repeat: 3 }, T.click + 0.1);
         tl.to("#chip-b", { opacity: 0, y: -8, duration: 0.12, ease: "power2.in" }, T.ready - 0.02);
-        tl.fromTo("#chip-c", { opacity: 0, scale: 0.88, y: 8 }, { opacity: 1, scale: 1, y: 0, duration: 0.28, ease: "back.out(2)" }, T.ready);
-        tl.fromTo("#seal-ico", { opacity: 0, scale: 0.5 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2)" }, T.ready + 0.05);
+        tl.fromTo("#chip-c", { opacity: 0, scale: 0.88, y: 8 }, { opacity: 1, scale: 1, y: 0, duration: 0.28, ease: "back.out(2)", immediateRender: false }, T.ready);
+        tl.fromTo("#seal-ico", { opacity: 0, scale: 0.5 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2)", immediateRender: false }, T.ready + 0.05);
 
-        // rows
         const swap = (a, b, at, dur) => {
           tl.to(a, { opacity: 0, duration: 0.1, ease: "power1.in" }, at);
-          tl.fromTo(b, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: dur || 0.18, ease: "power2.out" }, at + 0.04);
+          tl.fromTo(b, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: dur || 0.18, ease: "power2.out", immediateRender: false }, at + 0.04);
         };
         swap("#lp-a", "#lp-b", T.click + 0.05);
         swap("#lp-b", "#lp-c", T.ready - 0.02);
@@ -868,10 +1914,379 @@
         swap("#bg-a", "#bg-b", T.click + 0.02);
         swap("#bg-b", "#bg-c", T.ready - 0.02);
 
-        // end: soft fade to black (audio fades in the same window)
-        tl.fromTo("#fade", { opacity: 0 }, { opacity: 1, duration: 0.15, ease: "power1.in" }, T.end - 0.15);
+        // ==============================================================
+        // 5.0–6.5  collapse into the real page: tabs, proof token
+        // ==============================================================
+        // the proof token (seal) returns upstage while the card steps back
+        tl.to(S, { yaw: 0.5, pitch: 0.3, cam: 5, cx: 1540, cy: 300, R: 210, split: 1, frontA: 0.55, duration: 0.01 }, 5.2);
+        tl.to(S, { alpha: 0.95, duration: 0.6, ease: "power2.out" }, 5.5);
+        tl.to(S, { spin: Math.PI * 2.2 + 28, duration: 24, ease: "none" }, 3.0);
 
-        draw();
+        // rows out, card collapses to its summary bar, tabs rise
+        tl.to(["#rows-a", "#rows-b", "#rows-c", "#rows-d", "#actions", "#elig-note"], { opacity: 0, duration: 0.2, ease: "power1.in" }, T.collapse);
+        tl.to("#card", { height: 172, duration: 0.55, ease: "expo.out" }, T.collapse);
+        tl.to(pushEl, { scale: 1, duration: 0.6, ease: "power2.inOut" }, T.collapse);
+        tl.to("#below", { opacity: 1, duration: 0.4, ease: "power2.out" }, T.collapse + 0.15);
+        tl.fromTo("#tabs", { y: 40 }, { y: 0, duration: 0.55, ease: "expo.out", immediateRender: false }, T.collapse + 0.1);
+        tl.to("#tag", { opacity: 0.8, duration: 0.01 }, T.collapse);
+
+        // tab indicator geometry
+        const tabs = {
+          supply: document.getElementById("tab-supply"),
+          borrow: document.getElementById("tab-borrow"),
+          pos: document.getElementById("tab-pos"),
+        };
+        gsap.set("#tab-ind", { x: tabs.supply.offsetLeft, width: tabs.supply.offsetWidth });
+        const tabColor = (el, on, at) => tl.to(el, { color: on ? "#ffffff" : "#a89da1", duration: 0.15 }, at);
+
+        // the page settles into the Supply composition, then the cursor clicks the tab
+        const tSup = stage(tabs.supply, "sup");
+        tl.to(land, { x: BT.sup.x, y: BT.sup.y, scale: BT.sup.s, duration: 0.7, ease: "expo.out" }, T.collapse);
+        tl.to(land, { filter: "blur(8px)", duration: 0.1, ease: "power2.in" }, T.collapse);
+        tl.to(land, { filter: "blur(0px)", duration: 0.28, ease: "power2.out" }, T.collapse + 0.1);
+        curTo(T.collapse + 0.05, 0.5, tSup.x - 30, tSup.y);
+        click(T.tabSupply, tSup.x - 30, tSup.y);
+        tl.to("#tab-ind", { opacity: 1, duration: 0.2, ease: "power2.out" }, T.tabSupply);
+        tabColor("#tab-supply", true, T.tabSupply);
+        tl.fromTo("#p-supply", { opacity: 0, x: 80 }, { opacity: 1, x: 0, duration: 0.5, ease: "expo.out", immediateRender: false }, T.tabSupply + 0.05);
+
+        // ==============================================================
+        // 6.5–10.0  SUPPLY
+        // ==============================================================
+        const slam = (word, at, opts = {}) => {
+          tl.to(word, { opacity: 1, duration: 0.01 }, at);
+          tl.fromTo(word + " > span", { yPercent: 118, rotation: 3 }, { yPercent: 0, rotation: 0, duration: 0.4, ease: "expo.out", immediateRender: false }, at);
+          tl.fromTo("#scene", { x: 0, y: 0 }, { x: 8, y: -6, duration: 0.04, ease: "none", immediateRender: false }, at);
+          tl.to("#scene", { x: -6, y: 5, duration: 0.05, ease: "none" }, at + 0.04);
+          tl.to("#scene", { x: 0, y: 0, duration: 0.1, ease: "power2.out" }, at + 0.09);
+          if (opts.out) {
+            tl.to(word + " > span", { yPercent: -115, duration: 0.22, ease: "power3.in" }, opts.out);
+          }
+        };
+        slam("#bw-supply", T.supply, { out: T.coll - 0.05 });
+
+        tl.to(S, { m12: 1, cx: 1620, cy: 400, R: 300, yaw: 0.9, pitch: 0.22, duration: 1.4, ease: "power2.inOut" }, T.supply);
+        tl.to(S, { frontA: 0.4, duration: 0.01 }, T.supply);
+
+        // type 100 into the amount field
+        const supField = stage(document.getElementById("fld-sup"), "sup", 0.22, 0.5);
+        curTo(T.supply + 0.2, 0.5, supField.x, supField.y);
+        click(T.supType - 0.1, supField.x, supField.y);
+        tl.set("#sup-txt", { opacity: 1 }, T.supType);
+        // typed-feel: reveal by clip (3 characters, 0.125s each)
+        tl.fromTo("#sup-txt", { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 0.375, ease: "steps(3)", immediateRender: false }, T.supType);
+
+        // review box rows
+        tl.fromTo("#rs1", { opacity: 0, x: -24 }, { opacity: 1, x: 0, duration: 0.25, ease: "power3.out", immediateRender: false }, T.supReview);
+        tl.fromTo("#rs2", { opacity: 0, x: -24 }, { opacity: 1, x: 0, duration: 0.25, ease: "power3.out", immediateRender: false }, T.supReview + 0.125);
+        tl.fromTo("#st-sup", { opacity: 0 }, { opacity: 1, duration: 0.25, immediateRender: false }, T.supReview + 0.25);
+
+        // confirm supply: proof attaches to the ring
+        const supBtn = stage(document.getElementById("btn-sup"), "sup", 0.5, 0.5);
+        curTo(T.supReview + 0.1, 0.8, supBtn.x, supBtn.y);
+        click(T.supConfirm, supBtn.x, supBtn.y);
+        tl.to("#btn-sup", { scale: 0.975, duration: 0.06 }, T.supConfirm);
+        tl.to("#btn-sup", { scale: 1, duration: 0.14 }, T.supConfirm + 0.07);
+        tl.to(S, { pulse: 1, duration: 0.12, ease: "power2.out" }, T.supConfirm);
+        tl.to(S, { pulse: 0, duration: 0.5, ease: "power2.out" }, T.supConfirm + 0.12);
+        // label tracks the ring (fixed spot beside it)
+        gsap.set("#attach", { x: 1230, y: 150 });
+        tl.fromTo("#attach", { opacity: 0, y: 160 }, { opacity: 1, y: 150, duration: 0.25, ease: "power3.out", immediateRender: false }, T.supConfirm + 0.05);
+        tl.to("#attach", { opacity: 0, duration: 0.25 }, T.supConfirm + 0.9);
+
+        // ==============================================================
+        // 10.0–14.0  COLLATERAL
+        // ==============================================================
+        const bTab = stage(tabs.borrow, "sup");
+        curTo(T.supConfirm + 0.4, 0.6, bTab.x, bTab.y);
+        tl.to(land, { x: BT.col.x, y: BT.col.y, scale: BT.col.s, rotationY: 14, duration: 0.6, ease: "expo.out" }, T.coll);
+        tl.to(land, { rotationY: 0, duration: 0.9, ease: "sine.inOut" }, T.coll + 0.6);
+        tl.to(land, { filter: "blur(8px)", duration: 0.1, ease: "power2.in" }, T.coll);
+        tl.to(land, { filter: "blur(0px)", duration: 0.28, ease: "power2.out" }, T.coll + 0.1);
+        click(T.coll, bTab.x, bTab.y);
+        tl.to("#tab-ind", { x: tabs.borrow.offsetLeft, width: tabs.borrow.offsetWidth, duration: 0.4, ease: "expo.out" }, T.coll);
+        tabColor("#tab-supply", false, T.coll);
+        tabColor("#tab-borrow", true, T.coll);
+        tl.to("#p-supply", { opacity: 0, x: -80, duration: 0.3, ease: "power2.in" }, T.coll);
+        tl.fromTo("#p-borrow", { opacity: 0, x: 80 }, { opacity: 1, x: 0, duration: 0.5, ease: "expo.out", immediateRender: false }, T.coll + 0.1);
+        slam("#bw-coll", T.coll, { out: T.borrow - 0.05 });
+
+        // deposit 10 rCOL2 (no proof) then enable (proof)
+        const depField = stage(document.getElementById("fld-dep"), "col", 0.2, 0.5);
+        curTo(T.coll + 0.4, 0.4, depField.x, depField.y);
+        click(T.depType - 0.1, depField.x, depField.y);
+        tl.set("#dep-txt", { opacity: 1 }, T.depType);
+        tl.fromTo("#dep-txt", { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 0.25, ease: "steps(2)", immediateRender: false }, T.depType);
+
+        const depBtn = stage(document.getElementById("btn-dep"), "col");
+        curTo(T.depType + 0.3, 0.3, depBtn.x, depBtn.y);
+        click(T.depConfirm, depBtn.x, depBtn.y);
+        tl.to("#btn-dep", { scale: 0.975, duration: 0.06 }, T.depConfirm);
+        tl.to("#btn-dep", { scale: 1, duration: 0.14 }, T.depConfirm + 0.07);
+        swap("#cc-a", "#cc-b", T.depConfirm + 0.05);
+
+        // ink: underline the words that matter ("Enabling it for borrowing does")
+        const does = stage(document.getElementById("does-w"), "col");
+        const inkSvg = document.getElementById("ink");
+        function mkPath(d) {
+          const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          p.setAttribute("d", d);
+          inkSvg.appendChild(p);
+          const len = p.getTotalLength();
+          gsap.set(p, { strokeDasharray: len, strokeDashoffset: len, opacity: 1 });
+          return { p, len };
+        }
+        const ulX0 = does.x - does.w / 2 - 6, ulX1 = does.x + does.w / 2 + 6, ulY = does.y + does.h * 0.5 + 10;
+        const ul = mkPath(`M ${ulX0} ${ulY} Q ${(ulX0 + ulX1) / 2} ${ulY + 9} ${ulX1} ${ulY - 3}`);
+        tl.to(ul.p, { strokeDashoffset: 0, duration: 0.4, ease: "power2.out" }, T.depConfirm + 0.3);
+        tl.to(ul.p, { opacity: 0, duration: 0.25 }, T.enable + 0.2);
+
+        const enaBtn = stage(document.getElementById("btn-ena"), "col");
+        curTo(T.depConfirm + 0.55, 0.45, enaBtn.x, enaBtn.y);
+        click(T.enable, enaBtn.x, enaBtn.y);
+        tl.to("#btn-ena", { scale: 0.975, duration: 0.06 }, T.enable);
+        tl.to("#btn-ena", { scale: 1, duration: 0.14 }, T.enable + 0.07);
+        swap("#cc-b", "#cc-c", T.enable + 0.05);
+        swap("#ena-a", "#ena-b", T.enable + 0.05);
+
+        // the borrow ring emerges from the core and links with the supply ring
+        tl.to(S, { m23: 1, cx: 1400, cy: 420, R: 400, yaw: 1.4, pitch: 0.38, duration: 1.25, ease: "power2.inOut" }, T.enable);
+        tl.to(S, { pulse: 1, duration: 0.1, ease: "power2.out" }, T.enable);
+        tl.to(S, { pulse: 0, duration: 0.4, ease: "power2.out" }, T.enable + 0.1);
+        tl.to(S, { pulse: 1, duration: 0.08, ease: "power2.out" }, T.link);
+        tl.to(S, { pulse: 0, duration: 0.5, ease: "power2.out" }, T.link + 0.08);
+        tl.to(S, { frontA: 0.4, duration: 0.01 }, T.coll);
+        tl.fromTo("#linkcap", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out", immediateRender: false }, T.link);
+        tl.to("#linkcap", { opacity: 0, duration: 0.25 }, T.borrow - 0.1);
+
+        // ==============================================================
+        // 14.0–20.0  BORROW — the health factor, built from characters
+        // ==============================================================
+        tl.to(land, { x: BT.bor.x, y: BT.bor.y, scale: BT.bor.s, rotationY: -10, duration: 0.7, ease: "expo.out" }, T.borrow);
+        tl.to(land, { rotationY: 0, duration: 0.9, ease: "sine.inOut" }, T.borrow + 0.7);
+        tl.to(land, { filter: "blur(10px)", duration: 0.1, ease: "power2.in" }, T.borrow);
+        tl.to(land, { filter: "blur(0px)", duration: 0.28, ease: "power2.out" }, T.borrow + 0.1);
+        slam("#bw-bor", T.borrow, { out: T.enter - 0.05 });
+        tl.to("#b-coll", { yPercent: -108, duration: 0.5, ease: "expo.inOut" }, T.borrow);
+        tl.to("#b-borrow", { yPercent: 0, duration: 0.5, ease: "expo.inOut" }, T.borrow);
+
+        tl.to(S, { cx: 1640, cy: 150, R: 150, yaw: 0.75, pitch: 0.5, duration: 0.8, ease: "power3.inOut" }, T.borrow);
+        tl.to(S, { frontA: 0.5, duration: 0.01 }, T.borrow);
+
+        // numeral zone appears
+        tl.to("#num-wrap", { opacity: 1, duration: 0.3, ease: "power2.out" }, T.borrow + 0.5);
+        tl.to("#m-fill", { scaleX: 0.4, duration: 0.5, ease: "power3.out" }, T.bor3 + 0.1);
+
+        // cursor -> amount field, "3"
+        const borField = stage(document.getElementById("fld-bor"), "bor", 0.2, 0.5);
+        curTo(T.borrow + 0.2, 0.4, borField.x, borField.y);
+        click(T.bor3 - 0.1, borField.x, borField.y);
+        tl.set("#bor-3", { opacity: 1 }, T.bor3);
+        tl.to("#rev-bor", { opacity: 1, duration: 0.25, ease: "power2.out" }, T.bor3 + 0.15);
+        tl.fromTo("#bor-3", { scale: 1.25, transformOrigin: "0 50%" }, { scale: 1, duration: 0.15, ease: "power2.out", immediateRender: false }, T.bor3);
+
+        // numerals pour out of the field: src -> 2.40
+        NUM_T["src"] = (function () {
+          const o = new Float32Array(NUMM * 2);
+          const sx = borField.x + 140 - 1180 - NS.x;
+          const sy = borField.y - 330 - NS.y;
+          for (let i = 0; i < NUMM; i++) {
+            const a = rnd(i * 5.1) * Math.PI * 2, r = 20 + rnd(i * 6.3) * 40;
+            o[i * 2] = sx + Math.cos(a) * r;
+            o[i * 2 + 1] = sy + Math.sin(a) * r;
+          }
+          return o;
+        })();
+        gsap.set("#numeral", { x: 1180, y: 330 });
+        tl.set("#numeral", { opacity: 1 }, T.bor3);
+        tl.to(NS, { vis: 1, duration: 0.2, ease: "power1.out" }, T.bor3 + 0.1);
+        tl.to(NS, { u: 1, duration: 0.8, ease: "none" }, T.bor3 + 0.125);
+
+        // review rows (3 rUSD2 / 2.40 / 40%)
+        // (rows 3 are visible by default; later values swap in)
+        const valSwap = (k0, k1, at) => {
+          [["rb-", "rb-"], ["hf-", "hf-"], ["bl-", "bl-"]].forEach(([p]) => {
+            tl.to("#" + p + k0, { opacity: 0, duration: 0.08 }, at);
+            tl.fromTo("#" + p + k1, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.15, ease: "power2.out", immediateRender: false }, at + 0.05);
+          });
+          tl.to("#pc-" + k0, { opacity: 0, duration: 0.08 }, at);
+          tl.fromTo("#pc-" + k1, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.15, ease: "power2.out", immediateRender: false }, at + 0.05);
+          tl.to("#bor-" + k0, { opacity: 0, duration: 0.05 }, at);
+          tl.fromTo("#bor-" + k1, { opacity: 0, scale: 1.25, transformOrigin: "0 50%" }, { opacity: 1, scale: 1, duration: 0.15, ease: "power2.out", immediateRender: false }, at + 0.03);
+        };
+        // initial visible = "3" row values (opacity 1 by default)
+
+        // 15.5: "9" — 1.08 — 92% — caution
+        click(T.bor9 - 0.1, borField.x, borField.y);
+        valSwap("3", "9", T.bor9);
+        tl.to(NS, { u: 2, duration: 0.55, ease: "none" }, T.bor9 + 0.05);
+        tl.to("#m-fill", { scaleX: 0.92, duration: 0.5, ease: "power2.out" }, T.bor9 + 0.05);
+        tl.to(NS, { ruby: 0.5, duration: 0.5 }, T.bor9 + 0.05);
+        tl.fromTo("#call-caution", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.25, ease: "power3.out", immediateRender: false }, T.caution);
+
+        // 16.5: "14" — 0.92 — 104% — the pool rejects
+        click(T.bor14 - 0.1, borField.x, borField.y);
+        valSwap("9", "14", T.bor14);
+        tl.to(NS, { u: 3, duration: 0.5, ease: "none" }, T.bor14 + 0.05);
+        tl.to("#m-fill", { scaleX: 1, duration: 0.4, ease: "power2.out" }, T.bor14 + 0.05);
+        tl.to(NS, { ruby: 1, duration: 0.4 }, T.bor14 + 0.05);
+        tl.to("#call-caution", { opacity: 0, duration: 0.15 }, T.reject - 0.1);
+        swap("#rk-a", "#rk-b", T.reject);
+        tl.fromTo("#call-rej", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.2, ease: "power3.out", immediateRender: false }, T.reject);
+        // the pool pushes back: the page shakes once
+        tl.fromTo(pushEl, { x: 0 }, { x: 16, duration: 0.04, ease: "none", immediateRender: false }, T.reject);
+        tl.to(pushEl, { x: -12, duration: 0.05, ease: "none" }, T.reject + 0.04);
+        tl.to(pushEl, { x: 7, duration: 0.05, ease: "none" }, T.reject + 0.09);
+        tl.to(pushEl, { x: 0, duration: 0.12, ease: "power2.out" }, T.reject + 0.14);
+        tl.to("#m-lim", { scaleY: 1.5, backgroundColor: "#ff5c5c", duration: 0.1 }, T.reject);
+        // ink: circle the limit mark and the reject line
+        const limR = document.getElementById("m-lim").getBoundingClientRect();
+        const lim = { x: limR.left + limR.width / 2, y: limR.top + limR.height / 2 };
+        const circ = mkPath(`M ${lim.x + 52} ${lim.y - 8} C ${lim.x + 40} ${lim.y - 62} ${lim.x - 70} ${lim.y - 62} ${lim.x - 74} ${lim.y + 6} C ${lim.x - 72} ${lim.y + 62} ${lim.x + 44} ${lim.y + 64} ${lim.x + 54} ${lim.y - 4} C ${lim.x + 58} ${lim.y - 40} ${lim.x + 6} ${lim.y - 62} ${lim.x - 30} ${lim.y - 58}`);
+        tl.to(circ.p, { strokeDashoffset: 0, duration: 0.4, ease: "power2.out" }, T.reject);
+        tl.to(circ.p, { opacity: 0, duration: 0.25 }, T.bor3b + 0.2);
+
+        // 18.0: back off to 3 — 2.40 again
+        click(T.bor3b - 0.1, borField.x, borField.y);
+        valSwap("14", "3b", T.bor3b);
+        tl.to(NS, { u: 4, duration: 0.6, ease: "none" }, T.bor3b + 0.05);
+        tl.to("#m-fill", { scaleX: 0.4, duration: 0.5, ease: "power2.out" }, T.bor3b + 0.05);
+        tl.to(NS, { ruby: 0, duration: 0.5 }, T.bor3b + 0.05);
+        tl.to("#call-rej", { opacity: 0, duration: 0.2 }, T.bor3b);
+        swap("#rk-b", "#rk-a", T.bor3b);
+        tl.to("#m-lim", { scaleY: 1, backgroundColor: "#f7f3f4", duration: 0.15 }, T.bor3b);
+
+        // 19.0 confirm borrow -> proof attached
+        const borBtn = stage(document.getElementById("btn-bor"), "bor");
+        curTo(T.bor3b + 0.3, 0.6, borBtn.x, borBtn.y);
+        click(T.borConfirm, borBtn.x, borBtn.y);
+        tl.to("#btn-bor", { scale: 0.975, duration: 0.06 }, T.borConfirm);
+        tl.to("#btn-bor", { scale: 1, duration: 0.14 }, T.borConfirm + 0.07);
+        tl.to(S, { pulse: 1, duration: 0.12, ease: "power2.out" }, T.borConfirm);
+        tl.to(S, { pulse: 0, duration: 0.5, ease: "power2.out" }, T.borConfirm + 0.12);
+        tl.to("#attach", { x: 1300, y: 36, duration: 0.01 }, T.borConfirm - 0.01);
+        tl.fromTo("#attach", { opacity: 0 }, { opacity: 1, duration: 0.2, immediateRender: false }, T.borConfirm + 0.05);
+        tl.to("#attach", { opacity: 0, duration: 0.25 }, T.borConfirm + 0.8);
+
+        // ==============================================================
+        // 20.0–23.5  PROOF TO ENTER. NEVER TO EXIT.  (repay)
+        // ==============================================================
+        tl.to(["#num-wrap"], { opacity: 0, duration: 0.3 }, T.enter - 0.3);
+        tl.to(NS, { vis: 0, duration: 0.3 }, T.enter - 0.3);
+        tl.set("#numeral", { opacity: 0 }, T.enter);
+        // reposition the numeral zone for the debt: u jumps while invisible
+        tl.set("#numeral", { x: -60, y: 410 }, T.enter);
+        tl.to(NS, { u: 5, duration: 0.01 }, T.enter);
+
+        const posTab = stage(tabs.pos, "bor");
+        curTo(T.bor3b + 0.9, 0.55, posTab.x, posTab.y);
+        tl.to(land, { x: BT.rep.x, y: BT.rep.y, scale: BT.rep.s, rotationY: 12, duration: 0.7, ease: "expo.out" }, T.enter);
+        tl.to(land, { rotationY: 0, duration: 0.9, ease: "sine.inOut" }, T.enter + 0.7);
+        tl.to(land, { filter: "blur(9px)", duration: 0.1, ease: "power2.in" }, T.enter);
+        tl.to(land, { filter: "blur(0px)", duration: 0.28, ease: "power2.out" }, T.enter + 0.1);
+        click(T.enter, posTab.x, posTab.y);
+        tl.to("#tab-ind", { x: tabs.pos.offsetLeft, width: tabs.pos.offsetWidth, duration: 0.4, ease: "expo.out" }, T.enter);
+        tabColor("#tab-borrow", false, T.enter);
+        tabColor("#tab-pos", true, T.enter);
+        tl.to("#p-borrow", { opacity: 0, x: -80, duration: 0.3, ease: "power2.in" }, T.enter);
+        tl.fromTo("#p-pos", { opacity: 0, x: 80 }, { opacity: 1, x: 0, duration: 0.5, ease: "expo.out", immediateRender: false }, T.enter + 0.1);
+
+        // the big statement
+        tl.to("#bw-enter", { opacity: 1, duration: 0.01 }, T.enter);
+        tl.fromTo("#bw-enter > span", { yPercent: 118 }, { yPercent: 0, duration: 0.4, ease: "expo.out", immediateRender: false }, T.enter);
+        tl.to("#bw-exit", { opacity: 1, duration: 0.01 }, T.exit);
+        tl.fromTo("#bw-exit > span", { yPercent: 118, scale: 1.2, transformOrigin: "0 100%" }, { yPercent: 0, scale: 1, duration: 0.4, ease: "expo.out", immediateRender: false }, T.exit);
+        tl.fromTo("#scene", { x: 0, y: 0 }, { x: 9, y: -7, duration: 0.04, ease: "none", immediateRender: false }, T.exit);
+        tl.to("#scene", { x: -7, y: 6, duration: 0.05, ease: "none" }, T.exit + 0.04);
+        tl.to("#scene", { x: 0, y: 0, duration: 0.1, ease: "power2.out" }, T.exit + 0.09);
+        tl.to("#bw-sub", { opacity: 1, duration: 0.3 }, T.exit + 0.3);
+
+        // debt numeral appears
+        tl.to("#num2-label", { opacity: 1, duration: 0.3 }, T.exit + 0.2);
+        tl.set("#numeral", { opacity: 1 }, T.exit + 0.2);
+        tl.to(NS, { vis: 1, ruby: 0, duration: 0.3 }, T.exit + 0.2);
+        tl.to(S, { cx: 1700, cy: 230, R: 170, yaw: 1.4, pitch: 0.45, duration: 0.8, ease: "power2.inOut" }, T.enter);
+
+        // Repay in full -> review rows -> Confirm repayment
+        const repMax = stage(document.getElementById("max-rep"), "rep");
+        curTo(T.exit + 0.5, 0.5, repMax.x, repMax.y);
+        click(T.repMax, repMax.x, repMax.y);
+        tl.set("#rep-txt", { opacity: 1 }, T.repMax);
+        tl.fromTo("#rep-txt", { scale: 1.25, transformOrigin: "0 50%" }, { scale: 1, duration: 0.15, ease: "power2.out", immediateRender: false }, T.repMax);
+        tl.fromTo("#rp1", { opacity: 0, x: -24 }, { opacity: 1, x: 0, duration: 0.25, ease: "power3.out", immediateRender: false }, T.repMax + 0.1);
+        tl.fromTo("#rp2", { opacity: 0, x: -24 }, { opacity: 1, x: 0, duration: 0.25, ease: "power3.out", immediateRender: false }, T.repMax + 0.25);
+        tl.fromTo("#btn-rep", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out", immediateRender: false }, T.repMax + 0.35);
+        const no = stage(document.getElementById("rep-no"), "rep");
+        const ox0 = no.x - no.w / 2 - 10, ox1 = no.x + no.w / 2 + 10;
+        const nc = mkPath(`M ${ox0 + 30} ${no.y - 22} C ${ox0 - 20} ${no.y - 24} ${ox0 - 22} ${no.y + 26} ${ox0 + 40} ${no.y + 26} L ${ox1 - 40} ${no.y + 26} C ${ox1 + 24} ${no.y + 26} ${ox1 + 24} ${no.y - 24} ${ox1 - 30} ${no.y - 24} L ${ox0 + 50} ${no.y - 24}`);
+        tl.to(nc.p, { strokeDashoffset: 0, duration: 0.5, ease: "power2.out" }, T.repMax + 0.55);
+        tl.to(nc.p, { opacity: 0, duration: 0.25 }, T.repConfirm + 0.5);
+
+        const repBtn = stage(document.getElementById("btn-rep"), "rep");
+        curTo(T.repMax + 0.4, 0.3, repBtn.x, repBtn.y);
+        click(T.repConfirm, repBtn.x, repBtn.y);
+        tl.to("#btn-rep", { scale: 0.975, duration: 0.06 }, T.repConfirm);
+        tl.to("#btn-rep", { scale: 1, duration: 0.14 }, T.repConfirm + 0.07);
+        // debt 3 -> 0: characters scatter into "0"; chips + metrics flip; rings unlink
+        tl.to(NS, { u: 6, duration: 0.6, ease: "none" }, T.repConfirm + 0.05);
+        swap("#debt-a", "#debt-b", T.repConfirm + 0.1);
+        swap("#phf-a", "#phf-b", T.repConfirm + 0.1);
+        swap("#ps-a", "#ps-b", T.repConfirm + 0.1);
+        tl.to(S, { m23: 0, duration: 0.7, ease: "power2.inOut" }, T.repConfirm);
+        tl.to(S, { pulse: 0.8, duration: 0.1, ease: "power2.out" }, T.repConfirm);
+        tl.to(S, { pulse: 0, duration: 0.4, ease: "power2.out" }, T.repConfirm + 0.1);
+
+        // ==============================================================
+        // 23.5–26.0  MONTAGE
+        // ==============================================================
+        tl.to(land, { opacity: 0, scale: 1.25, duration: 0.2, ease: "power2.in" }, T.mont - 0.1);
+        tl.to("#cursor", { opacity: 0, duration: 0.12 }, T.mont - 0.1);
+        tl.to(["#bigword", "#num2-label", "#tag", "#ink"], { opacity: 0, duration: 0.15 }, T.mont - 0.1);
+        tl.to(NS, { vis: 0, duration: 0.15 }, T.mont - 0.1);
+        tl.set("#numeral", { opacity: 0 }, T.mont);
+        tl.to("#mont", { opacity: 1, duration: 0.01 }, T.mont - 0.05);
+        tl.to(S, { split: 0, cx: 960, cy: 540, R: 520, alpha: 0.5, yaw: 0.6, pitch: 0.25, duration: 0.01 }, T.mont - 0.05);
+
+        const mwords = ["#mw1", "#mw2", "#mw3", "#mw4"];
+        const mcx = [760, 1180, 740, 1160];
+        mwords.forEach((w, k) => {
+          const at = T.mont + k * 0.5;
+          tl.to(w, { opacity: 1, duration: 0.01 }, at);
+          tl.fromTo(w + " .mwb", { scale: 1.3, x: k % 2 ? 60 : -60 }, { scale: 1, x: 0, duration: 0.22, ease: "expo.out", immediateRender: false }, at);
+          tl.fromTo(w + " .mwf", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.2, ease: "power3.out", immediateRender: false }, at + 0.06);
+          tl.to(w, { opacity: 0, duration: 0.05 }, at + 0.45);
+          tl.to(S, { yaw: 0.6 + (k + 1) * 1.1, cx: mcx[k], pulse: 1, duration: 0.2, ease: "expo.out" }, at);
+          tl.to(S, { pulse: 0, duration: 0.25 }, at + 0.2);
+          tl.fromTo("#scene", { scale: 1 }, { scale: 1.03, duration: 0.05, ease: "power2.out", immediateRender: false }, at);
+          tl.to("#scene", { scale: 1, duration: 0.2, ease: "power2.out" }, at + 0.05);
+        });
+        // the honest line: what is public, what is private
+        tl.to("#mleg", { opacity: 1, duration: 0.01 }, T.legend2);
+        tl.fromTo("#mleg .ml", { x: -90, opacity: 0 }, { x: 0, opacity: 1, duration: 0.3, ease: "expo.out", stagger: 0.12, immediateRender: false }, T.legend2);
+        tl.to("#mleg", { opacity: 0, duration: 0.15 }, T.brand - 0.05);
+
+        // ==============================================================
+        // 26.0–28.0  BRAND
+        // ==============================================================
+        tl.to("#mont", { opacity: 0, duration: 0.05 }, T.brand);
+        tl.to(S, { m23: 1, cx: 1680, cy: 540, R: 300, alpha: 1, yaw: 0.7, pitch: 0.32, duration: 0.5, ease: "power3.out" }, T.legend2);
+        tl.to(S, { cx: 960, cy: 400, R: 300, duration: 0.7, ease: "power3.out" }, T.brand);
+        tl.to(S, { pulse: 1, duration: 0.1 }, T.brand);
+        tl.to(S, { pulse: 0, duration: 0.6 }, T.brand + 0.1);
+        tl.to("#brand", { opacity: 1, duration: 0.01 }, T.brand);
+        tl.fromTo("#br-word", { y: 60, opacity: 0, scale: 1.12 }, { y: 0, opacity: 1, scale: 1, duration: 0.5, ease: "expo.out", immediateRender: false }, T.brand);
+        tl.fromTo("#br-line", { y: 26, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: "power3.out", immediateRender: false }, T.brand + 0.25);
+        tl.fromTo("#br-url", { opacity: 0 }, { opacity: 1, duration: 0.3, immediateRender: false }, T.brand + 0.5);
+        tl.fromTo("#br-disc", { opacity: 0 }, { opacity: 1, duration: 0.3, immediateRender: false }, T.brand + 0.6);
+        tl.to("#scene", { scale: 1.03, duration: 1.7, ease: "sine.inOut" }, T.brand + 0.1);
+
+        tl.fromTo("#flash", { opacity: 0 }, { opacity: 0.55, duration: 0.08, ease: "expo.out", immediateRender: false }, T.brand);
+        tl.to("#flash", { opacity: 0, duration: 0.5, ease: "power2.out" }, T.brand + 0.08);
+
+        // end: soft fade to black (audio fades in the same window)
+        tl.fromTo("#fade", { opacity: 0 }, { opacity: 1, duration: 0.25, ease: "power1.in", immediateRender: false }, T.end - 0.25);
+
+        drawAll();
         window.__timelines["main"] = tl;
         tl.seek(0);
       });
