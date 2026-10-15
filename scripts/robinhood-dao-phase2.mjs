@@ -48,6 +48,14 @@ export function scoreLendingEvidence(metrics) {
   );
 }
 
+export function assertObservedRangeBeforeBlock(observedFromBlock, observedToBlock, l2BlockNumber) {
+  const from = BigInt(observedFromBlock);
+  const to = BigInt(observedToBlock);
+  const at = BigInt(l2BlockNumber);
+  assert.ok(from <= to, "Evidence observedFromBlock must not exceed observedToBlock.");
+  assert.ok(to < at, "Evidence observedToBlock must be strictly before the pinned L2 simulation block.");
+}
+
 function usage() {
   console.log(`GYEVO DAO Phase 2 operator — Robinhood Testnet ${CHAIN_ID}\n\nRead-only/local:\n  bun run robinhood:dao2 status [wallet]\n  bun run robinhood:dao2 evidence <wallet> [evidence-file]\n  bun run robinhood:dao2 prepare-membership <wallet> <expiry-days> <witness-file>\n\nGuarded writes (simulation unless both execution flags are present):\n  bun run robinhood:dao2 unpause <reputation|governance>\n  bun run robinhood:dao2 issue-reputation <witness-file> <evidence-file>\n  bun run robinhood:dao2 issue-credential <witness-file>\n\nExecution flags:\n  --execute --authorize-public-testnet-write=<phase2-unpause|phase2-reputation|phase2-credential> --account-alias <Foundry alias>\n\nThis CLI never deploys, votes, or reads private keys. Witness contents are never printed.`);
 }
@@ -123,12 +131,18 @@ async function context(requirePhase2 = true) {
 }
 
 async function completeLendingEvidence(ctx, wallet, requestedToBlock) {
-  const head = await ctx.client.getBlockNumber();
-  assert.ok(head > ctx.lendingDeploymentBlock + 5n, "The Lending V2 deployment has insufficient finalized history.");
-  const finalizedHead = head - 5n;
-  const toBlock = requestedToBlock === undefined ? finalizedHead : BigInt(requestedToBlock);
+  const initialHead = await ctx.client.getBlockNumber();
+  assert.ok(initialHead > ctx.lendingDeploymentBlock + 5n, "The Lending V2 deployment has insufficient finalized history.");
+  const initialFinalizedHead = initialHead - 5n;
+  const toBlock = requestedToBlock === undefined ? initialFinalizedHead : BigInt(requestedToBlock);
   assert.ok(toBlock >= ctx.lendingDeploymentBlock, "Evidence ends before the Lending V2 deployment block.");
-  assert.ok(toBlock <= finalizedHead, "Evidence includes blocks that have not reached the required finality depth.");
+  assert.ok(toBlock <= initialFinalizedHead, "Evidence includes blocks that have not reached the required finality depth.");
+  // Pin reads and simulation to one L2 block. The reputation contract validates
+  // evidence ranges with ArbSys.arbBlockNumber(), which uses the same L2 domain.
+  const simulationBlockNumber = await ctx.client.getBlockNumber();
+  assert.ok(simulationBlockNumber > 5n, "Robinhood RPC returned an invalid simulation block.");
+  assert.ok(toBlock <= simulationBlockNumber - 5n, "Evidence range is not finalized at the current RPC head.");
+  assertObservedRangeBeforeBlock(ctx.lendingDeploymentBlock, toBlock, simulationBlockNumber);
   const metrics = {
     supplyActions: 0,
     collateralActions: 0,
@@ -186,7 +200,15 @@ async function completeLendingEvidence(ctx, wallet, requestedToBlock) {
     score,
   };
   const evidenceHash = keccak256(toBytes(JSON.stringify(evidence)));
-  return { evidence, evidenceHash, diagnostics: { inspectedLogs, rpcQueries: queries } };
+  return {
+    evidence,
+    evidenceHash,
+    diagnostics: {
+      inspectedLogs,
+      rpcQueries: queries,
+      simulationBlockNumber: simulationBlockNumber.toString(),
+    },
+  };
 }
 
 function writeExclusive(file, value) {
@@ -288,10 +310,11 @@ async function readLine(prompt) {
   try { return await reader.question(prompt); } finally { reader.close(); }
 }
 
-async function guardedWrite(ctx, command, actor, target, abi, functionName, args, options, confirm) {
-  const simulation = await ctx.client.simulateContract({ account: actor, address: target, abi, functionName, args });
-  const gas = await ctx.client.estimateContractGas({ account: actor, address: target, abi, functionName, args });
-  console.log(`PASS simulate ${functionName} · from ${actor} · to ${target} · estimated ${gas} gas`);
+async function guardedWrite(ctx, command, actor, target, abi, functionName, args, options, confirm, simulationBlockNumber) {
+  const pinnedBlock = simulationBlockNumber === undefined ? {} : { blockNumber: simulationBlockNumber };
+  const simulation = await ctx.client.simulateContract({ account: actor, address: target, abi, functionName, args, ...pinnedBlock });
+  const gas = await ctx.client.estimateContractGas({ account: actor, address: target, abi, functionName, args, ...pinnedBlock });
+  console.log(`PASS simulate ${functionName} · from ${actor} · to ${target} · estimated ${gas} gas${simulationBlockNumber === undefined ? "" : ` · pinned block ${simulationBlockNumber}`}`);
   if (!options.execute) {
     console.log(`Simulation only. Execution additionally requires --execute --authorize-public-testnet-write=${authLabels[command]} --account-alias <Foundry alias>.`);
     return;
@@ -333,10 +356,11 @@ async function issueReputation(witnessFile, evidenceFile, options) {
   assert.equal(String(evidenceBody.score), witness.privateValue, "Witness private score does not match the evidence score.");
   const canonical = await completeLendingEvidence(ctx, witness.wallet, evidenceBody.observedToBlock);
   assert.equal(canonical.evidenceHash, storedHash, "Evidence does not match the complete canonical Lending V2 event history.");
+  const simulationBlockNumber = BigInt(canonical.diagnostics.simulationBlockNumber);
   const [claim, credential, threshold] = await Promise.all([
-    ctx.client.readContract({ address: ctx.reputation, abi: robinhoodLendingReputationAbi, functionName: "getClaim", args: [witness.wallet] }),
-    ctx.client.readContract({ address: ctx.credentialRegistry, abi: credentialRegistryAbi, functionName: "getCredential", args: [witness.wallet, POLICY_ID] }),
-    ctx.client.readContract({ address: ctx.governance, abi: robinhoodGovernancePhase2Abi, functionName: "minimumReputation" }),
+    ctx.client.readContract({ address: ctx.reputation, abi: robinhoodLendingReputationAbi, functionName: "getClaim", args: [witness.wallet], blockNumber: simulationBlockNumber }),
+    ctx.client.readContract({ address: ctx.credentialRegistry, abi: credentialRegistryAbi, functionName: "getCredential", args: [witness.wallet, POLICY_ID], blockNumber: simulationBlockNumber }),
+    ctx.client.readContract({ address: ctx.governance, abi: robinhoodGovernancePhase2Abi, functionName: "minimumReputation", blockNumber: simulationBlockNumber }),
   ]);
   assert.equal(claim.credentialVersion, credential.version, "Credential and reputation versions are out of sync.");
   const version = claim.credentialVersion + 1n;
@@ -354,14 +378,14 @@ async function issueReputation(witnessFile, evidenceFile, options) {
   });
   assert.equal(expectedCommitment.toLowerCase(), witness.commitment.toLowerCase(), "Witness commitment does not match the current Phase 2 policy context.");
   const actor = requiredAddress("RH_TESTNET_PHASE2_REPUTATION_ISSUER_ADDRESS");
-  const role = await ctx.client.readContract({ address: ctx.reputation, abi: robinhoodLendingReputationAbi, functionName: "REPUTATION_ISSUER_ROLE" });
-  const authorized = await ctx.client.readContract({ address: ctx.reputation, abi: credentialIssuerRoleAbi, functionName: "hasRole", args: [role, actor] });
+  const role = await ctx.client.readContract({ address: ctx.reputation, abi: robinhoodLendingReputationAbi, functionName: "REPUTATION_ISSUER_ROLE", blockNumber: simulationBlockNumber });
+  const authorized = await ctx.client.readContract({ address: ctx.reputation, abi: credentialIssuerRoleAbi, functionName: "hasRole", args: [role, actor], blockNumber: simulationBlockNumber });
   assert.equal(authorized, true, "Configured reputation issuer lacks the on-chain role.");
   const args = [witness.wallet, witness.commitment, BigInt(witness.expiresAt), version, BigInt(evidenceBody.observedFromBlock), BigInt(evidenceBody.observedToBlock), storedHash];
   await guardedWrite(ctx, "issue-reputation", actor, ctx.reputation, robinhoodLendingReputationAbi, "recordClaim", args, options, async () => {
     const after = await ctx.client.readContract({ address: ctx.reputation, abi: robinhoodLendingReputationAbi, functionName: "getClaim", args: [witness.wallet] });
     return after.credentialVersion === version && after.commitment.toLowerCase() === witness.commitment.toLowerCase();
-  });
+  }, simulationBlockNumber);
 }
 
 async function issueCredential(witnessFile, options) {

@@ -10,12 +10,18 @@ interface VmRobinhoodGovernancePhase2 {
     function chainId(uint256 newChainId) external;
     function warp(uint256 timestamp) external;
     function roll(uint256 blockNumber) external;
+    function etch(address target, bytes calldata code) external;
+    function store(address target, bytes32 slot, bytes32 value) external;
     function prank(address sender) external;
     function expectRevert(bytes4 selector) external;
     function expectRevert(bytes calldata revertData) external;
 }
 
 contract LendingPoolCodeFixture {}
+
+contract MockArbSys {
+    uint256 public arbBlockNumber;
+}
 
 contract RobinhoodGovernancePhase2Test {
     VmRobinhoodGovernancePhase2 private constant vm =
@@ -27,8 +33,11 @@ contract RobinhoodGovernancePhase2Test {
     uint64 private constant EXECUTION_WINDOW = 7 days;
     uint256 private constant QUORUM = 2;
     uint256 private constant MINIMUM_REPUTATION = 3;
+    address private constant ARB_SYS = address(100);
     address private constant MEMBER_ONE = address(0x1001);
     address private constant MEMBER_TWO = address(0x1002);
+    address private constant L2_EVIDENCE_WALLET_A = address(0xA001);
+    address private constant L2_EVIDENCE_WALLET_B = address(0xA002);
     address private constant UNVERIFIED = address(0x2001);
 
     RobinhoodDemoCredentialRegistry private credentialRegistry;
@@ -39,7 +48,10 @@ contract RobinhoodGovernancePhase2Test {
     function setUp() public {
         vm.chainId(46_630);
         vm.warp(START_TIME);
-        vm.roll(1_000);
+        vm.roll(11_922_330);
+        MockArbSys arbSys = new MockArbSys();
+        vm.etch(ARB_SYS, address(arbSys).code);
+        vm.store(ARB_SYS, bytes32(0), bytes32(uint256(1_000)));
         credentialRegistry = new RobinhoodDemoCredentialRegistry();
         credentialRegistry.grantRole(credentialRegistry.ISSUER_ROLE(), address(this));
         verifier = new MockEligibilityVerifierV2();
@@ -64,6 +76,55 @@ contract RobinhoodGovernancePhase2Test {
         _issueMembership(MEMBER_TWO, bytes32(uint256(0x2222)));
         _register(MEMBER_ONE);
         _register(MEMBER_TWO);
+    }
+
+    function testRecordClaimAcceptsAuthenticL2RangesAboveL1OriginHeight() public {
+        uint256 l1OriginBlock = 11_922_330;
+        uint256 l2BlockNumber = 136_014_631;
+        vm.roll(l1OriginBlock);
+        vm.store(ARB_SYS, bytes32(0), bytes32(l2BlockNumber));
+        require(block.number == l1OriginBlock, "fixture L1 height mismatch");
+        require(MockArbSys(ARB_SYS).arbBlockNumber() == l2BlockNumber, "fixture L2 height mismatch");
+
+        uint64 expiresAt = uint64(START_TIME + 10 days);
+        reputationRegistry.recordClaim(
+            L2_EVIDENCE_WALLET_A,
+            bytes32(uint256(0xA1)),
+            expiresAt,
+            1,
+            133_689_989,
+            135_967_848,
+            keccak256("wallet-a-l2-evidence")
+        );
+        reputationRegistry.recordClaim(
+            L2_EVIDENCE_WALLET_B,
+            bytes32(uint256(0xB1)),
+            expiresAt,
+            1,
+            133_689_989,
+            135_970_183,
+            keccak256("wallet-b-l2-evidence")
+        );
+
+        RobinhoodLendingReputation.Claim memory claimA = reputationRegistry.getClaim(L2_EVIDENCE_WALLET_A);
+        RobinhoodLendingReputation.Claim memory claimB = reputationRegistry.getClaim(L2_EVIDENCE_WALLET_B);
+        require(claimA.observedFromBlock == 133_689_989 && claimA.observedToBlock == 135_967_848, "Wallet A L2 range changed");
+        require(claimB.observedFromBlock == 133_689_989 && claimB.observedToBlock == 135_970_183, "Wallet B L2 range changed");
+    }
+
+    function testRecordClaimRequiresObservedToBlockBelowArbSysL2Height() public {
+        uint256 l2BlockNumber = 136_014_631;
+        vm.store(ARB_SYS, bytes32(0), bytes32(l2BlockNumber));
+        vm.expectRevert(RobinhoodLendingReputation.InvalidBlockRange.selector);
+        reputationRegistry.recordClaim(
+            L2_EVIDENCE_WALLET_A,
+            bytes32(uint256(0xA2)),
+            uint64(START_TIME + 10 days),
+            1,
+            133_689_989,
+            l2BlockNumber,
+            keccak256("evidence-at-current-l2-height")
+        );
     }
 
     function testPrivateReputationMembershipAndCommitRevealLifecycle() public {

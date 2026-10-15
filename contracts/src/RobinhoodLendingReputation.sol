@@ -5,11 +5,18 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
+/// @dev Arbitrum Nitro's ArbSys precompile. `arbBlockNumber()` returns the L2 height;
+///      Solidity `block.number` tracks the L1 origin height on Nitro chains.
+interface IArbSys {
+    function arbBlockNumber() external view returns (uint256);
+}
+
 /// @notice Issuer-backed, privacy-preserving reputation commitments derived from Lending V2 evidence.
 /// @dev Scores and wallet event histories remain off-chain. Each claim pins the canonical Lending V2
 ///      contract, an inspected block interval, and a digest of the reproducible evidence document.
 contract RobinhoodLendingReputation is AccessControl, Pausable {
     uint256 public constant ROBINHOOD_TESTNET_CHAIN_ID = 46_630;
+    address private constant ARB_SYS = address(100);
     uint64 public constant MODEL_VERSION = 1;
     bytes32 public constant REPUTATION_ISSUER_ROLE = keccak256("REPUTATION_ISSUER_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
@@ -84,7 +91,9 @@ contract RobinhoodLendingReputation is AccessControl, Pausable {
             wallet == address(0) || commitment == bytes32(0) || evidenceHash == bytes32(0)
                 || expiresAt <= block.timestamp || credentialVersion == 0
         ) revert InvalidClaim();
-        if (observedFromBlock > observedToBlock || observedToBlock >= block.number) revert InvalidBlockRange();
+        if (observedFromBlock > observedToBlock || observedToBlock >= IArbSys(ARB_SYS).arbBlockNumber()) {
+            revert InvalidBlockRange();
+        }
         uint64 expectedVersion = claims[wallet].credentialVersion + 1;
         if (credentialVersion != expectedVersion) {
             revert UnexpectedClaimVersion(expectedVersion, credentialVersion);
