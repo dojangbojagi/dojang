@@ -24,6 +24,8 @@ const CONTRACT_LABELS: Record<RobinhoodCodeEvidence["name"], string> = {
   lendingV2Collateral: "rCOL2 test token",
   lendingV2Pool: "LendingPoolV2",
   governance: "RobinhoodGovernancePhase1",
+  phase2ReputationRegistry: "RobinhoodLendingReputation",
+  phase2Governance: "RobinhoodGovernancePhase2",
 };
 
 function describeError(error: unknown): string {

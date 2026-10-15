@@ -30,6 +30,7 @@ export interface Phase2Membership {
   credentialVersion: bigint;
   expiresAt: bigint;
   registeredAt: bigint;
+  reputationThreshold: bigint;
   active: boolean;
 }
 

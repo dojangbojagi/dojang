@@ -13,9 +13,8 @@ contract RobinhoodLendingReputation is AccessControl, Pausable {
     uint64 public constant MODEL_VERSION = 1;
     bytes32 public constant REPUTATION_ISSUER_ROLE = keccak256("REPUTATION_ISSUER_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
-    bytes32 public constant SCORE_MODEL_HASH = keccak256(
-        "GYEVO_LENDING_REPUTATION_V1:participation=1,borrow=1,full-repayment=2,liquidation=-2"
-    );
+    bytes32 public constant SCORE_MODEL_HASH =
+        keccak256("GYEVO_LENDING_REPUTATION_V1:participation=1,borrow=1,full-repayment=2,liquidation=-2");
 
     struct Claim {
         address wallet;
@@ -59,7 +58,9 @@ contract RobinhoodLendingReputation is AccessControl, Pausable {
 
     constructor(address lendingPool_, address admin_, address issuer_, address pauseAuthority_) {
         if (block.chainid != ROBINHOOD_TESTNET_CHAIN_ID) revert UnsupportedChain();
-        if (lendingPool_ == address(0) || admin_ == address(0) || issuer_ == address(0) || pauseAuthority_ == address(0)) {
+        if (
+            lendingPool_ == address(0) || admin_ == address(0) || issuer_ == address(0) || pauseAuthority_ == address(0)
+        ) {
             revert ZeroAddress();
         }
         if (lendingPool_.code.length == 0) revert MissingCode(lendingPool_);

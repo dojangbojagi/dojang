@@ -22,14 +22,28 @@ contract RobinhoodGovernancePhase2 is AccessControl, Pausable {
     bytes32 public constant BALLOT_DOMAIN = keccak256("GYEVO_DAO_PHASE2_BALLOT_V1");
     bytes32 public constant NULLIFIER_DOMAIN = keccak256("GYEVO_DAO_PHASE2_NULLIFIER_V1");
 
-    enum VoteType { Against, For, Abstain }
-    enum ProposalState { None, Pending, Commit, Reveal, Succeeded, Rejected, Expired, Executed }
+    enum VoteType {
+        Against,
+        For,
+        Abstain
+    }
+    enum ProposalState {
+        None,
+        Pending,
+        Commit,
+        Reveal,
+        Succeeded,
+        Rejected,
+        Expired,
+        Executed
+    }
 
     struct Membership {
         bytes32 commitment;
         uint64 credentialVersion;
         uint64 expiresAt;
         uint64 registeredAt;
+        uint256 reputationThreshold;
     }
 
     struct Proposal {
@@ -96,7 +110,8 @@ contract RobinhoodGovernancePhase2 is AccessControl, Pausable {
         address indexed wallet,
         bytes32 indexed commitment,
         uint64 indexed credentialVersion,
-        uint64 expiresAt
+        uint64 expiresAt,
+        uint256 reputationThreshold
     );
     event ProposalCreated(
         uint256 indexed proposalId,
@@ -163,14 +178,18 @@ contract RobinhoodGovernancePhase2 is AccessControl, Pausable {
     }
 
     function registerMembership(bytes calldata proof, uint256[9] calldata publicInputs) external whenNotPaused {
-        RobinhoodDemoCredentialRegistry.Credential memory credential = _validateEligibility(msg.sender, proof, publicInputs);
+        RobinhoodDemoCredentialRegistry.Credential memory credential =
+            _validateEligibility(msg.sender, proof, publicInputs);
         memberships[msg.sender] = Membership({
             commitment: credential.commitment,
             credentialVersion: credential.version,
             expiresAt: credential.expiresAt,
-            registeredAt: SafeCast.toUint64(block.timestamp)
+            registeredAt: SafeCast.toUint64(block.timestamp),
+            reputationThreshold: minimumReputation
         });
-        emit MembershipRegistered(msg.sender, credential.commitment, credential.version, credential.expiresAt);
+        emit MembershipRegistered(
+            msg.sender, credential.commitment, credential.version, credential.expiresAt, minimumReputation
+        );
     }
 
     function createProposal(string calldata contentReference, uint256 proposedMinimumReputation)
@@ -304,8 +323,13 @@ contract RobinhoodGovernancePhase2 is AccessControl, Pausable {
         return (proposal.forVotes, proposal.againstVotes, proposal.abstainVotes, proposal.committedVotes);
     }
 
-    function pause() external onlyRole(PAUSER_ROLE) { _pause(); }
-    function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) { _unpause(); }
+    function pause() external onlyRole(PAUSER_ROLE) {
+        _pause();
+    }
+
+    function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _unpause();
+    }
 
     function _validateEligibility(address wallet, bytes calldata proof, uint256[9] calldata publicInputs)
         private
@@ -321,7 +345,8 @@ contract RobinhoodGovernancePhase2 is AccessControl, Pausable {
         ) revert CredentialInactive(wallet);
         RobinhoodLendingReputation.Claim memory claim = reputationRegistry.getClaim(wallet);
         if (
-            claim.wallet != wallet || claim.revoked || claim.issuedAt > block.timestamp || claim.expiresAt <= block.timestamp
+            claim.wallet != wallet || claim.revoked || claim.issuedAt > block.timestamp
+                || claim.expiresAt <= block.timestamp
                 || !reputationRegistry.hasRole(reputationRegistry.REPUTATION_ISSUER_ROLE(), claim.issuer)
         ) revert ReputationInactive(wallet);
         if (
@@ -344,15 +369,21 @@ contract RobinhoodGovernancePhase2 is AccessControl, Pausable {
 
     function _isActiveMember(address wallet) private view returns (bool) {
         Membership storage member = memberships[wallet];
-        if (member.commitment == bytes32(0) || member.expiresAt <= block.timestamp) return false;
-        RobinhoodDemoCredentialRegistry.Credential memory credential = credentialRegistry.getCredential(wallet, MEMBERSHIP_POLICY_ID);
         if (
-            credential.wallet != wallet || credential.revoked || credential.expiresAt <= block.timestamp
+            member.commitment == bytes32(0) || member.expiresAt <= block.timestamp
+                || member.reputationThreshold != minimumReputation
+        ) return false;
+        RobinhoodDemoCredentialRegistry.Credential memory credential =
+            credentialRegistry.getCredential(wallet, MEMBERSHIP_POLICY_ID);
+        if (
+            credential.wallet != wallet || credential.revoked || credential.issuedAt > block.timestamp
+                || credential.expiresAt <= block.timestamp || credential.expiresAt != member.expiresAt
                 || credential.version != member.credentialVersion || credential.commitment != member.commitment
                 || !credentialRegistry.hasRole(credentialRegistry.ISSUER_ROLE(), credential.issuer)
         ) return false;
         RobinhoodLendingReputation.Claim memory claim = reputationRegistry.getClaim(wallet);
-        return claim.wallet == wallet && !claim.revoked && claim.expiresAt > block.timestamp
+        return claim.wallet == wallet && !claim.revoked && claim.issuedAt <= block.timestamp
+            && claim.expiresAt > block.timestamp && claim.expiresAt == member.expiresAt
             && claim.credentialVersion == member.credentialVersion && claim.commitment == member.commitment
             && reputationRegistry.hasRole(reputationRegistry.REPUTATION_ISSUER_ROLE(), claim.issuer);
     }

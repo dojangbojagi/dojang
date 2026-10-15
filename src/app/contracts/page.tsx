@@ -21,6 +21,8 @@ const ROWS: Omit<DirectoryRow, "address" | "invalid">[] = [
   { key: "zkTranscriptLib", group: "Credentials and proofs", name: "Verifier Library · Transcript", tech: "ZKTranscriptLib", purpose: "Library linked into the proof verifier." },
   { key: "relationsLib", group: "Credentials and proofs", name: "Verifier Library · Relations", tech: "RelationsLib", purpose: "Library linked into the proof verifier." },
   { key: "governance", group: "DAO Governance", name: "DAO Governance", tech: "RobinhoodGovernancePhase1", purpose: "Credential-gated proposals and public voting. Its first phase has one bounded action and holds no funds." },
+  { key: "phase2ReputationRegistry", group: "DAO Governance Phase 2", name: "Lending Reputation Registry", tech: "RobinhoodLendingReputation", purpose: "Pins private reputation commitments to a canonical Lending V2 event range and evidence digest." },
+  { key: "phase2Governance", group: "DAO Governance Phase 2", name: "Protected Governance", tech: "RobinhoodGovernancePhase2", purpose: "Verifies Policy 5 reputation proofs and runs commit–reveal ballots with proposal-scoped nullifiers." },
   { key: "lendingV2Pool", group: "Lending V2", name: "Lending Pool", tech: "LendingPoolV2", purpose: "The demonstration market: supply, collateral, borrow, repay, withdraw and liquidation, gated by proofs." },
   { key: "lendingV2Oracle", group: "Lending V2", name: "Test Price Oracle", tech: "ControlledTestOracle", purpose: "Operator-set synthetic prices for the demo assets. Not market data." },
   { key: "lendingV2Asset", group: "Lending V2", name: "Demo Lending Token", tech: "rUSD2", purpose: "Controlled test token that is lent. No real value." },
@@ -33,8 +35,8 @@ export default function ContractsPage() {
     address: robinhoodContracts[row.key] ?? undefined,
     invalid: invalidRobinhoodContractConfig.includes(row.key),
   }));
-  const mainnetRows: DirectoryRow[] = ROWS.map((row) => {
-    const mainnet = {
+  const mainnetRows: DirectoryRow[] = ROWS.flatMap((row): DirectoryRow[] => {
+    const mainnet = ({
       credentialRegistry: ["RobinhoodMainnetDemoCredentialRegistry", robinhoodMainnetDemoContracts.credentialRegistry],
       honkVerifier: ["HonkVerifier", robinhoodMainnetDemoContracts.honkVerifier],
       verifierAdapter: ["EligibilityVerifierAdapter", robinhoodMainnetDemoContracts.verifierAdapter],
@@ -45,7 +47,8 @@ export default function ContractsPage() {
       lendingV2Oracle: ["RobinhoodMainnetDemoOracle", robinhoodMainnetDemoContracts.oracle],
       lendingV2Asset: ["RobinhoodMainnetDemoToken · dUSD", robinhoodMainnetDemoContracts.loanToken],
       lendingV2Collateral: ["RobinhoodMainnetDemoToken · dCOL", robinhoodMainnetDemoContracts.collateralToken],
-    }[row.key];
+    } as Partial<Record<DirectoryRow["key"], readonly [string, string | undefined]>>)[row.key];
+    if (!mainnet) return [];
     const purpose = row.key === "lendingV2Asset" || row.key === "lendingV2Collateral"
       ? "Synthetic demo asset with no redemption value."
       : row.key === "lendingV2Pool"
@@ -53,7 +56,7 @@ export default function ContractsPage() {
         : row.key === "governance"
           ? "Credential-gated governance contract. Paused on Mainnet."
           : row.purpose;
-    return { ...row, tech: mainnet[0]!, address: mainnet[1]!, purpose };
+    return [{ ...row, tech: mainnet[0], address: mainnet[1], purpose }];
   });
 
   return (

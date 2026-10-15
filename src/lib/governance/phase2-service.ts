@@ -142,7 +142,8 @@ export async function readPhase2Snapshot(
     if (!isAddressEqual(claim.wallet, zeroAddress)) reputation = { ...claim, active: claimActive };
     if (!/^0x0{64}$/i.test(member[0])) {
       membership = {
-        commitment: member[0], credentialVersion: member[1], expiresAt: member[2], registeredAt: member[3], active: memberActive,
+        commitment: member[0], credentialVersion: member[1], expiresAt: member[2], registeredAt: member[3],
+        reputationThreshold: member[4], active: memberActive,
       };
     }
   }

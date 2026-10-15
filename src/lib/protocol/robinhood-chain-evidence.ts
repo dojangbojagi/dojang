@@ -14,6 +14,8 @@ import {
   controlledTokenAbi,
   credentialRegistryAbi,
   robinhoodGovernanceAbi,
+  robinhoodGovernancePhase2Abi,
+  robinhoodLendingReputationAbi,
   eligibilityVerifierAdapterAbi,
   lendingPoolV2Abi,
 } from "@/lib/contracts/abis";
@@ -67,6 +69,8 @@ const eventAbiByContract = {
   lendingV2Collateral: controlledTokenAbi,
   lendingV2Pool: lendingPoolV2Abi,
   governance: robinhoodGovernanceAbi,
+  phase2ReputationRegistry: robinhoodLendingReputationAbi,
+  phase2Governance: robinhoodGovernancePhase2Abi,
 } as const;
 
 function addressUrl(address: Address): string {

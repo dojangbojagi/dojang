@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { decodeEventLog, isAddressEqual, type Address, type Hex, type TransactionReceipt } from "viem";
 import { usePublicClient, useWriteContract } from "wagmi";
@@ -73,8 +73,9 @@ export function useRobinhoodDaoPhase2(proposalId?: bigint) {
     refetchInterval: 15_000,
     retry: 1,
   });
-  const readiness = snapshotQuery.data?.state;
-  const snapshot = readiness === "ready" ? snapshotQuery.data.snapshot : undefined;
+  const queryData = snapshotQuery.data;
+  const readiness = queryData?.state;
+  const snapshot = queryData?.state === "ready" ? queryData.snapshot : undefined;
   const state = !addresses
     ? "unconfigured" as const
     : snapshotQuery.isError
@@ -89,7 +90,7 @@ export function useRobinhoodDaoPhase2(proposalId?: bigint) {
 
   const context = useCallback(() => {
     if (!account.address) throw new ProtocolError("WALLET_REQUIRED", "Connect a wallet before using DAO Phase 2.");
-    if (!account.isRobinhoodTestnet) throw new ProtocolError("WRONG_NETWORK", "Switch to Robinhood Chain Testnet (46630)." );
+    if (!account.isRobinhoodTestnet) throw new ProtocolError("WRONG_NETWORK", "Switch to Robinhood Chain Testnet (46630).");
     if (!client || !addresses) throw new ProtocolError("GOVERNANCE_NOT_CONFIGURED", "DAO Phase 2 is not deployed or configured.");
     return { wallet: account.address, client, addresses };
   }, [account.address, account.isRobinhoodTestnet, addresses, client]);
@@ -132,7 +133,7 @@ export function useRobinhoodDaoPhase2(proposalId?: bigint) {
         explorerUrl,
         error: message,
       });
-      throw error;
+      throw new Error(message, { cause: error });
     }
   }, [client, queryClient, writer]);
 
@@ -143,6 +144,11 @@ export function useRobinhoodDaoPhase2(proposalId?: bigint) {
     const data = latest.snapshot;
     if (!data.credentialActive || !data.credential) throw new Error("An active Policy 5 project credential is required.");
     if (!data.reputation?.active) throw new Error("An active Lending V2 reputation claim is required.");
+    if (
+      data.reputation.commitment.toLowerCase() !== data.credential.commitment.toLowerCase()
+        || data.reputation.credentialVersion !== data.credential.version
+        || data.reputation.expiresAt !== data.credential.expiresAt
+    ) throw new Error("The Policy 5 credential and Lending reputation claim do not describe the same private commitment.");
     if (
       witness.format !== "robinhood-demo-credential-v1" || witness.policyId !== 5
         || !isAddressEqual(witness.wallet, current.wallet)
@@ -190,7 +196,13 @@ export function useRobinhoodDaoPhase2(proposalId?: bigint) {
         functionName: "memberships",
         args: [current.wallet],
       });
-      return member[1] === version;
+      const active = await current.client.readContract({
+        address: current.addresses.governance,
+        abi: robinhoodGovernancePhase2Abi,
+        functionName: "isActiveMember",
+        args: [current.wallet],
+      });
+      return member[1] === version && member[4] === proof.publicContext.threshold && active;
     });
   }, [context, proof, submit]);
 
@@ -273,6 +285,24 @@ export function useRobinhoodDaoPhase2(proposalId?: bigint) {
         || !/^0x[0-9a-fA-F]{64}$/.test(ballot.salt)
     ) throw new Error("This ballot reveal file does not match the connected wallet and Phase 2 contract.");
     const id = BigInt(ballot.proposalId);
+    const [expectedCommitment, expectedNullifier] = await Promise.all([
+      current.client.readContract({
+        address: current.addresses.governance,
+        abi: robinhoodGovernancePhase2Abi,
+        functionName: "ballotCommitment",
+        args: [id, current.wallet, ballot.voteType, ballot.salt],
+      }),
+      current.client.readContract({
+        address: current.addresses.governance,
+        abi: robinhoodGovernancePhase2Abi,
+        functionName: "voteNullifier",
+        args: [id, current.wallet],
+      }),
+    ]);
+    if (
+      expectedCommitment.toLowerCase() !== ballot.commitment.toLowerCase()
+        || expectedNullifier.toLowerCase() !== ballot.nullifier.toLowerCase()
+    ) throw new Error("This ballot reveal file was changed after the vote was committed.");
     return submit(async () => {
       const simulation = await current.client.simulateContract({
         account: current.wallet,
@@ -289,6 +319,10 @@ export function useRobinhoodDaoPhase2(proposalId?: bigint) {
       args: [id, nullifier],
     }));
   }, [context, submit]);
+
+  useEffect(() => {
+    setProof(undefined);
+  }, [account.address, addresses?.governance, snapshot?.credential?.version, snapshot?.minimumReputation]);
 
   const finalizeProposal = useCallback(async (id: bigint) => {
     const current = context();

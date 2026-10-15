@@ -25,6 +25,22 @@ contract DeployRobinhoodDaoPhase2 {
         RobinhoodDaoPhase2Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
     uint256 private constant ROBINHOOD_TESTNET_CHAIN_ID = 46_630;
 
+    struct Config {
+        address deployer;
+        address admin;
+        address membershipIssuer;
+        address reputationIssuer;
+        address pauseAuthority;
+        address registry;
+        address verifier;
+        address lendingPool;
+        uint64 commitPeriod;
+        uint64 revealPeriod;
+        uint64 executionWindow;
+        uint256 quorum;
+        uint256 minimumReputation;
+    }
+
     event RobinhoodDaoPhase2Deployed(
         address indexed governance,
         address indexed reputationRegistry,
@@ -32,57 +48,21 @@ contract DeployRobinhoodDaoPhase2 {
         address credentialRegistry,
         address eligibilityVerifier,
         address admin,
+        address membershipIssuer,
         address reputationIssuer,
         address pauseAuthority
     );
 
     function run() external returns (address reputationRegistryAddress, address governanceAddress) {
         require(block.chainid == ROBINHOOD_TESTNET_CHAIN_ID, "wrong chain: expected Robinhood Testnet 46630");
-        address deployer = vm.envAddress("RH_TESTNET_PHASE2_DEPLOYER_ADDRESS");
-        address admin = vm.envAddress("RH_TESTNET_PHASE2_ADMIN_ADDRESS");
-        address membershipIssuer = vm.envAddress("RH_TESTNET_PHASE2_MEMBERSHIP_ISSUER_ADDRESS");
-        address reputationIssuer = vm.envAddress("RH_TESTNET_PHASE2_REPUTATION_ISSUER_ADDRESS");
-        address pauseAuthority = vm.envAddress("RH_TESTNET_PHASE2_PAUSE_AUTHORITY_ADDRESS");
-        address registryAddress = vm.envAddress("RH_TESTNET_CREDENTIAL_REGISTRY_ADDRESS");
-        address verifierAddress = vm.envAddress("RH_TESTNET_VERIFIER_ADAPTER_ADDRESS");
-        address lendingPoolAddress = vm.envAddress("RH_TESTNET_LENDING_V2_POOL_ADDRESS");
-        _requireDistinctRoles(deployer, admin, membershipIssuer, reputationIssuer, pauseAuthority);
-        require(registryAddress.code.length > 0, "credential registry has no code");
-        require(verifierAddress.code.length > 0, "verifier adapter has no code");
-        require(lendingPoolAddress.code.length > 0, "Lending V2 pool has no code");
+        Config memory config = _configuration();
+        _validateConfiguration(config);
 
-        RobinhoodDemoCredentialRegistry registry = RobinhoodDemoCredentialRegistry(registryAddress);
-        require(registry.hasRole(registry.ISSUER_ROLE(), membershipIssuer), "membership issuer lacks registry role");
-        require(
-            RobinhoodLendingV2Dependencies(lendingPoolAddress).credentialRegistry() == registryAddress,
-            "Lending V2 registry mismatch"
+        vm.startBroadcast(config.deployer);
+        RobinhoodLendingReputation reputationRegistry = new RobinhoodLendingReputation(
+            config.lendingPool, config.admin, config.reputationIssuer, config.pauseAuthority
         );
-        require(
-            RobinhoodLendingV2Dependencies(lendingPoolAddress).eligibilityVerifier() == verifierAddress,
-            "Lending V2 verifier mismatch"
-        );
-
-        uint64 commitPeriod = _uint64("RH_TESTNET_PHASE2_COMMIT_PERIOD");
-        uint64 revealPeriod = _uint64("RH_TESTNET_PHASE2_REVEAL_PERIOD");
-        uint64 executionWindow = _uint64("RH_TESTNET_PHASE2_EXECUTION_WINDOW");
-        uint256 quorum = vm.envUint("RH_TESTNET_PHASE2_QUORUM");
-        uint256 minimumReputation = vm.envUint("RH_TESTNET_PHASE2_MINIMUM_REPUTATION");
-
-        vm.startBroadcast(deployer);
-        RobinhoodLendingReputation reputationRegistry =
-            new RobinhoodLendingReputation(lendingPoolAddress, admin, reputationIssuer, pauseAuthority);
-        RobinhoodGovernancePhase2 governance = new RobinhoodGovernancePhase2(
-            registry,
-            reputationRegistry,
-            IEligibilityVerifier(verifierAddress),
-            admin,
-            pauseAuthority,
-            commitPeriod,
-            revealPeriod,
-            executionWindow,
-            quorum,
-            minimumReputation
-        );
+        RobinhoodGovernancePhase2 governance = _deployGovernance(config, reputationRegistry);
         vm.stopBroadcast();
 
         require(reputationRegistry.paused(), "reputation registry must start paused");
@@ -92,12 +72,68 @@ contract DeployRobinhoodDaoPhase2 {
         emit RobinhoodDaoPhase2Deployed(
             governanceAddress,
             reputationRegistryAddress,
-            lendingPoolAddress,
-            registryAddress,
-            verifierAddress,
-            admin,
-            reputationIssuer,
-            pauseAuthority
+            config.lendingPool,
+            config.registry,
+            config.verifier,
+            config.admin,
+            config.membershipIssuer,
+            config.reputationIssuer,
+            config.pauseAuthority
+        );
+    }
+
+    function _configuration() private returns (Config memory config) {
+        config.deployer = vm.envAddress("RH_TESTNET_PHASE2_DEPLOYER_ADDRESS");
+        config.admin = vm.envAddress("RH_TESTNET_PHASE2_ADMIN_ADDRESS");
+        config.membershipIssuer = vm.envAddress("RH_TESTNET_PHASE2_MEMBERSHIP_ISSUER_ADDRESS");
+        config.reputationIssuer = vm.envAddress("RH_TESTNET_PHASE2_REPUTATION_ISSUER_ADDRESS");
+        config.pauseAuthority = vm.envAddress("RH_TESTNET_PHASE2_PAUSE_AUTHORITY_ADDRESS");
+        config.registry = vm.envAddress("RH_TESTNET_CREDENTIAL_REGISTRY_ADDRESS");
+        config.verifier = vm.envAddress("RH_TESTNET_VERIFIER_ADAPTER_ADDRESS");
+        config.lendingPool = vm.envAddress("RH_TESTNET_LENDING_V2_POOL_ADDRESS");
+        config.commitPeriod = _uint64("RH_TESTNET_PHASE2_COMMIT_PERIOD");
+        config.revealPeriod = _uint64("RH_TESTNET_PHASE2_REVEAL_PERIOD");
+        config.executionWindow = _uint64("RH_TESTNET_PHASE2_EXECUTION_WINDOW");
+        config.quorum = vm.envUint("RH_TESTNET_PHASE2_QUORUM");
+        config.minimumReputation = vm.envUint("RH_TESTNET_PHASE2_MINIMUM_REPUTATION");
+    }
+
+    function _validateConfiguration(Config memory config) private view {
+        _requireDistinctRoles(
+            config.deployer, config.admin, config.membershipIssuer, config.reputationIssuer, config.pauseAuthority
+        );
+        require(config.registry.code.length > 0, "credential registry has no code");
+        require(config.verifier.code.length > 0, "verifier adapter has no code");
+        require(config.lendingPool.code.length > 0, "Lending V2 pool has no code");
+        RobinhoodDemoCredentialRegistry registry = RobinhoodDemoCredentialRegistry(config.registry);
+        require(
+            registry.hasRole(registry.ISSUER_ROLE(), config.membershipIssuer), "membership issuer lacks registry role"
+        );
+        require(
+            RobinhoodLendingV2Dependencies(config.lendingPool).credentialRegistry() == config.registry,
+            "Lending V2 registry mismatch"
+        );
+        require(
+            RobinhoodLendingV2Dependencies(config.lendingPool).eligibilityVerifier() == config.verifier,
+            "Lending V2 verifier mismatch"
+        );
+    }
+
+    function _deployGovernance(Config memory config, RobinhoodLendingReputation reputationRegistry)
+        private
+        returns (RobinhoodGovernancePhase2)
+    {
+        return new RobinhoodGovernancePhase2(
+            RobinhoodDemoCredentialRegistry(config.registry),
+            reputationRegistry,
+            IEligibilityVerifier(config.verifier),
+            config.admin,
+            config.pauseAuthority,
+            config.commitPeriod,
+            config.revealPeriod,
+            config.executionWindow,
+            config.quorum,
+            config.minimumReputation
         );
     }
 
@@ -118,7 +154,9 @@ contract DeployRobinhoodDaoPhase2 {
                 && deployer != pauseAuthority,
             "separate deployer role"
         );
-        require(admin != membershipIssuer && admin != reputationIssuer && admin != pauseAuthority, "separate admin role");
+        require(
+            admin != membershipIssuer && admin != reputationIssuer && admin != pauseAuthority, "separate admin role"
+        );
         require(
             membershipIssuer != reputationIssuer && membershipIssuer != pauseAuthority
                 && reputationIssuer != pauseAuthority,

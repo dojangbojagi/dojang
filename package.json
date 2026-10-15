@@ -23,6 +23,8 @@
     "robinhood:verifier:simulate": "bun run contracts:build && bash scripts/forge-simulate.sh script/DeployRobinhoodVerifier.s.sol:DeployRobinhoodVerifier --profile robinhood_testnet --rpc-url \"$RH_TESTNET_RPC_URL\"",
     "robinhood:stack:simulate": "bun run contracts:build && bash scripts/forge-simulate.sh script/DeployRobinhoodProtocolStack.s.sol:DeployRobinhoodProtocolStack --profile robinhood_testnet --rpc-url \"$RH_TESTNET_RPC_URL\"",
     "robinhood:dao2:simulate": "bun run contracts:build && bash scripts/forge-simulate.sh script/DeployRobinhoodDaoPhase2.s.sol:DeployRobinhoodDaoPhase2 --profile robinhood_testnet --rpc-url \"$RH_TESTNET_RPC_URL\"",
+    "robinhood:dao2": "bun scripts/robinhood-dao-phase2.mjs",
+    "robinhood:dao2:proof": "bun circuits/scripts/dao-phase2-conformance.mjs",
     "robinhood:mainnet:demo:build": "forge build --root contracts --profile robinhood_mainnet --use \"$PWD/contracts/solc-wrapper.sh\"",
     "robinhood:mainnet:demo:validate-config": "bun scripts/validate-robinhood-mainnet-demo-config.mjs",
     "robinhood:mainnet:demo:simulate": "bun run robinhood:mainnet:demo:build && bash scripts/forge-simulate.sh script/DeployRobinhoodMainnetDemoStack.s.sol:DeployRobinhoodMainnetDemoStack --profile robinhood_mainnet --chain-id 4663 --rpc-timeout 20 --rpc-url \"$RH_MAINNET_RPC_URL\"",

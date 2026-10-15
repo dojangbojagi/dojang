@@ -75,12 +75,10 @@ contract RobinhoodGovernancePhase2Test {
 
         bytes32 saltOne = bytes32(uint256(0xA1));
         bytes32 saltTwo = bytes32(uint256(0xA2));
-        bytes32 sealedOne = governance.ballotCommitment(
-            proposalId, MEMBER_ONE, RobinhoodGovernancePhase2.VoteType.For, saltOne
-        );
-        bytes32 sealedTwo = governance.ballotCommitment(
-            proposalId, MEMBER_TWO, RobinhoodGovernancePhase2.VoteType.For, saltTwo
-        );
+        bytes32 sealedOne =
+            governance.ballotCommitment(proposalId, MEMBER_ONE, RobinhoodGovernancePhase2.VoteType.For, saltOne);
+        bytes32 sealedTwo =
+            governance.ballotCommitment(proposalId, MEMBER_TWO, RobinhoodGovernancePhase2.VoteType.For, saltTwo);
         vm.prank(MEMBER_ONE);
         bytes32 nullifierOne = governance.commitVote(proposalId, sealedOne);
         vm.prank(MEMBER_TWO);
@@ -104,10 +102,18 @@ contract RobinhoodGovernancePhase2Test {
 
         vm.warp(proposal.revealDeadline);
         governance.finalizeProposal(proposalId);
-        require(governance.proposalState(proposalId) == RobinhoodGovernancePhase2.ProposalState.Succeeded, "not succeeded");
+        require(
+            governance.proposalState(proposalId) == RobinhoodGovernancePhase2.ProposalState.Succeeded, "not succeeded"
+        );
         governance.executeProposal(proposalId);
         require(governance.minimumReputation() == 4, "governed reputation threshold not applied");
-        require(governance.proposalState(proposalId) == RobinhoodGovernancePhase2.ProposalState.Executed, "not executed");
+        require(
+            governance.proposalState(proposalId) == RobinhoodGovernancePhase2.ProposalState.Executed, "not executed"
+        );
+        require(!governance.isActiveMember(MEMBER_ONE), "old-threshold proof remained active");
+        _issueNextMembership(MEMBER_ONE, bytes32(uint256(0x1112)));
+        _register(MEMBER_ONE);
+        require(governance.isActiveMember(MEMBER_ONE), "member could not re-prove at governed threshold");
     }
 
     function testWrongRevealAndCrossProposalReplayAreRejected() public {
@@ -118,9 +124,8 @@ contract RobinhoodGovernancePhase2Test {
         RobinhoodGovernancePhase2.Proposal memory first = governance.getProposal(proposalOne);
         vm.warp(first.startAt);
         bytes32 salt = bytes32(uint256(0xB1));
-        bytes32 commitment = governance.ballotCommitment(
-            proposalOne, MEMBER_ONE, RobinhoodGovernancePhase2.VoteType.For, salt
-        );
+        bytes32 commitment =
+            governance.ballotCommitment(proposalOne, MEMBER_ONE, RobinhoodGovernancePhase2.VoteType.For, salt);
         vm.prank(MEMBER_ONE);
         governance.commitVote(proposalOne, commitment);
         require(
@@ -171,9 +176,8 @@ contract RobinhoodGovernancePhase2Test {
         RobinhoodGovernancePhase2.Proposal memory proposal = governance.getProposal(proposalId);
         vm.warp(proposal.startAt);
         bytes32 salt = bytes32(uint256(0xC1));
-        bytes32 commitment = governance.ballotCommitment(
-            proposalId, MEMBER_ONE, RobinhoodGovernancePhase2.VoteType.For, salt
-        );
+        bytes32 commitment =
+            governance.ballotCommitment(proposalId, MEMBER_ONE, RobinhoodGovernancePhase2.VoteType.For, salt);
         vm.prank(MEMBER_ONE);
         governance.commitVote(proposalId, commitment);
         governance.pause();
@@ -211,6 +215,16 @@ contract RobinhoodGovernancePhase2Test {
         uint256[9] memory inputs = _proofInputs(wallet);
         vm.prank(wallet);
         governance.registerMembership(hex"42", inputs);
+    }
+
+    function _issueNextMembership(address wallet, bytes32 commitment) private {
+        uint64 expiresAt = uint64(START_TIME + 10 days);
+        RobinhoodDemoCredentialRegistry.Credential memory previous = credentialRegistry.getCredential(wallet, 5);
+        uint64 version = previous.version + 1;
+        credentialRegistry.recordCredential(wallet, 5, commitment, expiresAt, version);
+        reputationRegistry.recordClaim(
+            wallet, commitment, expiresAt, version, 900, 999, keccak256(abi.encode(wallet, version))
+        );
     }
 
     function _proofInputs(address wallet) private view returns (uint256[9] memory inputs) {

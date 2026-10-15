@@ -49,7 +49,7 @@ if [[ -f "$workspace_env" ]]; then
       RH_TESTNET_PHASE2_EXECUTION_WINDOW|RH_TESTNET_PHASE2_QUORUM|RH_TESTNET_PHASE2_MINIMUM_REPUTATION)
         value="${value#\"}"; value="${value%\"}"
         value="${value#\'}"; value="${value%\'}"
-        if [[ -z "${!name:-}" ]]; then export "$name=$value"; fi
+        if [[ -z "${!name+x}" ]]; then export "$name=$value"; fi
         ;;
       RH_MAINNET_RPC_URL|RH_MAINNET_DEPLOYER_ADDRESS|RH_MAINNET_ADMIN_ADDRESS|\
       RH_MAINNET_ISSUER_ADDRESS|RH_MAINNET_ORACLE_UPDATER_ADDRESS|RH_MAINNET_RISK_ADMIN_ADDRESS|\
@@ -69,7 +69,7 @@ if [[ -f "$workspace_env" ]]; then
       RH_MAINNET_DEMO_COLLATERAL_PRICE_MIN_WAD|RH_MAINNET_DEMO_COLLATERAL_PRICE_MAX_WAD)
         value="${value#\"}"; value="${value%\"}"
         value="${value#\'}"; value="${value%\'}"
-        if [[ -z "${!name:-}" ]]; then export "$name=$value"; fi
+        if [[ -z "${!name+x}" ]]; then export "$name=$value"; fi
         ;;
     esac
   done < "$workspace_env"

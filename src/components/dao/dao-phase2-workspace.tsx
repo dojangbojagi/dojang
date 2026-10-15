@@ -104,8 +104,9 @@ export function DaoPhase2Workspace() {
 
   const snapshot = dao.snapshot;
   const proposal = snapshot?.proposal;
-  const unavailable = dao.state !== "ready" || !wallet.address || !wallet.isRobinhoodTestnet || Boolean(snapshot?.paused);
-  const memberUnavailable = unavailable || !snapshot?.membership?.active;
+  const connectionUnavailable = dao.state !== "ready" || !wallet.address || !wallet.isRobinhoodTestnet;
+  const riskIncreasingUnavailable = connectionUnavailable || Boolean(snapshot?.paused);
+  const memberUnavailable = riskIncreasingUnavailable || !snapshot?.membership?.active;
 
   return (
     <section className="panel panel--ticks protocol-panel" aria-labelledby="dao-phase2-heading">
@@ -135,7 +136,7 @@ export function DaoPhase2Workspace() {
         <div className="kv__row"><dt>Connected wallet</dt><dd className="addr">{wallet.address ?? "Not connected"}</dd></div>
         <div className="kv__row"><dt>Policy 5 credential</dt><dd>{snapshot?.credentialActive ? `Active · version ${snapshot.credential?.version}` : "Missing or inactive"}</dd></div>
         <div className="kv__row"><dt>Lending reputation claim</dt><dd>{snapshot?.reputation?.active ? `Active · evidence ${snapshot.reputation.evidenceHash.slice(0, 10)}…` : "Missing or inactive"}</dd></div>
-        <div className="kv__row"><dt>Proof-backed membership</dt><dd>{snapshot?.membership?.active ? "Active" : "Not registered"}</dd></div>
+        <div className="kv__row"><dt>Proof-backed membership</dt><dd>{snapshot?.membership?.active ? "Active" : snapshot?.membership ? "Registration is stale" : "Not registered"}</dd></div>
         <div className="kv__row"><dt>Minimum private reputation</dt><dd>{snapshot?.minimumReputation.toString() ?? "—"}</dd></div>
         <div className="kv__row"><dt>Quorum</dt><dd>{snapshot?.quorum.toString() ?? "—"} revealed ballots</dd></div>
       </dl>
@@ -147,8 +148,8 @@ export function DaoPhase2Workspace() {
           <input type="file" accept="application/json,.json" onChange={(event) => void importWitness(event.currentTarget.files?.[0])} />
         </label>
         <div className="protocol-actions">
-          <button className="btn btn--secondary" type="button" disabled={busy || unavailable || !witness || !snapshot?.credentialActive || !snapshot.reputation?.active} onClick={() => void run(() => dao.generateMembershipProof(witness!), "The genuine Policy 5 proof passed local and deployed-verifier checks.")}>Generate Reputation Proof</button>
-          <button className="btn btn--primary" type="button" disabled={busy || unavailable || !dao.proof || Boolean(snapshot?.membership?.active)} onClick={() => void run(() => dao.registerMembership(), "Phase 2 membership was confirmed on Robinhood Testnet.")}>Register Membership</button>
+          <button className="btn btn--secondary" type="button" disabled={busy || connectionUnavailable || !witness || !snapshot?.credentialActive || !snapshot.reputation?.active} onClick={() => void run(() => dao.generateMembershipProof(witness!), "The genuine Policy 5 proof passed local and deployed-verifier checks.")}>Generate Reputation Proof</button>
+          <button className="btn btn--primary" type="button" disabled={busy || riskIncreasingUnavailable || !dao.proof || Boolean(snapshot?.membership?.active)} onClick={() => void run(() => dao.registerMembership(), "Phase 2 membership was confirmed on Robinhood Testnet.")}>Register Membership</button>
         </div>
       </div>
 
@@ -198,9 +199,9 @@ export function DaoPhase2Workspace() {
           <input type="file" accept="application/json,.json" onChange={(event) => void importBallot(event.currentTarget.files?.[0])} />
         </label>
         <div className="protocol-actions">
-          <button className="btn btn--primary" type="button" disabled={busy || unavailable || !ballot || proposal?.state !== "reveal" || proposal.walletRevealed} onClick={() => void run(() => dao.revealVote(ballot!), "The ballot reveal receipt and public tally were confirmed.")}>Reveal Vote</button>
-          <button className="btn btn--secondary" type="button" disabled={busy || unavailable || !selectedId || proposal?.state === "pending" || proposal?.state === "commit" || proposal?.state === "reveal" || proposal?.finalized} onClick={() => void run(() => dao.finalizeProposal(selectedId!), "The proposal result was finalized on-chain.")}>Finalize</button>
-          <button className="btn btn--secondary" type="button" disabled={busy || unavailable || !selectedId || proposal?.state !== "succeeded"} onClick={() => void run(() => dao.executeProposal(selectedId!), "The bounded reputation-threshold action was executed.")}>Execute</button>
+          <button className="btn btn--primary" type="button" disabled={busy || connectionUnavailable || !ballot || proposal?.state !== "reveal" || proposal.walletRevealed} onClick={() => void run(() => dao.revealVote(ballot!), "The ballot reveal receipt and public tally were confirmed.")}>Reveal Vote</button>
+          <button className="btn btn--secondary" type="button" disabled={busy || connectionUnavailable || !selectedId || proposal?.state === "pending" || proposal?.state === "commit" || proposal?.state === "reveal" || proposal?.finalized} onClick={() => void run(() => dao.finalizeProposal(selectedId!), "The proposal result was finalized on-chain.")}>Finalize</button>
+          <button className="btn btn--secondary" type="button" disabled={busy || riskIncreasingUnavailable || !selectedId || proposal?.state !== "succeeded"} onClick={() => void run(() => dao.executeProposal(selectedId!), "The bounded reputation-threshold action was executed.")}>Execute</button>
         </div>
       </div>
 
