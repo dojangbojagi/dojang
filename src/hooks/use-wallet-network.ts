@@ -5,10 +5,11 @@ import { useAccount, useConfig, useSwitchChain } from "wagmi";
 import { getAccount, watchAccount } from "wagmi/actions";
 import { GIWA_CHAIN_ID } from "@/lib/config/chain";
 import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
+import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo";
 import { supportedProtocolChains } from "@/lib/config/network-registry";
 import type { WalletState } from "@/lib/protocol/types";
 
-export type ProtocolChainId = typeof GIWA_CHAIN_ID | typeof ROBINHOOD_TESTNET_CHAIN_ID;
+export type ProtocolChainId = typeof GIWA_CHAIN_ID | typeof ROBINHOOD_TESTNET_CHAIN_ID | typeof ROBINHOOD_MAINNET_CHAIN_ID;
 
 export interface WalletNetworkDiagnostics {
   connectorName?: string;
@@ -261,9 +262,11 @@ export function useWalletNetwork(expectedChainId: ProtocolChainId = ROBINHOOD_TE
     isOnExpectedNetwork: account.isConnected && account.chainId === expectedChainId,
     isGiwaSepolia: account.isConnected && account.chainId === GIWA_CHAIN_ID,
     isRobinhoodTestnet: account.isConnected && account.chainId === ROBINHOOD_TESTNET_CHAIN_ID,
+    isRobinhoodMainnet: account.isConnected && account.chainId === ROBINHOOD_MAINNET_CHAIN_ID,
     switchToExpectedNetwork: () => switchTo(expectedChainId),
     switchToGiwaSepolia: () => switchTo(GIWA_CHAIN_ID),
     switchToRobinhoodTestnet: () => switchTo(ROBINHOOD_TESTNET_CHAIN_ID),
+    switchToRobinhoodMainnet: () => switchTo(ROBINHOOD_MAINNET_CHAIN_ID),
     isSwitching: switchChain.isPending,
     switchError,
     switchDiagnostics,

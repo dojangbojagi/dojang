@@ -5,8 +5,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { decodeEventLog, isAddressEqual, type Address, type Hex, type TransactionReceipt } from "viem";
 import { usePublicClient, useWriteContract } from "wagmi";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
-import { robinhoodContracts } from "@/lib/config/contracts";
+import { getDaoPhase2ContractSet } from "@/lib/config/network-registry";
+import type { SupportedProtocolChainId } from "@/lib/config/network-registry";
 import { ROBINHOOD_TESTNET_CHAIN_ID, ROBINHOOD_TESTNET_EXPLORER_URL } from "@/lib/config/robinhood-testnet";
+import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo";
 import {
   eligibilityVerifierProofAbi,
   robinhoodGovernancePhase2Abi,
@@ -40,44 +42,53 @@ function errorMessage(error: unknown) {
   return raw;
 }
 
-export function useRobinhoodDaoPhase2(proposalId?: bigint) {
-  const account = useWalletNetwork(ROBINHOOD_TESTNET_CHAIN_ID);
-  const client = usePublicClient({ chainId: ROBINHOOD_TESTNET_CHAIN_ID });
+export function useRobinhoodDaoPhase2(proposalId?: bigint, chainId: SupportedProtocolChainId = ROBINHOOD_TESTNET_CHAIN_ID) {
+  const account = useWalletNetwork(chainId);
+  const client = usePublicClient({ chainId });
   const writer = useWriteContract();
   const queryClient = useQueryClient();
   const [transaction, setTransaction] = useState<TransactionLifecycle>({ state: "idle" });
   const [proof, setProof] = useState<EligibilityProof>();
+  const contractSet = useMemo(() => getDaoPhase2ContractSet(chainId), [chainId]);
   const addresses = useMemo<Phase2Addresses | undefined>(() => {
-    const governance = robinhoodContracts.phase2Governance;
-    const reputationRegistry = robinhoodContracts.phase2ReputationRegistry;
-    const credentialRegistry = robinhoodContracts.credentialRegistry;
-    const verifier = robinhoodContracts.verifierAdapter;
-    const lendingPool = robinhoodContracts.lendingV2Pool;
+    const governance = contractSet?.governance;
+    const reputationRegistry = contractSet?.reputationRegistry;
+    const credentialRegistry = contractSet?.credentialRegistry;
+    const verifier = contractSet?.verifier;
+    const lendingPool = contractSet?.lendingPool;
     return governance && reputationRegistry && credentialRegistry && verifier && lendingPool
-      ? { governance, reputationRegistry, credentialRegistry, verifier, lendingPool }
+      ? { chainId, governance, reputationRegistry, credentialRegistry, verifier, lendingPool }
       : undefined;
-  }, []);
+  }, [chainId, contractSet]);
   const queryKey = useMemo(() => [
     "robinhood-dao-phase2",
+    chainId,
     addresses?.governance,
+    addresses?.reputationRegistry,
+    addresses?.credentialRegistry,
+    addresses?.verifier,
+    addresses?.lendingPool,
     account.address,
     proposalId?.toString() ?? null,
-  ] as const, [account.address, addresses?.governance, proposalId]);
+  ] as const, [account.address, addresses, chainId, proposalId]);
   const snapshotQuery = useQuery({
     queryKey,
     queryFn: () => {
       if (!client || !addresses) throw new Error("DAO Phase 2 contract addresses are not configured.");
-      return readPhase2Snapshot(client, addresses, account.address, proposalId);
+      return readPhase2Snapshot(client, addresses, account.address, proposalId, chainId);
     },
-    enabled: Boolean(client && addresses),
+    enabled: Boolean(client && addresses && !contractSet?.phase2DeploymentPending),
     refetchInterval: 15_000,
+    refetchOnWindowFocus: true,
     retry: 1,
   });
   const queryData = snapshotQuery.data;
   const readiness = queryData?.state;
   const snapshot = queryData?.state === "ready" ? queryData.snapshot : undefined;
-  const state = !addresses
-    ? "unconfigured" as const
+  const state = contractSet?.phase2DeploymentPending
+    ? "deployment-pending" as const
+    : !addresses
+      ? "unconfigured" as const
     : snapshotQuery.isError
       ? "read-error" as const
       : snapshotQuery.isPending
@@ -90,14 +101,16 @@ export function useRobinhoodDaoPhase2(proposalId?: bigint) {
 
   const context = useCallback(() => {
     if (!account.address) throw new ProtocolError("WALLET_REQUIRED", "Connect a wallet before using DAO Phase 2.");
-    if (!account.isRobinhoodTestnet) throw new ProtocolError("WRONG_NETWORK", "Switch to Robinhood Chain Testnet (46630).");
+      if (account.chainId !== chainId) throw new ProtocolError("WRONG_NETWORK", `Switch to ${contractSet?.chainId === ROBINHOOD_MAINNET_CHAIN_ID ? "Robinhood Mainnet (4663)" : "Robinhood Testnet (46630)"}.`);
+      if (chainId !== ROBINHOOD_TESTNET_CHAIN_ID) throw new ProtocolError("GOVERNANCE_NOT_CONFIGURED", "Mainnet Phase 2 actions are not enabled. Use Robinhood Testnet for the currently supported interactive flow.");
     if (!client || !addresses) throw new ProtocolError("GOVERNANCE_NOT_CONFIGURED", "DAO Phase 2 is not deployed or configured.");
     return { wallet: account.address, client, addresses };
-  }, [account.address, account.isRobinhoodTestnet, addresses, client]);
+  }, [account.address, account.chainId, addresses, chainId, client, contractSet]);
 
   const refresh = useCallback(async () => {
     await snapshotQuery.refetch();
   }, [snapshotQuery]);
+  const clearProof = useCallback(() => setProof(undefined), []);
 
   const submit = useCallback(async <T,>(
     prepare: () => Promise<{ request: unknown; result: T }>,
@@ -110,7 +123,7 @@ export function useRobinhoodDaoPhase2(proposalId?: bigint) {
       const simulation = await prepare();
       setTransaction({ state: "awaiting-signature" });
       hash = await writer.writeContractAsync(simulation.request as Parameters<typeof writer.writeContractAsync>[0]);
-      explorerUrl = `${ROBINHOOD_TESTNET_EXPLORER_URL}/tx/${hash}`;
+      explorerUrl = `${contractSet?.explorerUrl ?? ROBINHOOD_TESTNET_EXPLORER_URL}/tx/${hash}`;
       setTransaction({ state: "submitted", hash, explorerUrl });
       setTransaction({ state: "confirming", hash, explorerUrl });
       const receipt = await client!.waitForTransactionReceipt({ hash });
@@ -135,7 +148,7 @@ export function useRobinhoodDaoPhase2(proposalId?: bigint) {
       });
       throw new Error(message, { cause: error });
     }
-  }, [client, queryClient, writer]);
+  }, [client, contractSet?.explorerUrl, queryClient, writer]);
 
   const generateMembershipProof = useCallback(async (witness: DemoCredentialWitness) => {
     const current = context();
@@ -163,7 +176,7 @@ export function useRobinhoodDaoPhase2(proposalId?: bigint) {
       threshold: data.minimumReputation,
       credentialVersion: data.credential.version,
       expiresAt: data.credential.expiresAt,
-      chainId: BigInt(ROBINHOOD_TESTNET_CHAIN_ID),
+      chainId: BigInt(chainId),
       vault: current.addresses.governance,
     });
     const accepted = await current.client.readContract({
@@ -175,7 +188,7 @@ export function useRobinhoodDaoPhase2(proposalId?: bigint) {
     if (!accepted) throw new Error("The deployed verifier rejected the generated Policy 5 proof.");
     setProof(generated);
     return generated;
-  }, [context]);
+  }, [chainId, context]);
 
   const registerMembership = useCallback(async () => {
     const current = context();
@@ -322,7 +335,7 @@ export function useRobinhoodDaoPhase2(proposalId?: bigint) {
 
   useEffect(() => {
     setProof(undefined);
-  }, [account.address, addresses?.governance, snapshot?.credential?.version, snapshot?.minimumReputation]);
+  }, [account.address, addresses?.governance, chainId, snapshot?.credential?.version, snapshot?.minimumReputation]);
 
   const finalizeProposal = useCallback(async (id: bigint) => {
     const current = context();
@@ -360,10 +373,12 @@ export function useRobinhoodDaoPhase2(proposalId?: bigint) {
 
   return {
     state,
+    deployment: contractSet,
     snapshot,
     error: snapshotQuery.error instanceof Error ? snapshotQuery.error.message : undefined,
     transaction,
     proof,
+    clearProof,
     generateMembershipProof,
     registerMembership,
     createProposal,

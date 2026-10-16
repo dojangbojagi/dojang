@@ -297,6 +297,10 @@ export const eligibilityVerifierAdapterAbi = parseAbi([
   "function honkVerifier() view returns (address)",
 ]);
 
+export const robinhoodMainnetDemoMarkerAbi = parseAbi([
+  "function demoOnly() view returns (bool)",
+]);
+
 export const eligibilityVerifierProofAbi = parseAbi([
   "function verifyProof(bytes proof, uint256[9] publicInputs) view returns (bool)",
 ]);
@@ -397,6 +401,7 @@ export const robinhoodGovernanceAbi = parseAbi([
 
 /** Robinhood Testnet DAO Phase 2. The vote choice is sealed only until reveal; voters are not anonymous. */
 export const robinhoodLendingReputationAbi = parseAbi([
+  "function demoOnly() view returns (bool)",
   "function lendingPool() view returns (address)",
   "function SCORE_MODEL_HASH() view returns (bytes32)",
   "function REPUTATION_ISSUER_ROLE() view returns (bytes32)",
@@ -412,6 +417,7 @@ export const robinhoodLendingReputationAbi = parseAbi([
 ]);
 
 export const robinhoodGovernancePhase2Abi = parseAbi([
+  "function demoOnly() view returns (bool)",
   "function credentialRegistry() view returns (address)",
   "function reputationRegistry() view returns (address)",
   "function eligibilityVerifier() view returns (address)",
@@ -424,6 +430,7 @@ export const robinhoodGovernancePhase2Abi = parseAbi([
   "function minimumReputation() view returns (uint256)",
   "function nextProposalId() view returns (uint256)",
   "function paused() view returns (bool)",
+  "function unpause()",
   "function memberships(address wallet) view returns (bytes32 commitment,uint64 credentialVersion,uint64 expiresAt,uint64 registeredAt,uint256 reputationThreshold)",
   "function isActiveMember(address wallet) view returns (bool)",
   "function voteNullifier(uint256 proposalId,address voter) view returns (bytes32)",

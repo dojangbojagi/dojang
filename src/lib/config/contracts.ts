@@ -1,6 +1,7 @@
 import type { Address, Hex } from "viem";
 import { isAddress } from "viem";
 import { appEnv } from "@/lib/config/env";
+import { robinhoodMainnetDemoContracts } from "@/lib/config/robinhood-mainnet-demo";
 
 function checkedAddress(value?: string): Address | undefined {
   return value && isAddress(value) ? (value as Address) : undefined;
@@ -44,10 +45,23 @@ export const robinhoodContracts = {
   phase2Governance: checkedAddress(appEnv.robinhoodContracts.phase2Governance),
 } as const;
 
+/** Mainnet Phase 2 is a separate, optional registry and never inherits Testnet outputs. */
+export const robinhoodMainnetPhase2Contracts = {
+  reputationRegistry: checkedAddress(appEnv.robinhoodMainnetPhase2Contracts.reputationRegistry),
+  governance: checkedAddress(appEnv.robinhoodMainnetPhase2Contracts.governance),
+  credentialRegistry: robinhoodMainnetDemoContracts.credentialRegistry,
+  verifier: robinhoodMainnetDemoContracts.verifierAdapter,
+  lendingPool: robinhoodMainnetDemoContracts.lendingPool,
+} as const;
+
 export const invalidContractConfig = Object.entries(appEnv.contracts)
   .filter(([, value]) => value && !isAddress(value))
   .map(([key]) => key);
 
 export const invalidRobinhoodContractConfig = Object.entries(appEnv.robinhoodContracts)
+  .filter(([, value]) => value && !isAddress(value))
+  .map(([key]) => key);
+
+export const invalidRobinhoodMainnetPhase2ContractConfig = Object.entries(appEnv.robinhoodMainnetPhase2Contracts)
   .filter(([, value]) => value && !isAddress(value))
   .map(([key]) => key);

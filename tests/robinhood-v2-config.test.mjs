@@ -22,8 +22,8 @@ describe("Robinhood Testnet configuration", () => {
 
   test("makes Robinhood primary and resolves V2 addresses without cross-chain fallback", () => {
     expect(primaryProtocolChainId).toBe(46_630);
-    expect(supportedProtocolChains.map((chain) => chain.id)).toEqual([46_630, 91_342]);
-    expect(supportedProtocolChains.some((chain) => chain.id === 4_663)).toBe(false);
+    expect(supportedProtocolChains.map((chain) => chain.id)).toEqual([46_630, 91_342, 4_663]);
+    expect(supportedProtocolChains[0]?.id).toBe(46_630);
     const robinhood = getLendingV2ContractSet(46_630);
     const giwa = getLendingV2ContractSet(91_342);
     expect(robinhood?.pool).toBe(robinhoodContracts.lendingV2Pool);

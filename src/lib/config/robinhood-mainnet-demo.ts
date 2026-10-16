@@ -2,12 +2,13 @@ import { defineChain, isAddress, type Address } from "viem";
 import { appEnv } from "@/lib/config/env";
 
 export const ROBINHOOD_MAINNET_CHAIN_ID = 4_663;
+export const ROBINHOOD_MAINNET_PUBLIC_RPC_URL = "https://rpc.mainnet.chain.robinhood.com";
 export const ROBINHOOD_MAINNET_DEMO_EXPLORER_URL = "https://robinhoodchain.blockscout.com";
 
 /** Dormant config only: deliberately absent from active wallet/network selection. */
 export const robinhoodMainnetDemoChain = defineChain({
   id: ROBINHOOD_MAINNET_CHAIN_ID,
-  name: "Robinhood Chain Mainnet (GYEVO controlled demo)",
+  name: "Robinhood Chain Mainnet",
   nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
   rpcUrls: { default: { http: [appEnv.robinhoodMainnetRpcUrl] } },
   blockExplorers: {

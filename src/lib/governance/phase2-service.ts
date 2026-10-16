@@ -5,6 +5,7 @@ import {
   credentialRegistryAbi,
   robinhoodGovernancePhase2Abi,
   robinhoodLendingReputationAbi,
+  robinhoodMainnetDemoMarkerAbi,
 } from "@/lib/contracts/abis";
 import type { DemoCredentialRecord } from "@/lib/protocol/types";
 import type {
@@ -21,6 +22,7 @@ const proposalStates: readonly (Phase2ProposalState | undefined)[] = [
 ];
 
 export interface Phase2Addresses {
+  chainId: number;
   governance: Address;
   reputationRegistry: Address;
   credentialRegistry: Address;
@@ -32,10 +34,19 @@ export type Phase2Readiness =
   | { state: "ready"; snapshot: Phase2Snapshot }
   | { state: "no-code" | "dependency-mismatch" };
 
-export async function checkPhase2Deployment(client: PublicClient, addresses: Phase2Addresses) {
+export async function checkPhase2Deployment(client: PublicClient, addresses: Phase2Addresses, expectedChainId = addresses.chainId) {
+  if (addresses.chainId !== expectedChainId) {
+    throw new Error(`Phase 2 addresses are configured for chain ${addresses.chainId}; expected ${expectedChainId}.`);
+  }
   const chainId = await client.getChainId();
-  if (chainId !== ROBINHOOD_TESTNET_CHAIN_ID) throw new Error(`Phase 2 requires chain 46630; RPC returned ${chainId}.`);
-  const targets = Object.values(addresses);
+  if (chainId !== expectedChainId) throw new Error(`Phase 2 requires chain ${expectedChainId}; RPC returned ${chainId}.`);
+  const targets = [
+    addresses.governance,
+    addresses.reputationRegistry,
+    addresses.credentialRegistry,
+    addresses.verifier,
+    addresses.lendingPool,
+  ];
   const codes = await Promise.all(targets.map((address) => client.getBytecode({ address })));
   if (codes.some((code) => !code || code === "0x")) return "no-code" as const;
   const [registry, reputation, verifier, pool] = await Promise.all([
@@ -48,6 +59,15 @@ export async function checkPhase2Deployment(client: PublicClient, addresses: Pha
     !isAddressEqual(registry, addresses.credentialRegistry) || !isAddressEqual(reputation, addresses.reputationRegistry)
       || !isAddressEqual(verifier, addresses.verifier) || !isAddressEqual(pool, addresses.lendingPool)
   ) return "dependency-mismatch" as const;
+  if (chainId === 4_663) {
+    const [governanceDemo, reputationDemo, registryDemo, lendingDemo] = await Promise.all([
+      client.readContract({ address: addresses.governance, abi: robinhoodGovernancePhase2Abi, functionName: "demoOnly" }),
+      client.readContract({ address: addresses.reputationRegistry, abi: robinhoodLendingReputationAbi, functionName: "demoOnly" }),
+      client.readContract({ address: addresses.credentialRegistry, abi: robinhoodMainnetDemoMarkerAbi, functionName: "demoOnly" }),
+      client.readContract({ address: addresses.lendingPool, abi: robinhoodMainnetDemoMarkerAbi, functionName: "demoOnly" }),
+    ]);
+    if (!governanceDemo || !reputationDemo || !registryDemo || !lendingDemo) return "dependency-mismatch" as const;
+  }
   return "ready" as const;
 }
 
@@ -111,8 +131,9 @@ export async function readPhase2Snapshot(
   addresses: Phase2Addresses,
   wallet?: Address,
   proposalId?: bigint,
+  expectedChainId = addresses.chainId || ROBINHOOD_TESTNET_CHAIN_ID,
 ): Promise<Phase2Readiness> {
-  const deployment = await checkPhase2Deployment(client, addresses);
+  const deployment = await checkPhase2Deployment(client, addresses, expectedChainId);
   if (deployment !== "ready") return { state: deployment };
   const [paused, commitPeriod, revealPeriod, executionWindow, quorum, minimumReputation, nextProposalId, block] =
     await Promise.all([

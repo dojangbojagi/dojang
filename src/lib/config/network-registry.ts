@@ -7,10 +7,63 @@ import {
   robinhoodContracts,
 } from "@/lib/config/contracts";
 import { robinhoodTestnet, ROBINHOOD_TESTNET_CHAIN_ID, ROBINHOOD_TESTNET_EXPLORER_URL } from "@/lib/config/robinhood-testnet";
+import {
+  robinhoodMainnetDemoChain,
+  robinhoodMainnetDemoContracts,
+  ROBINHOOD_MAINNET_CHAIN_ID,
+  ROBINHOOD_MAINNET_DEMO_EXPLORER_URL,
+} from "@/lib/config/robinhood-mainnet-demo";
+import { robinhoodMainnetPhase2Contracts } from "@/lib/config/contracts";
 
-export const supportedProtocolChains = [robinhoodTestnet, giwaSepolia] as const;
+export const supportedProtocolChains = [robinhoodTestnet, giwaSepolia, robinhoodMainnetDemoChain] as const;
 export const primaryProtocolChainId = ROBINHOOD_TESTNET_CHAIN_ID;
-export type SupportedProtocolChainId = typeof GIWA_CHAIN_ID | typeof ROBINHOOD_TESTNET_CHAIN_ID;
+export type SupportedProtocolChainId = typeof GIWA_CHAIN_ID | typeof ROBINHOOD_TESTNET_CHAIN_ID | typeof ROBINHOOD_MAINNET_CHAIN_ID;
+
+export interface DaoPhase2ContractSet {
+  chainId: typeof ROBINHOOD_TESTNET_CHAIN_ID | typeof ROBINHOOD_MAINNET_CHAIN_ID;
+  explorerUrl: string;
+  governance?: Address;
+  reputationRegistry?: Address;
+  credentialRegistry?: Address;
+  verifier?: Address;
+  lendingPool?: Address;
+  phase2DeploymentPending: boolean;
+}
+
+/** Returns only the Phase 2 contract addresses assigned to the requested chain. */
+export function getDaoPhase2ContractSet(chainId: number): DaoPhase2ContractSet | undefined {
+  if (chainId === ROBINHOOD_TESTNET_CHAIN_ID) {
+    const governance = robinhoodContracts.phase2Governance;
+    const reputationRegistry = robinhoodContracts.phase2ReputationRegistry;
+    const credentialRegistry = robinhoodContracts.credentialRegistry;
+    const verifier = robinhoodContracts.verifierAdapter;
+    const lendingPool = robinhoodContracts.lendingV2Pool;
+    if (!credentialRegistry || !verifier || !lendingPool) return undefined;
+    return {
+      chainId: ROBINHOOD_TESTNET_CHAIN_ID,
+      explorerUrl: ROBINHOOD_TESTNET_EXPLORER_URL,
+      governance,
+      reputationRegistry,
+      credentialRegistry,
+      verifier,
+      lendingPool,
+      phase2DeploymentPending: false,
+    };
+  }
+  if (chainId === ROBINHOOD_MAINNET_CHAIN_ID) {
+    return {
+      chainId: ROBINHOOD_MAINNET_CHAIN_ID,
+      explorerUrl: ROBINHOOD_MAINNET_DEMO_EXPLORER_URL,
+      governance: robinhoodMainnetPhase2Contracts.governance,
+      reputationRegistry: robinhoodMainnetPhase2Contracts.reputationRegistry,
+      credentialRegistry: robinhoodMainnetDemoContracts.credentialRegistry,
+      verifier: robinhoodMainnetDemoContracts.verifierAdapter,
+      lendingPool: robinhoodMainnetDemoContracts.lendingPool,
+      phase2DeploymentPending: !robinhoodMainnetPhase2Contracts.governance || !robinhoodMainnetPhase2Contracts.reputationRegistry,
+    };
+  }
+  return undefined;
+}
 
 export interface LendingV2ContractSet {
   chainId: SupportedProtocolChainId;
