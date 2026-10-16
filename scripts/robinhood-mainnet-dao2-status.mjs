@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import assert from "node:assert/strict";
-import { createPublicClient, defineChain, http, isAddressEqual, parseAbi } from "viem";
+import { createPublicClient, defineChain, http, isAddress, isAddressEqual, parseAbi } from "viem";
 import { robinhoodMainnetDemoContracts, ROBINHOOD_MAINNET_CHAIN_ID } from "../src/lib/config/robinhood-mainnet-demo.ts";
 
 const ROOT = process.cwd();
@@ -28,6 +28,50 @@ const governanceAbi = parseAbi([
 const markerAbi = parseAbi(["function demoOnly() view returns (bool)"]);
 
 function fail(message) { console.error(`DAO Phase 2 status failed: ${message}`); process.exitCode = 1; }
+export function parseDeploymentArtifact(artifact, deployer) {
+  assert.equal(Number(artifact.chain), ROBINHOOD_MAINNET_CHAIN_ID, "artifact chain is not 4663");
+  assert.ok(deployer && isAddress(deployer), "configured Mainnet deployer address is required");
+  const deployed = {};
+  for (const name of EXPECTED) {
+    const tx = artifact.transactions?.find((item) => item.transactionType === "CREATE" && item.contractName === name);
+    assert.ok(tx, `missing ${name} CREATE record`);
+    assert.ok(tx.hash, `${name} CREATE record has no transaction hash`);
+    // Forge can omit `from` in broadcast artifacts. Keep any recorded sender
+    // as an additional assertion, and always verify the canonical RPC sender.
+    if (tx.from) assert.ok(isAddressEqual(tx.from, deployer), `${name} artifact sender differs from the configured Mainnet deployer`);
+    const receipt = artifact.receipts?.find((item) => item.transactionHash?.toLowerCase() === tx.hash?.toLowerCase());
+    assert.ok(receipt && receipt.status === "0x1", `${name} receipt is missing or unsuccessful`);
+    const address = receipt.contractAddress ?? tx.contractAddress;
+    assert.ok(address, `${name} receipt has no contract address`);
+    if (receipt.from) assert.ok(isAddressEqual(receipt.from, deployer), `${name} artifact receipt sender differs from the configured Mainnet deployer`);
+    deployed[name] = {
+      address,
+      hash: tx.hash,
+      artifactFrom: tx.from ?? receipt.from ?? undefined,
+      blockNumber: BigInt(receipt.blockNumber),
+      blockHash: receipt.blockHash,
+    };
+  }
+  return deployed;
+}
+
+export function assertCanonicalDeployment({ name, item, transaction, receipt, deployer }) {
+  assert.ok(deployer && isAddress(deployer), "configured Mainnet deployer address is required");
+  assert.ok(transaction, `${name} canonical Mainnet transaction is unavailable`);
+  assert.ok(transaction.from && isAddressEqual(transaction.from, deployer), `${name} canonical RPC sender differs from the configured Mainnet deployer`);
+  if (item.artifactFrom) assert.ok(isAddressEqual(transaction.from, item.artifactFrom), `${name} canonical RPC sender differs from the artifact sender`);
+  if (transaction.chainId != null) assert.equal(transaction.chainId, ROBINHOOD_MAINNET_CHAIN_ID, `${name} transaction chain ID is not 4663`);
+  assert.equal(transaction.to, null, `${name} transaction is not a contract creation`);
+  assert.ok(receipt, `${name} canonical Mainnet receipt is unavailable`);
+  assert.equal(receipt.transactionHash.toLowerCase(), item.hash.toLowerCase(), `${name} live receipt transaction hash differs from the artifact`);
+  assert.equal(receipt.status, "success", `${name} live Mainnet receipt failed`);
+  assert.ok(receipt.contractAddress && isAddressEqual(receipt.contractAddress, item.address), `${name} live receipt address differs from the recorded artifact`);
+  assert.equal(receipt.blockNumber, item.blockNumber, `${name} live receipt block differs from the recorded artifact`);
+  if (item.blockHash) assert.equal(receipt.blockHash.toLowerCase(), item.blockHash.toLowerCase(), `${name} live receipt block hash differs from the recorded artifact`);
+  assert.equal(transaction.blockHash, receipt.blockHash, `${name} transaction and receipt are not in the same canonical block`);
+  return true;
+}
+
 function readArtifact() {
   if (!fs.existsSync(ARTIFACT_PATH)) {
     console.log("Robinhood Mainnet DAO Phase 2: NOT DEPLOYED");
@@ -35,20 +79,7 @@ function readArtifact() {
     return undefined;
   }
   const artifact = JSON.parse(fs.readFileSync(ARTIFACT_PATH, "utf8"));
-  assert.equal(Number(artifact.chain), ROBINHOOD_MAINNET_CHAIN_ID, "artifact chain is not 4663");
-  const deployed = {};
-  for (const name of EXPECTED) {
-    const tx = artifact.transactions?.find((item) => item.transactionType === "CREATE" && item.contractName === name);
-    assert.ok(tx, `missing ${name} CREATE record`);
-    const deployer = process.env.RH_MAINNET_DEPLOYER_ADDRESS;
-    assert.ok(deployer && tx.from && isAddressEqual(tx.from, deployer), `${name} deployment sender differs from the configured Mainnet deployer`);
-    const receipt = artifact.receipts?.find((item) => item.transactionHash?.toLowerCase() === tx.hash?.toLowerCase());
-    assert.ok(receipt && receipt.status === "0x1", `${name} receipt is missing or unsuccessful`);
-    const address = receipt.contractAddress ?? tx.contractAddress;
-    assert.ok(address, `${name} receipt has no contract address`);
-    deployed[name] = { address, hash: tx.hash, blockNumber: BigInt(receipt.blockNumber) };
-  }
-  return deployed;
+  return parseDeploymentArtifact(artifact, process.env.RH_MAINNET_DEPLOYER_ADDRESS);
 }
 
 async function blockscoutSourceStatus(address) {
@@ -64,6 +95,7 @@ async function blockscoutSourceStatus(address) {
   } catch { return "unavailable"; }
 }
 
+async function runStatus() {
 const deployment = readArtifact();
 if (deployment) {
   console.log("Robinhood Mainnet DAO Phase 2 · chain 4663 · recorded deployment receipts");
@@ -86,9 +118,11 @@ if (deployment) {
     const govAddress = deployment.RobinhoodMainnetDemoGovernancePhase2.address;
     const liveReceipts = await Promise.all(EXPECTED.map(async (name) => {
       const item = deployment[name];
-      const receipt = await client.getTransactionReceipt({ hash: item.hash });
-      assert.equal(receipt.status, "success", `${name} live Mainnet receipt failed`);
-      assert.ok(receipt.contractAddress && isAddressEqual(receipt.contractAddress, item.address), `${name} live receipt address differs from the recorded artifact`);
+      const [transaction, receipt] = await Promise.all([
+        client.getTransaction({ hash: item.hash }),
+        client.getTransactionReceipt({ hash: item.hash }),
+      ]);
+      assertCanonicalDeployment({ name, item, transaction, receipt, deployer: process.env.RH_MAINNET_DEPLOYER_ADDRESS });
       return receipt;
     }));
     const targets = [
@@ -186,4 +220,12 @@ if (deployment) {
     const message = error instanceof Error ? error.message.replace(RPC, "<configured Mainnet RPC>") : "unknown read error";
     fail(`live verification unavailable or failed: ${message}`);
   }
+}
+}
+
+if (import.meta.main) {
+  runStatus().catch((error) => {
+    const message = error instanceof Error ? error.message.replace(RPC, "<configured Mainnet RPC>") : "unknown read error";
+    fail(`live verification unavailable or failed: ${message}`);
+  });
 }

@@ -7,11 +7,11 @@ import {
   ageText, formatBps, formatWad, oracleLabel, oracleTone, reserveBlockReason, reserveStatus, usageBps,
 } from "@/components/lending-v2/v2-format";
 import type { V2Market, V2Reserve, V2Snapshot } from "@/components/lending-v2/v2-types";
-import { ROBINHOOD_TESTNET_EXPLORER_URL } from "@/lib/config/robinhood-testnet";
 
-function ReserveCard({ reserve, snapshot, onOpen }: {
+function ReserveCard({ reserve, snapshot, explorerUrl, onOpen }: {
   reserve: V2Reserve;
   snapshot: V2Snapshot;
+  explorerUrl: string;
   onOpen: (tab: "supply" | "borrow", asset: Address) => void;
 }) {
   const { data, oracle, symbol, decimals } = reserve;
@@ -30,7 +30,7 @@ function ReserveCard({ reserve, snapshot, onOpen }: {
       <header className="lendv2-reserve__head">
         <div>
           <h3 id={`lendv2-res-${reserve.asset}`}>{symbol}</h3>
-          <a className="addr muted" href={`${ROBINHOOD_TESTNET_EXPLORER_URL}/address/${reserve.asset}`} target="_blank" rel="noopener noreferrer">
+          <a className="addr muted" href={`${explorerUrl}/address/${reserve.asset}`} target="_blank" rel="noopener noreferrer">
             {shortAddress(reserve.asset)}<span className="visually-hidden"> (token on the explorer, opens in a new tab)</span>
           </a>
         </div>
@@ -150,7 +150,7 @@ export function MarketsView({ market, onOpen }: { market: V2Market; onOpen: (tab
       ) : (
         <div className="lendv2-reserves">
           {snapshot.reserves.map((reserve) => (
-            <ReserveCard key={reserve.asset} reserve={reserve} snapshot={snapshot} onOpen={onOpen} />
+        <ReserveCard key={reserve.asset} reserve={reserve} snapshot={snapshot} explorerUrl={market.explorerUrl} onOpen={onOpen} />
           ))}
         </div>
       )}

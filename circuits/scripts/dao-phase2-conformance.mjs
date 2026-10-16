@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Barretenberg, UltraHonkBackend } from "@aztec/bb.js";
 import { Noir } from "@noir-lang/noir_js";
+import { createPublicClient, defineChain, http, toHex, parseAbi } from "viem";
 import { computeEligibilityCommitment } from "../../src/lib/zk/commitment.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -70,6 +71,29 @@ try {
     noir.execute(inputs({ vault_address: BigInt("0x3333333333333333333333333333333333333333").toString() })),
     "wrong-governance context was accepted",
   );
+  let deployedVerifierAccepted;
+  const adapterAddress = process.env.DAO_PHASE2_VERIFY_ADAPTER_ADDRESS;
+  if (adapterAddress) {
+    const rpcUrl = process.env.RH_MAINNET_RPC_URL;
+    assert.equal(chainId, 4_663n, "Deployed Mainnet verifier check requires DAO_PHASE2_CHAIN_ID=4663.");
+    assert.match(adapterAddress, /^0x[0-9a-fA-F]{40}$/, "DAO_PHASE2_VERIFY_ADAPTER_ADDRESS must be an EVM address.");
+    assert.ok(rpcUrl, "RH_MAINNET_RPC_URL is required for the read-only deployed verifier check.");
+    const chain = defineChain({
+      id: 4_663,
+      name: "Robinhood Chain Mainnet",
+      nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+      rpcUrls: { default: { http: [rpcUrl] } },
+    });
+    const client = createPublicClient({ chain, transport: http(rpcUrl, { timeout: 15_000, retryCount: 1 }) });
+    assert.equal(await client.getChainId(), 4_663, "Verifier RPC is not Robinhood Mainnet 4663.");
+    deployedVerifierAccepted = await client.readContract({
+      address: adapterAddress,
+      abi: parseAbi(["function verifyProof(bytes proof,uint256[9] publicInputs) view returns (bool)"]),
+      functionName: "verifyProof",
+      args: [toHex(proof.proof), proof.publicInputs.map(BigInt)],
+    });
+    assert.equal(deployedVerifierAccepted, true, "The deployed Mainnet verifier adapter rejected this genuine local fixture proof.");
+  }
   console.log(JSON.stringify({
     result: "Policy 5 proof locally verified; under-threshold, wrong-chain, and wrong-DAO witnesses rejected",
     chainId: Number(context.chainId),
@@ -77,6 +101,7 @@ try {
     threshold: 3,
     publicInputCount: proof.publicInputs.length,
     proofBytes: proof.proof.length,
+    deployedMainnetVerifierAdapter: deployedVerifierAccepted === undefined ? "not checked" : "accepted genuine local fixture proof (read-only)",
   }, null, 2));
 } finally {
   await api.destroy();

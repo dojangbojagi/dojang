@@ -20,6 +20,8 @@ import { useLendingMarketV2 } from "@/hooks/use-lending-market-v2";
 import { useLendingV2EligibilityProof } from "@/hooks/use-lending-v2-eligibility-proof";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
+import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo";
+import type { LendingV2ChainId } from "@/lib/lending/v2-network";
 import type { DemoCredentialWitness } from "@/lib/credential/witness";
 import { mapLendingV2Error } from "@/lib/lending/v2-errors";
 import { ProtocolError } from "@/lib/protocol/types";
@@ -62,14 +64,15 @@ function explain(error: unknown): string {
  * lending rules and never reports a transaction as done before the hook has confirmed it.
  */
 export function LendingV2Workspace() {
-  const wallet = useWalletNetwork(ROBINHOOD_TESTNET_CHAIN_ID);
-  const market = useLendingMarketV2();
+  const [chainId, setChainId] = useState<LendingV2ChainId>(ROBINHOOD_TESTNET_CHAIN_ID);
+  const wallet = useWalletNetwork(chainId);
+  const market = useLendingMarketV2(chainId);
   const [witness, setWitness] = useState<DemoCredentialWitness | null>(null);
-  const proof = useLendingV2EligibilityProof(witness ?? undefined);
+  const proof = useLendingV2EligibilityProof(witness ?? undefined, chainId);
   const gas = useBalance({
     address: wallet.address,
-    chainId: ROBINHOOD_TESTNET_CHAIN_ID,
-    query: { enabled: Boolean(wallet.address && wallet.isRobinhoodTestnet) },
+    chainId,
+    query: { enabled: Boolean(wallet.address && wallet.isOnExpectedNetwork) },
   });
 
   const [tab, setTab] = useState<V2Tab>("markets");
@@ -88,6 +91,15 @@ export function LendingV2Workspace() {
     if (witness && wallet.address?.toLowerCase() !== witness.wallet.toLowerCase()) setWitness(null);
   }, [wallet.address, witness]);
 
+  useEffect(() => {
+    setWitness(null);
+    setSupplyAsset(undefined);
+    setBorrowAsset(undefined);
+    setCollateralAsset(undefined);
+    setManageAsset(undefined);
+    setBanner(null);
+  }, [chainId]);
+
   /* the session list of confirmed transactions, built only from the hook's own confirmed lifecycle */
   const tx = market.transaction;
   useEffect(() => {
@@ -103,14 +115,14 @@ export function LendingV2Workspace() {
   let block: string | null = null;
   if (market.state === "unconfigured") block = "Lending V2 is not configured, so no transaction can be prepared.";
   else if (market.state === "disconnected") block = "Connect a wallet first.";
-  else if (market.state === "wrong-network") block = "Switch to Robinhood Chain Testnet first.";
+  else if (market.state === "wrong-network") block = `Switch to ${market.networkName} first.`;
   else if (market.state === "checking") block = "Reading the V2 pool and your wallet…";
   else if (market.state === "unavailable") block = "The configured address is not a compatible Lending V2 deployment.";
   else if (market.state === "read-error") block = "The V2 market could not be read. Refresh and try again.";
   else if (market.isSubmitting) block = "A transaction is already in progress.";
-  else if (wallet.address && wallet.isRobinhoodTestnet && gas.isPending) block = "Checking this wallet's ETH balance for the network fee.";
-  else if (wallet.address && gas.isError) block = "The wallet's Robinhood Testnet ETH balance could not be read. Refresh before submitting.";
-  else if (noGas) block = "This wallet has no Robinhood Testnet ETH to pay the network fee.";
+  else if (wallet.address && wallet.isOnExpectedNetwork && gas.isPending) block = `Checking this wallet's ETH balance on ${market.networkName} for the network fee.`;
+  else if (wallet.address && gas.isError) block = `The wallet's ${market.networkName} ETH balance could not be read. Refresh before submitting.`;
+  else if (noGas) block = `This wallet has no ${market.networkName} ETH to pay the network fee.`;
   else if (!market.writesAvailable) block = "Transactions are not available right now.";
 
   const runner: ActionRunner = {
@@ -155,14 +167,22 @@ export function LendingV2Workspace() {
     document.getElementById("lendv2-tabs")?.scrollIntoView({ block: "start", behavior: "smooth" });
   }
 
-  const copy = marketStateCopy(market.state);
+  const copy = marketStateCopy(market.state, chainId);
   const eligibility = ELIGIBILITY_TONE[proof.state] ?? { tone: "neutral" as Tone, label: "Unknown" };
   const failure = market.failure;
 
   return (
     <div className="lend lendv2">
-      <V2LimitationsNotice configured={market.state !== "unconfigured"} />
-      <WalletNetworkCard expectedChainId={ROBINHOOD_TESTNET_CHAIN_ID} />
+      <V2LimitationsNotice configured={market.state !== "unconfigured"} chainId={chainId} riskPaused={market.snapshot?.riskPaused} />
+      <section className="protocol-actions" aria-label="Lending network">
+        <button className={`btn btn--${chainId === ROBINHOOD_TESTNET_CHAIN_ID ? "primary" : "secondary"} btn--sm`} type="button" aria-pressed={chainId === ROBINHOOD_TESTNET_CHAIN_ID} onClick={() => setChainId(ROBINHOOD_TESTNET_CHAIN_ID)}>
+          Robinhood Testnet · Interactive
+        </button>
+        <button className={`btn btn--${chainId === ROBINHOOD_MAINNET_CHAIN_ID ? "primary" : "secondary"} btn--sm`} type="button" aria-pressed={chainId === ROBINHOOD_MAINNET_CHAIN_ID} onClick={() => setChainId(ROBINHOOD_MAINNET_CHAIN_ID)}>
+          Robinhood Mainnet · Controlled
+        </button>
+      </section>
+      <WalletNetworkCard expectedChainId={chainId} />
       <ContextBar market={market} walletAddress={wallet.address} eligibility={eligibility} />
 
       <div className="lend-layout">
@@ -240,7 +260,7 @@ export function LendingV2Workspace() {
               <Chip tone={gas.isError || noGas ? "warn" : gas.isPending || gasBalance === undefined ? "neutral" : "valid"}>{gas.isError ? "Read unavailable" : gas.isPending ? "Checking" : gasBalance === undefined ? "Not read" : noGas ? "No ETH" : "ETH available"}</Chip>
             </div>
             <p className="small muted">
-              {gas.isError ? "The wallet balance could not be read. Refresh the page or wallet connection before submitting." : gas.isPending ? "Checking this wallet's Robinhood Testnet ETH for network fees." : gasBalance === undefined ? "Connect a wallet on Robinhood Chain Testnet to read its ETH balance." : `${formatAmount(gasBalance, 18, 5)} ETH for network fees.`}
+              {gas.isError ? "The wallet balance could not be read. Refresh the page or wallet connection before submitting." : gas.isPending ? `Checking this wallet's ${market.networkName} ETH for network fees.` : gasBalance === undefined ? `Connect a wallet on ${market.networkName} to read its ETH balance.` : `${formatAmount(gasBalance, 18, 5)} ETH for network fees.`}
             </p>
             <p className="xsmall muted">
               Activity here lists only transactions confirmed in this browser session. A protocol-wide event history is not exposed by the V2 hooks yet, so none is shown.

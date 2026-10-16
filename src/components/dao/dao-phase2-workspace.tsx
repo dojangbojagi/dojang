@@ -208,6 +208,8 @@ export function DaoPhase2Workspace() {
               ? "The Phase 2 deployment or its dependencies are not ready. Check the deployment status above."
               : snapshot?.paused
                 ? "Governance is paused. Membership actions are unavailable until an authorized admin unpauses it."
+                : snapshot?.reputationPaused && !snapshot.reputation?.active
+                  ? "The reputation registry is paused, so the authorized issuer cannot record a claim for this wallet yet."
                 : !snapshot?.credentialActive
                   ? "This wallet needs an active project-issued Policy 5 credential. Ask the authorized issuer; the app cannot issue one."
                   : !snapshot.reputation?.active
@@ -227,7 +229,11 @@ export function DaoPhase2Workspace() {
           <p className="eyebrow">Reputation-Gated Governance · Phase 2</p>
           <h2 id="dao-phase2-heading">Prove reputation, then commit a protected ballot.</h2>
         </div>
-        <span className="chip">{dao.state === "ready" ? snapshot?.paused ? "PAUSED" : isTestnet ? "TESTNET QA READY" : "MAINNET READY" : dao.state.toUpperCase().replaceAll("-", " ")}</span>
+        <span className="chip">{dao.state === "ready"
+          ? isTestnet
+            ? snapshot?.paused ? "GOVERNANCE PAUSED" : "TESTNET INTERACTIVE"
+            : snapshot?.paused || snapshot?.reputationPaused ? `MAINNET PAUSED · GOV ${snapshot?.paused ? "PAUSED" : "ACTIVE"} / REP ${snapshot?.reputationPaused ? "PAUSED" : "ACTIVE"}` : "MAINNET CONTROLLED DEMO"
+          : dao.state.toUpperCase().replaceAll("-", " ")}</span>
       </div>
       <p className="protocol-copy">
         Policy 5 proves a private reputation score derived by an authorized issuer from canonical Lending V2 events.
@@ -242,7 +248,7 @@ export function DaoPhase2Workspace() {
           Robinhood Testnet · Interactive
         </button>
         <button className={`btn btn--${!isTestnet ? "primary" : "secondary"} btn--sm`} type="button" aria-pressed={!isTestnet} onClick={() => setSelectedChainId(ROBINHOOD_MAINNET_CHAIN_ID)}>
-          Robinhood Mainnet · Production
+          Robinhood Mainnet · Controlled Demo
         </button>
         <WalletControl expectedChainId={selectedChainId} showRecoveryAction />
       </div>
@@ -258,9 +264,9 @@ export function DaoPhase2Workspace() {
         <p className="callout">Phase 2 has not been configured from confirmed deployment receipts.</p>
       )}
       {dao.state === "deployment-pending" && (
-        <p className="callout">DAO Phase 2 has not been deployed or configured on Robinhood Mainnet. Mainnet addresses and proofs are isolated from Testnet. Transactions remain unavailable until the Mainnet contracts and dependencies are deployed, verified, and active.</p>
+        <p className="callout">Mainnet Phase 2 addresses are not configured for this build, so this page cannot verify the deployed contracts. This does not mean they are undeployed. Add the receipt-verified Mainnet addresses; transactions remain unavailable until live code and dependencies check out.</p>
       )}
-      {!isTestnet && <p className="callout callout--demo">Mainnet Phase 2 is designed around project-issued credentials and controlled synthetic Lending evidence. It is not official GIWA or Upbit verification and is not public production credit infrastructure.</p>}
+      {!isTestnet && <p className="callout callout--demo">Mainnet Phase 2 uses project-issued credentials and synthetic Lending evidence. It is not official GIWA or Upbit verification and is not public production credit infrastructure.</p>}
       {dao.state === "no-code" && <p className="callout">No contract bytecode exists at one or more configured Phase 2 addresses.</p>}
       {dao.state === "dependency-mismatch" && <p className="callout">The configured Phase 2 contracts do not reference the expected credential, verifier, reputation, and Lending V2 contracts.</p>}
       {dao.state === "read-error" && <p className="callout">The {networkName} RPC or one of the configured Phase 2 contract reads failed. Check the network configuration and try the read again.</p>}
@@ -282,6 +288,10 @@ export function DaoPhase2Workspace() {
         <div className="kv__row"><dt>Policy 5 credential · {networkName}</dt><dd>{!wallet.address ? "Connect a wallet to check" : dao.state === "checking" ? "Checking on-chain status…" : dao.state !== "ready" ? "Unavailable until contract reads succeed" : snapshot?.credentialActive ? `Active · version ${snapshot.credential?.version}` : "No active Policy 5 credential found"}</dd></div>
         <div className="kv__row"><dt>Lending reputation claim · {networkName}</dt><dd>{!wallet.address ? "Connect a wallet to check" : dao.state === "checking" ? "Checking on-chain status…" : dao.state !== "ready" ? "Unavailable until contract reads succeed" : snapshot?.reputation?.active ? `Active · evidence ${snapshot.reputation.evidenceHash.slice(0, 10)}…` : "No active reputation claim found"}</dd></div>
         <div className="kv__row"><dt>Proof-backed membership · {networkName}</dt><dd>{!wallet.address ? "Connect a wallet to check" : dao.state === "checking" ? "Checking on-chain status…" : dao.state !== "ready" ? "Unavailable until contract reads succeed" : snapshot?.membership?.active ? "Active" : snapshot?.membership ? "Registration is stale" : "Not registered"}</dd></div>
+        {!isTestnet && <>
+          <div className="kv__row"><dt>Governance</dt><dd>{dao.state !== "ready" ? "Unavailable until contract reads succeed" : snapshot?.paused ? "Paused; proposals and ballots are disabled" : "Active"}</dd></div>
+          <div className="kv__row"><dt>Reputation registry</dt><dd>{dao.state !== "ready" ? "Unavailable until contract reads succeed" : snapshot?.reputationPaused ? "Paused; claim issuance is disabled" : "Active"}</dd></div>
+        </>}
         <div className="kv__row"><dt>Minimum private reputation</dt><dd>{snapshot?.minimumReputation.toString() ?? "—"}</dd></div>
         <div className="kv__row"><dt>Quorum</dt><dd>{snapshot?.quorum.toString() ?? "—"} revealed ballots</dd></div>
       </dl>

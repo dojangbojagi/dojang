@@ -4,13 +4,19 @@ import { robinhoodMainnetDemoChain, robinhoodMainnetDemoContracts, ROBINHOOD_MAI
 import { supportedProtocolChains, getDaoPhase2ContractSet, getLendingV2ContractSet } from "../src/lib/config/network-registry.ts";
 
 describe("Robinhood Mainnet demo configuration", () => {
-  test("supports read-only Phase 2 network selection while keeping Lending Testnet-only", () => {
+  test("keeps Mainnet Lending isolated behind its own explicit synthetic contract registry", () => {
     expect(ROBINHOOD_MAINNET_CHAIN_ID).toBe(4_663);
     expect(robinhoodMainnetDemoChain.id).toBe(4_663);
     expect(robinhoodMainnetDemoContracts.chainId).toBe(4_663);
     expect(robinhoodMainnetDemoContracts.explorerUrl).toBe("https://robinhoodchain.blockscout.com");
     expect(supportedProtocolChains.some((chain) => chain.id === 4_663)).toBe(true);
-    expect(getLendingV2ContractSet(4_663)).toBeUndefined();
+    const mainnetLending = getLendingV2ContractSet(4_663);
+    const testnetLending = getLendingV2ContractSet(46_630);
+    expect(mainnetLending?.chainId).toBe(4_663);
+    expect(mainnetLending?.pool).toBe(robinhoodMainnetDemoContracts.lendingPool);
+    expect(mainnetLending?.configuredAssets).toEqual([robinhoodMainnetDemoContracts.loanToken, robinhoodMainnetDemoContracts.collateralToken]);
+    expect(mainnetLending?.pool).not.toBe(testnetLending?.pool);
+    expect(mainnetLending?.configuredAssets).not.toEqual(testnetLending?.configuredAssets);
     const phase2 = getDaoPhase2ContractSet(4_663);
     expect(phase2?.chainId).toBe(4_663);
     expect(phase2?.credentialRegistry).toBe(robinhoodMainnetDemoContracts.credentialRegistry);

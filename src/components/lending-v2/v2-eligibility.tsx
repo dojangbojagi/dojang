@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
 import { useReadContract } from "wagmi";
+import { isAddress } from "viem";
 import { formatAmount, shortAddress } from "@/components/lending/format";
 import { Chip, type Tone } from "@/components/lending-v2/v2-parts";
 import { dateTimeText } from "@/components/lending-v2/v2-format";
@@ -12,6 +13,7 @@ import { TransactionSummary } from "@/components/protocol-state";
 import { useLendingV2CredentialIssuance } from "@/hooks/use-lending-v2-credential-issuance";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
+import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo";
 import { credentialIssuerRoleAbi } from "@/lib/contracts/abis";
 import { parseDemoCredentialWitness, type DemoCredentialWitness } from "@/lib/credential/witness";
 import { LENDING_V2_ELIGIBILITY_THRESHOLD, LENDING_V2_POLICY_ID } from "@/lib/lending/v2-config";
@@ -40,8 +42,9 @@ const PROOF_COPY: Record<V2Proof["state"], { tone: Tone; label: string; text: st
 };
 
 function IssuerTools({ market, onIssued }: { market: V2Market; onIssued: (witness: DemoCredentialWitness) => void }) {
-  const wallet = useWalletNetwork(ROBINHOOD_TESTNET_CHAIN_ID);
-  const issuance = useLendingV2CredentialIssuance();
+  const wallet = useWalletNetwork(market.chainId);
+  const issuance = useLendingV2CredentialIssuance(market.chainId);
+  const [recipient, setRecipient] = useState("");
   const [privateValue, setPrivateValue] = useState("");
   const [expiresAt, setExpiresAt] = useState(() => {
     const date = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
@@ -50,10 +53,11 @@ function IssuerTools({ market, onIssued }: { market: V2Market; onIssued: (witnes
   });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  useEffect(() => setRecipient(wallet.address ?? ""), [wallet.address]);
   const validValue = /^(0|[1-9][0-9]*)$/.test(privateValue) && BigInt(privateValue || "0") >= LENDING_V2_ELIGIBILITY_THRESHOLD;
   const expiresMs = Date.parse(expiresAt);
   const validExpiry = Number.isFinite(expiresMs) && Math.floor(expiresMs / 1000) > Math.floor(Date.now() / 1000);
-  const canIssue = Boolean(wallet.address && wallet.isRobinhoodTestnet && market.readAvailable && validValue && validExpiry && !issuance.isSubmitting);
+  const canIssue = Boolean(wallet.address && wallet.isOnExpectedNetwork && market.readAvailable && isAddress(recipient) && validValue && validExpiry && !issuance.isSubmitting);
 
   async function issue(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -61,10 +65,21 @@ function IssuerTools({ market, onIssued }: { market: V2Market; onIssued: (witnes
     setError("");
     if (!wallet.address || !canIssue) return;
     try {
-      const witness = await issuance.issueCredential({ wallet: wallet.address, privateValue, expiresAt: BigInt(Math.floor(expiresMs / 1000)) });
-      onIssued(witness);
+      const witness = await issuance.issueCredential({ wallet: recipient as `0x${string}`, privateValue, expiresAt: BigInt(Math.floor(expiresMs / 1000)) });
+      if (recipient.toLowerCase() === wallet.address.toLowerCase()) {
+        onIssued(witness);
+        setMessage("The credential is confirmed. Its matching witness remains in this browser session.");
+      } else {
+        const blob = new Blob([JSON.stringify(witness, null, 2) + "\n"], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = `gyevo-policy-3-${recipient.toLowerCase()}.json`;
+        anchor.click();
+        URL.revokeObjectURL(url);
+        setMessage("The on-chain credential is confirmed. A private witness file was downloaded for secure delivery to the recipient; treat that file as a secret.");
+      }
       setPrivateValue("");
-      setMessage("The credential was confirmed by the registry readback. Its private witness is held in this browser session only; it was not displayed or exported.");
     } catch (cause) {
       setError(cause instanceof Error && "code" in cause ? explainProtocolError(cause) : mapLendingV2Error(cause).message);
     }
@@ -72,14 +87,17 @@ function IssuerTools({ market, onIssued }: { market: V2Market; onIssued: (witnes
 
   return (
     <details className="lend-issuer">
-      <summary className="protocol-inline-link">Project issuer tools: issue a Project Test Credential to this wallet</summary>
+      <summary className="protocol-inline-link">Project issuer tools: issue a Policy 3 credential</summary>
       <div className="lend-issuer__body">
         <p className="small muted">
           Shown only because this wallet holds the project registry&apos;s issuer role. It issues a policy {LENDING_V2_POLICY_ID.toString()} <strong>Project Test Credential</strong>,
-          bound to the Robinhood Lending V2 pool. It is a BOJOGAY-issued test credential, not official GIWA, Dojang or Upbit verification. The registry stores a commitment only; the private value and salt stay in this browser.
+          bound to the selected {market.networkName} Lending V2 pool. It is a project-issued credential, not official GIWA, Dojang or Upbit verification. The registry stores a commitment only; the private value and salt stay in this browser.
         </p>
         <form className="protocol-form" onSubmit={(event) => void issue(event)}>
           <div className="protocol-form__grid">
+            <label className="protocol-field" htmlFor="lendv2-recipient"><span>Recipient wallet</span>
+              <input id="lendv2-recipient" type="text" autoComplete="off" spellCheck={false} value={recipient} onChange={(event) => setRecipient(event.currentTarget.value.trim())} />
+            </label>
             <label className="protocol-field" htmlFor="lendv2-private-value"><span>Private eligibility value</span>
               <input id="lendv2-private-value" type="password" inputMode="numeric" autoComplete="off" value={privateValue} onChange={(event) => setPrivateValue(event.currentTarget.value)} />
             </label>
@@ -89,7 +107,7 @@ function IssuerTools({ market, onIssued }: { market: V2Market; onIssued: (witnes
           </div>
           <p className="xsmall muted">At least {LENDING_V2_ELIGIBILITY_THRESHOLD.toString()} test units. This is not a currency amount and is never sent to the registry.</p>
           <div className="protocol-actions">
-            <button className="btn btn--secondary" type="submit" disabled={!canIssue}>{issuance.isSubmitting ? "Issuing credential…" : "Issue to connected wallet"}</button>
+            <button className="btn btn--secondary" type="submit" disabled={!canIssue}>{issuance.isSubmitting ? "Issuing credential…" : "Issue to recipient"}</button>
           </div>
         </form>
         <TransactionSummary lifecycle={issuance.transaction} />
@@ -110,7 +128,7 @@ export function EligibilityCard({ market, proof, witness, onWitness }: {
   witness: DemoCredentialWitness | null;
   onWitness: (witness: DemoCredentialWitness | null) => void;
 }) {
-  const wallet = useWalletNetwork(ROBINHOOD_TESTNET_CHAIN_ID);
+  const wallet = useWalletNetwork(market.chainId);
   const [importMessage, setImportMessage] = useState("");
   const [importFailed, setImportFailed] = useState(false); /* presentation only: the picker shows the last attempt */
   const [witnessFile, setWitnessFile] = useState("");
@@ -119,14 +137,14 @@ export function EligibilityCard({ market, proof, witness, onWitness }: {
   const registry = market.snapshot?.credentialRegistry;
   const role = useReadContract({
     address: registry,
-    chainId: ROBINHOOD_TESTNET_CHAIN_ID,
+    chainId: market.chainId,
     abi: credentialIssuerRoleAbi,
     functionName: "ISSUER_ROLE",
     query: { enabled: Boolean(registry && wallet.address), retry: 1 },
   });
   const isIssuer = useReadContract({
     address: registry,
-    chainId: ROBINHOOD_TESTNET_CHAIN_ID,
+    chainId: market.chainId,
     abi: credentialIssuerRoleAbi,
     functionName: "hasRole",
     args: role.data && wallet.address ? [role.data, wallet.address] : undefined,
@@ -140,7 +158,9 @@ export function EligibilityCard({ market, proof, witness, onWitness }: {
     setImporting(false);
   }, [wallet.address]);
 
-  const copy = PROOF_COPY[proof.state];
+  const copy = proof.state === "wrong-network"
+    ? { ...PROOF_COPY[proof.state], text: `This action requires ${market.networkName} (chain ${market.chainId}). Switch networks to continue.` }
+    : PROOF_COPY[proof.state];
   const record = proof.credential;
   const canProve = (proof.state === "ready-to-prove" || proof.state === "proof-ready") && !market.isSubmitting;
   const proofBytes = proof.proof ? (proof.proof.proof.length - 2) / 2 : 0;
@@ -232,11 +252,12 @@ export function EligibilityCard({ market, proof, witness, onWitness }: {
         <details className="lendv2-privacy">
           <summary className="protocol-inline-link">How to get a matching Policy 3 credential and witness</summary>
           <div className="lendv2-privacy__body">
-            <p><strong>1. Connect the recipient wallet.</strong> Check the address shown above and use Robinhood Chain Testnet, chain 46630. The credential and witness are bound to that exact address and the deployed Lending V2 pool.</p>
+            <p><strong>1. Connect the recipient wallet.</strong> Check the address shown above and use {market.networkName}, chain {market.chainId}. The credential and witness are bound to that exact address and the deployed Lending V2 pool.</p>
             <p><strong>2. Request a Policy 3 Project Test Credential.</strong> Give that address to a GYEVO project issuer. A regular wallet cannot issue its own credential. The issuer's hidden local input is test data (at least 1,000 test units), not an official Dojang balance, KYC result, or exchange asset.</p>
             <p><strong>3. Receive the matching JSON privately.</strong> The issuer creates the witness locally, simulates the registry call, and issues only the public commitment after the required owner authorization. Ask the issuer to deliver the resulting `.json` file directly to the recipient; do not post it in a public channel or upload it to a third-party site.</p>
             <p><strong>4. Import it here and generate the proof.</strong> This page checks the wallet, policy, commitment, and expiry before using the witness in the browser. The proof is locally verified first; the contract verifies it again when a protected action is submitted. The witness stays in browser memory for this session and is cleared when removed or when the tab closes.</p>
-            <p>For a project operator, the existing guarded preparation command is <code>bun run robinhood:bootstrap prepare-lending &lt;recipient-wallet&gt; &lt;expiry-days&gt; ~/.local/share/gyevo-witnesses/&lt;recipient&gt;-policy3.json</code>. It writes a mode-0600 witness and runs a no-broadcast issuance simulation. The follow-up <code>issue-lending &lt;witness-file&gt;</code> also simulates by default; any public issuance requires separate owner authorization and the guarded execution flags.</p>
+            {market.chainId === ROBINHOOD_TESTNET_CHAIN_ID && <p>For a Testnet project operator, the guarded preparation command is <code>bun run robinhood:bootstrap prepare-lending &lt;recipient-wallet&gt; &lt;expiry-days&gt; ~/.local/share/gyevo-witnesses/&lt;recipient&gt;-policy3.json</code>. It writes a mode-0600 witness and runs a no-broadcast issuance simulation. The follow-up <code>issue-lending &lt;witness-file&gt;</code> simulates by default; a public issuance needs separate owner authorization.</p>}
+            {market.chainId === ROBINHOOD_MAINNET_CHAIN_ID && <p><strong>Mainnet is separate.</strong> Use only the Mainnet authorized issuer and the dedicated guarded Mainnet operator workflow. Never reuse Testnet witnesses, credentials, or evidence.</p>}
             <p><strong>DAO Policy 4 is separate.</strong> It needs an issuer-backed project credential but no ZK witness. Neither project policy is an official GIWA Dojang credential.</p>
           </div>
         </details>

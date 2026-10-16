@@ -28,7 +28,7 @@ export function SupplyView({ market, proof, runner, asset, onAsset }: {
       <section className="panel panel--ticks protocol-panel" aria-labelledby="lendv2-supply-heading">
         <div className="protocol-panel__head"><h2 id="lendv2-supply-heading">Supply</h2></div>
         <Unavailable title={market.state === "checking" ? "Reading the pool…" : "Supplying is unavailable"}>
-          {market.state === "checking" ? <p>Reading the Lending V2 pool and your wallet from Robinhood Chain Testnet. Nothing is shown in its place.</p> : null}
+          {market.state === "checking" ? <p>Reading the Lending V2 pool and your wallet from {market.networkName}. Nothing is shown in its place.</p> : null}
           <p>Supply needs a readable Lending V2 pool with at least one reserve that accepts supply. Nothing is simulated while it is unavailable.</p>
         </Unavailable>
       </section>
@@ -46,7 +46,7 @@ export function SupplyView({ market, proof, runner, asset, onAsset }: {
 
   const supplyPrecondition =
     blocked ??
-    (!position ? "Connect a wallet on Robinhood Chain Testnet to see your balance." : null) ??
+    (!position ? `Connect a wallet on ${market.networkName} to see your balance.` : null) ??
     (headroom === 0n ? `The ${symbol} supply cap has been reached.` : null) ??
     (!proofValue ? "Supplying needs a locally verified policy-3 proof. Generate one in the Eligibility card first." : null);
 
@@ -126,7 +126,7 @@ export function SupplyView({ market, proof, runner, asset, onAsset }: {
           successMessage="Withdrawal confirmed by the receipt, the pool event and the contract readback."
           max={withdrawable}
           hint={position ? `Up to ${formatAmount(withdrawable, decimals)} ${symbol} can come out now: your position, limited to liquidity that is not lent out.` : undefined}
-          precondition={!position ? "Connect a wallet on Robinhood Chain Testnet to withdraw." : position.supplied === 0n ? "You have no supplied position in this asset." : null}
+              precondition={!position ? `Connect a wallet on ${market.networkName} to withdraw.` : position.supplied === 0n ? "You have no supplied position in this asset." : null}
           checkAmount={(amount) =>
             amount > position!.supplied
               ? `This is more than your supplied position (${formatAmount(position!.supplied, decimals)} ${symbol}).`

@@ -35,7 +35,7 @@ export function PositionView({ market, runner, asset, onAsset }: {
       <section className="panel panel--ticks protocol-panel" aria-labelledby="lendv2-position-heading">
         <div className="protocol-panel__head"><h2 id="lendv2-position-heading">Your position</h2></div>
         <Unavailable title="Connect a wallet to see your position">
-          <p>The pool is readable, but a position belongs to a wallet. Connect one on Robinhood Chain Testnet to see what you supplied, deposited and owe.</p>
+          <p>The pool is readable, but a position belongs to a wallet. Connect one on {market.networkName} to see what you supplied, deposited and owe.</p>
         </Unavailable>
       </section>
     );
@@ -134,7 +134,7 @@ export function PositionView({ market, runner, asset, onAsset }: {
               max={position ? minBigint(position.debt, position.walletBalance) : undefined}
               maxMeansFull={Boolean(position && position.walletBalance >= position.debt)}
               hint={position ? `You owe ${formatAmount(position.debt, reserve.decimals)} ${reserve.symbol}, including interest accrued to the block read. Max repays the whole debt, including interest that accrues while the transaction confirms.` : undefined}
-              precondition={!position ? "Connect a wallet on Robinhood Chain Testnet to repay." : position.debt === 0n ? `You have no ${reserve.symbol} debt.` : null}
+              precondition={!position ? `Connect a wallet on ${market.networkName} to repay.` : position.debt === 0n ? `You have no ${reserve.symbol} debt.` : null}
               checkAmount={(amount) => position && amount > position.debt ? `This is more than your debt (${formatAmount(position.debt, reserve.decimals)} ${reserve.symbol}).` : null}
               requiredAllowance={(amount, flags) => position && flags.max ? position.debt + repayAllowanceHeadroom(position.debt, reserve.data.currentBorrowRateBps) : amount}
               approveAmount={(amount, flags) => position && flags.max ? position.debt + repayAllowanceHeadroom(position.debt, reserve.data.currentBorrowRateBps) : amount}
@@ -165,7 +165,7 @@ export function PositionView({ market, runner, asset, onAsset }: {
               successMessage="Withdrawal confirmed by the receipt, the pool event and the contract readback."
               max={position ? minBigint(position.supplied, reserve.data.availableLiquidity) : undefined}
               hint={position ? `You supplied ${formatAmount(position.supplied, reserve.decimals)} ${reserve.symbol}; ${formatAmount(reserve.data.availableLiquidity, reserve.decimals)} is not lent out.` : undefined}
-              precondition={!position ? "Connect a wallet on Robinhood Chain Testnet to withdraw." : position.supplied === 0n ? `You have no supplied ${reserve.symbol}.` : null}
+              precondition={!position ? `Connect a wallet on ${market.networkName} to withdraw.` : position.supplied === 0n ? `You have no supplied ${reserve.symbol}.` : null}
               checkAmount={(amount) =>
                 position && amount > position.supplied
                   ? `This is more than your supplied position (${formatAmount(position.supplied, reserve.decimals)} ${reserve.symbol}).`
@@ -188,7 +188,7 @@ export function PositionView({ market, runner, asset, onAsset }: {
               hint={!anyDebt
                 ? "No debt: all of your deposited collateral can come out."
                 : "While you owe debt, only collateral beyond what the loan needs can come out. The pool checks every withdrawal and rejects an unsafe one. Repay to release more."}
-              precondition={!position ? "Connect a wallet on Robinhood Chain Testnet to withdraw." : position.collateral === 0n ? `You have no deposited ${reserve.symbol} collateral.` : null}
+              precondition={!position ? `Connect a wallet on ${market.networkName} to withdraw.` : position.collateral === 0n ? `You have no deposited ${reserve.symbol} collateral.` : null}
               checkAmount={(amount) => position && amount > position.collateral ? `This is more than your deposited collateral (${formatAmount(position.collateral, reserve.decimals)} ${reserve.symbol}).` : null}
               onSubmit={(amount) => market.withdrawCollateral(reserve.asset, amount)}
               runner={runner}
