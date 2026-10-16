@@ -14,7 +14,8 @@ export const LENDING_USER_AUTH = Object.freeze({
 });
 
 export const LENDING_USER_ALIASES = Object.freeze({
-  A: "gyevo-rh-mainnet-wallet-a",
+  // Wallet A is now controlled by MetaMask; never fall back to the inaccessible legacy keystore.
+  A: null,
   B: "gyevo-rh-mainnet-wallet-b",
 });
 

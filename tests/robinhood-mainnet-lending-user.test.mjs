@@ -14,7 +14,7 @@ import {
   transactionConfirmationPhrase,
 } from "../scripts/robinhood-mainnet-lending-user-core.mjs";
 
-const WALLET_A = "0xdB354254bF1E0374963600811D1fF5643a56A367";
+const WALLET_A = "0x3cdb91a29b73daB9219D9A287543800B417b6dbB";
 const WALLET_B = "0xc70865Ec508E6A1C55E6a3E6aB60533ef57286b8";
 
 describe("Robinhood Mainnet encrypted participant Lending guards", () => {
@@ -24,7 +24,7 @@ describe("Robinhood Mainnet encrypted participant Lending guards", () => {
     expect(() => parseParticipantLabel("C")).toThrow();
     expect(assertParticipantAddress("A", WALLET_A, WALLET_A)).toBe(WALLET_A);
     expect(() => assertParticipantAddress("A", WALLET_B, WALLET_A)).toThrow();
-    expect(LENDING_USER_ALIASES).toEqual({ A: "gyevo-rh-mainnet-wallet-a", B: "gyevo-rh-mainnet-wallet-b" });
+    expect(LENDING_USER_ALIASES).toEqual({ A: null, B: "gyevo-rh-mainnet-wallet-b" });
   });
 
   test("Policy 3 witness must be Robinhood-specific and bound to the selected wallet", () => {

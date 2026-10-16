@@ -4,7 +4,7 @@ import {
   assertMainnetProposalFinalizationReady, mainnetPolicy5ProofContext,
 } from "../scripts/robinhood-mainnet-dao2-proof-core.mjs";
 
-const wallet = "0xdb354254bf1e0374963600811d1ff5643a56a367";
+const wallet = "0x3cdb91a29b73daB9219D9A287543800B417b6dbB";
 const governance = "0x0d543953a62a932ca687b160a59b8950af52c252";
 const issuer = "0xc6e130e111230d6cfa7ecd6bad283259687ecc49";
 const commitment = `0x${"ab".repeat(32)}`;
@@ -21,7 +21,7 @@ const valid = () => mainnetPolicy5ProofContext({
 describe("Robinhood Mainnet DAO Phase 2 proof binding", () => {
   test("builds a Policy 5 proof context bound to the real wallet, DAO, chain, and active record", () => {
     expect(valid()).toEqual({
-      subject: "0xdB354254bF1E0374963600811D1fF5643a56A367", commitment,
+      subject: "0x3cdb91a29b73daB9219D9A287543800B417b6dbB", commitment,
       policyId: 5n, policyVersion: 1n, threshold: 3n, credentialVersion: 2n,
       expiresAt: 2_000n, chainId: 4_663n,
       vault: "0x0D543953A62a932Ca687b160A59B8950af52C252",

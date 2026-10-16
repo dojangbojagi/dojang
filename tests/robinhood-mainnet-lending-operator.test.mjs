@@ -2,12 +2,14 @@ import { describe, expect, test } from "bun:test";
 import {
   assertDistinctParticipants,
   assertExactDemoParticipants,
+  classifyDemoParticipantMigration,
   assertFreshSyntheticPrice,
   assertMainnetActivationPrerequisites,
   assertPriceWithinBounds,
   assertWriteAuthorization,
   artifactReceiptFrom,
   assertCanonicalDeploymentEvidence,
+  assertCanonicalOperatorWrite,
   assertSafeDemoReserveConfig,
   credentialIsActive,
   isSplittableRangeError,
@@ -17,6 +19,7 @@ import {
 
 const A = "0x1111111111111111111111111111111111111111";
 const B = "0x2222222222222222222222222222222222222222";
+const C = "0x3333333333333333333333333333333333333333";
 const HASH = `0x${"ab".repeat(32)}`;
 const BLOCK_HASH = `0x${"cd".repeat(32)}`;
 const activeCredential = (wallet) => ({ wallet, revoked: false, issuedAt: 900n, expiresAt: 2_000n });
@@ -66,6 +69,20 @@ describe("Robinhood Mainnet controlled Lending operator guards", () => {
     expect(() => assertCanonicalDeploymentEvidence({ item, receipt, transaction: { ...transaction, from: A }, block, deployer: B })).toThrow("canonical RPC sender does not match");
   });
 
+  test("checks every canonical admin write against its chain, sender, target, and calldata", () => {
+    const submitted = {
+      hash: HASH, actor: A, target: B, data: "0x1234",
+      receipt: { status: "success", transactionHash: HASH },
+      transaction: { hash: HASH, chainId: 4663, from: A, to: B, input: "0x1234" },
+    };
+    expect(() => assertCanonicalOperatorWrite(submitted)).not.toThrow();
+    expect(() => assertCanonicalOperatorWrite({ ...submitted, transaction: { ...submitted.transaction, from: B } })).toThrow("sender differs");
+    expect(() => assertCanonicalOperatorWrite({ ...submitted, transaction: { ...submitted.transaction, chainId: 91342 } })).toThrow("not on Robinhood Mainnet");
+    expect(() => assertCanonicalOperatorWrite({ ...submitted, transaction: { ...submitted.transaction, to: A } })).toThrow("target differs");
+    expect(() => assertCanonicalOperatorWrite({ ...submitted, transaction: { ...submitted.transaction, input: "0xabcd" } })).toThrow("calldata differs");
+    expect(() => assertCanonicalOperatorWrite({ ...submitted, receipt: { ...submitted.receipt, status: "reverted" } })).toThrow("receipt failed");
+  });
+
   test("normalizes viem tuple arrays and named tuple objects before status arithmetic", () => {
     expect(normalizePriceBounds([950n, 1_050n, 1_000n, 900n])).toEqual({
       minimumPriceWad: 950n, maximumPriceWad: 1_050n, priceWad: 1_000n, updatedAt: 900n,
@@ -96,6 +113,16 @@ describe("Robinhood Mainnet controlled Lending operator guards", () => {
     expect(() => assertExactDemoParticipants([A, B], [A, B])).not.toThrow();
     expect(() => assertExactDemoParticipants([A, B, "0x3333333333333333333333333333333333333333"], [A, B])).toThrow("differ from the two configured participants");
     expect(() => assertExactDemoParticipants([A], [A, B])).toThrow();
+  });
+
+  test("accepts only the bounded old-A -> Wallet B only -> new-A migration history", () => {
+    const migration = { previousParticipantA: A, participantA: C, participantB: B };
+    expect(classifyDemoParticipantMigration([A, B], migration)).toBe("awaiting-revocation");
+    expect(classifyDemoParticipantMigration([B], migration)).toBe("awaiting-grant");
+    expect(classifyDemoParticipantMigration([C, B], migration)).toBe("complete");
+    expect(() => classifyDemoParticipantMigration([A, B, C], migration)).toThrow("outside the explicitly allowed");
+    expect(() => classifyDemoParticipantMigration([A, C], migration)).toThrow("outside the explicitly allowed");
+    expect(() => classifyDemoParticipantMigration([A, B], { ...migration, previousParticipantA: C })).toThrow("Previous and replacement Wallet A must differ");
   });
 
   test("accepts only seeded, nonfuture, fresh synthetic prices", () => {

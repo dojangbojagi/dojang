@@ -363,7 +363,7 @@ async function executeCommand() {
   const command = process.argv[2] ?? "help";
   const { positional, options } = parseArgs(process.argv.slice(3));
   if (command === "help" || command === "--help") {
-    console.log(`Robinhood Mainnet participant Lending operator · chain ${CHAIN_ID}\n\nLocal prover cache:\n  crs-status\n  crs-check  (downloads/caches official Aztec SRS files; no chain access)\n\nRead-only:\n  status <A|B>\n  check-wallet-alias <A|B>\n  proof <A|B> <private-policy3-witness.json>\n\nSimulated by default (base-unit amounts only):\n  approve <A|B> <loan|collateral> <amount>\n  approve-repay <A|B>\n  supply <A|B> <amount> <private-policy3-witness.json>\n  deposit-collateral <A|B> <amount>\n  enable-collateral <A|B> <private-policy3-witness.json>\n  borrow <A|B> <amount> <private-policy3-witness.json>\n  repay-all <A|B>\n  withdraw-supply <A|B> <amount>\n  withdraw-collateral <A|B> <amount>\n\nWrites require --execute, the exact --authorize-mainnet-lending-user-write=<action> flag, the matching encrypted alias, and a typed per-transaction confirmation. No credentials, witnesses, keystore data, or private keys are emitted.`);
+    console.log(`Robinhood Mainnet participant Lending operator · chain ${CHAIN_ID}\n\nLocal prover cache:\n  crs-status\n  crs-check  (downloads/caches official Aztec SRS files; no chain access)\n\nRead-only:\n  status <A|B>\n  check-wallet-alias B\n  proof <A|B> <private-policy3-witness.json>\n\nSimulated by default (base-unit amounts only):\n  approve <A|B> <loan|collateral> <amount>\n  approve-repay <A|B>\n  supply <A|B> <amount> <private-policy3-witness.json>\n  deposit-collateral <A|B> <amount>\n  enable-collateral <A|B> <private-policy3-witness.json>\n  borrow <A|B> <amount> <private-policy3-witness.json>\n  repay-all <A|B>\n  withdraw-supply <A|B> <amount>\n  withdraw-collateral <A|B> <amount>\n\nWallet A signs from MetaMask in the browser; it has no default Foundry alias. Wallet B uses its matching encrypted alias. Signed CLI writes require --execute, the exact --authorize-mainnet-lending-user-write=<action> flag, a matching alias, and typed per-transaction confirmation. No credentials, witnesses, keystore data, or private keys are emitted.`);
     return;
   }
   if (command === "crs-status") {
@@ -392,6 +392,7 @@ async function executeCommand() {
     const configured = roles();
     const expected = assertParticipantAddress(label, configured[label], configured[label]);
     const alias = options.accountAlias ?? LENDING_USER_ALIASES[label];
+    assert.ok(alias, `Wallet ${label} is configured for browser-wallet signing; connect MetaMask and verify the displayed address in the app instead of unlocking the legacy Foundry alias.`);
     await verifyAlias(alias, expected);
     console.log(`PASS: ${alias} resolves to Wallet ${label} ${expected}. No transaction was signed or submitted.`);
     return;
@@ -407,6 +408,9 @@ async function executeCommand() {
     return;
   }
   const alias = options.accountAlias ?? LENDING_USER_ALIASES[label];
+  if (options.execute && label === "A" && !options.accountAlias) {
+    throw new Error("Wallet A is MetaMask-controlled. Submit its transaction from the connected browser wallet; the inaccessible legacy Foundry alias is never used as a fallback.");
+  }
   const eventFor = (name, fields) => ({ name, matches: (args) => Object.entries(fields).every(([key, value]) => {
     const actual = args[key];
     return typeof value === "bigint" ? BigInt(actual) === value : typeof value === "boolean" ? actual === value : String(actual).toLowerCase() === String(value).toLowerCase();

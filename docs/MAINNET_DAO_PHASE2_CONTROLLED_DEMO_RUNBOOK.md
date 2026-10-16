@@ -64,11 +64,10 @@ For either wallet to reach the deployed reputation threshold of 3, canonical his
 
 ### Participant transaction CLI
 
-The browser already supports the same Mainnet operations. For the two encrypted Foundry participant wallets, the read-only and simulation-first CLI is `bun run robinhood:mainnet:lending:user`. It accepts only the configured Wallet A/B addresses, verifies the matching alias before each signed operation, keeps witness/proof bytes out of logs, simulates every contract call, estimates gas, and checks receipt sender/chain/target/calldata, pool event, and post-state. Each write needs its own exact authorization flag and interactive confirmation; never batch multiple writes into one approval.
+Wallet A is now the MetaMask-controlled address configured for Mainnet; its old Foundry keystore is inaccessible and is never used as a signing fallback. Wallet A signs Lending and DAO transactions in the browser after connecting MetaMask on chain 4663 and checking the full address. Wallet B remains Foundry-keystore controlled. `bun run robinhood:mainnet:lending:user` provides read-only status, proof generation, and simulations for either participant; signed CLI transactions use Wallet B's `gyevo-rh-mainnet-wallet-b` alias. Every write is simulated first and requires its own exact authorization flag and interactive confirmation.
 
 ```sh
 bun run robinhood:mainnet:lending:user status A
-bun run robinhood:mainnet:lending:user check-wallet-alias A
 bun run robinhood:mainnet:lending:user proof A "$HOME/.local/share/gyevo-witnesses/mainnet-wallet-a-policy3.json"
 bun run robinhood:mainnet:lending:user approve A loan 2000000
 bun run robinhood:mainnet:lending:user supply A 2000000 "$HOME/.local/share/gyevo-witnesses/mainnet-wallet-a-policy3.json"
@@ -80,7 +79,7 @@ bun run robinhood:mainnet:lending:user approve-repay A
 bun run robinhood:mainnet:lending:user repay-all A
 ```
 
-Run every command above once without `--execute` first. A signed transaction adds `--execute --authorize-mainnet-lending-user-write=<operation> --account-alias <matching-alias>`; `approve` uses `approve-token`. The matching aliases are `gyevo-rh-mainnet-wallet-a` and `gyevo-rh-mainnet-wallet-b`. Wallet B repeats collateral approval/deposit, enable, borrow, repay approval, and repayment with label `B` and its own witness/alias. After both debt readbacks are zero, collateral can be withdrawn; Wallet A's supplier position can then be withdrawn if the live liquidity read allows it. All amounts above are base units, and none of these candidate transaction amounts are authorization.
+Run each command once without `--execute` first. Wallet A performs approved operations in `/lending` with MetaMask; Wallet B's CLI writes add `--execute --authorize-mainnet-lending-user-write=<operation> --account-alias gyevo-rh-mainnet-wallet-b` (`approve` uses `approve-token`). Wallet B repeats collateral approval/deposit, enable, borrow, repay approval, and repayment with its own witness. After both debt readbacks are zero, collateral can be withdrawn; Wallet A's supplier position can then be withdrawn if the live liquidity read allows it. All amounts above are base units, and none of these candidate transaction amounts are authorization.
 
 Barretenberg CRS handling is provided by the pinned `@aztec/bb.js` 5.2.1 dependency. Browser WASM uses its IndexedDB cache and the package's HTTPS primary/fallback CRS hosts. The local CLI uses `CRS_PATH` (default `$HOME/.bb-crs`) and the package filenames `bn254_g1_compressed.dat`, `bn254_g2.dat`, and `grumpkin_g1_v2.flat.dat`; `g1_compressed.dat` alone is not the Node cache contract. Check or warm the cache without an RPC call using:
 
@@ -138,17 +137,16 @@ bun run robinhood:mainnet:dao2:operator unpause governance --execute --authorize
 
 ## 5. Activate Phase 2 and conduct the two-voter lifecycle
 
-After the ordered activation above, each wallet opens `/dao`, chooses Mainnet, connects that same wallet on chain 4663, imports its Policy 5 witness, generates and locally verifies the genuine proof, and registers proof-backed membership. The DAO operator also supports simulation-first keystore paths for membership registration, proposal creation, finalization, execution, commits and reveals:
+After the ordered activation above, each wallet opens `/dao`, chooses Mainnet, connects that same wallet on chain 4663, imports its Policy 5 witness, generates and locally verifies the genuine proof, and registers proof-backed membership. Wallet A signs participant transactions in the browser; Wallet B can use its encrypted Foundry alias. The CLI supports simulations for either wallet, but do not execute Wallet A operations with the retired alias:
 
 ```sh
 # Each command without execution flags is the simulation/read-only step.
 bun run robinhood:mainnet:dao2:operator register-membership "$HOME/.local/share/gyevo-witnesses/mainnet-wallet-a-policy5.json"
-bun run robinhood:mainnet:dao2:operator register-membership "$HOME/.local/share/gyevo-witnesses/mainnet-wallet-a-policy5.json" --execute --authorize-mainnet-dao2-write=mainnet-dao2-register-membership --account-alias gyevo-rh-mainnet-wallet-a
 bun run robinhood:mainnet:dao2:operator register-membership "$HOME/.local/share/gyevo-witnesses/mainnet-wallet-b-policy5.json" --execute --authorize-mainnet-dao2-write=mainnet-dao2-register-membership --account-alias gyevo-rh-mainnet-wallet-b
 
 # Proposal wording and threshold need owner approval; proposer is Wallet A.
-bun run robinhood:mainnet:dao2:operator create-proposal "$APPROVED_PROPOSAL_REFERENCE" "$APPROVED_MINIMUM_REPUTATION" --proposer-address 0xdB354254bF1E0374963600811D1fF5643a56A367
-bun run robinhood:mainnet:dao2:operator create-proposal "$APPROVED_PROPOSAL_REFERENCE" "$APPROVED_MINIMUM_REPUTATION" --proposer-address 0xdB354254bF1E0374963600811D1fF5643a56A367 --execute --authorize-mainnet-dao2-write=mainnet-dao2-create-proposal --account-alias gyevo-rh-mainnet-wallet-a
+# Wallet A simulates here; perform the approved proposal transaction from the connected browser wallet.
+bun run robinhood:mainnet:dao2:operator create-proposal "$APPROVED_PROPOSAL_REFERENCE" "$APPROVED_MINIMUM_REPUTATION" --proposer-address 0x3cdb91a29b73daB9219D9A287543800B417b6dbB
 
 # Read current lifecycle state/times at any point.
 bun run robinhood:mainnet:dao2:operator proposal "$PROPOSAL_ID"
@@ -160,7 +158,6 @@ For encrypted-keystore commit/reveal, the CLI simulates first and verifies the a
 
 ```sh
 bun run robinhood:mainnet:dao2:operator commit-vote <PROPOSAL_ID> for "$HOME/.local/share/gyevo-witnesses/mainnet-wallet-a-ballot.json" --voter-address <PARTICIPANT_A>
-bun run robinhood:mainnet:dao2:operator commit-vote <PROPOSAL_ID> for "$HOME/.local/share/gyevo-witnesses/mainnet-wallet-a-ballot.json" --voter-address <PARTICIPANT_A> --execute --authorize-mainnet-dao2-write=mainnet-dao2-commit-vote --account-alias gyevo-rh-mainnet-wallet-a
 bun run robinhood:mainnet:dao2:operator commit-vote <PROPOSAL_ID> for "$HOME/.local/share/gyevo-witnesses/mainnet-wallet-b-ballot.json" --voter-address <PARTICIPANT_B> --execute --authorize-mainnet-dao2-write=mainnet-dao2-commit-vote --account-alias gyevo-rh-mainnet-wallet-b
 ```
 
@@ -171,7 +168,6 @@ The deployed Mainnet contract sets `startAt = createdAt + 60s`; with 3,600-secon
 For encrypted aliases, repeat each reveal once without execution flags first. Then execute with the matching voter alias; after the live reveal deadline, finalize and execute separately with the admin alias:
 
 ```sh
-bun run robinhood:mainnet:dao2:operator reveal-vote "$HOME/.local/share/gyevo-witnesses/mainnet-wallet-a-ballot.json" --voter-address 0xdB354254bF1E0374963600811D1fF5643a56A367 --execute --authorize-mainnet-dao2-write=mainnet-dao2-reveal-vote --account-alias gyevo-rh-mainnet-wallet-a
 bun run robinhood:mainnet:dao2:operator reveal-vote "$HOME/.local/share/gyevo-witnesses/mainnet-wallet-b-ballot.json" --voter-address 0xc70865Ec508E6A1C55E6a3E6aB60533ef57286b8 --execute --authorize-mainnet-dao2-write=mainnet-dao2-reveal-vote --account-alias gyevo-rh-mainnet-wallet-b
 bun run robinhood:mainnet:dao2:operator finalize-proposal "$PROPOSAL_ID"
 bun run robinhood:mainnet:dao2:operator finalize-proposal "$PROPOSAL_ID" --execute --authorize-mainnet-dao2-write=mainnet-dao2-finalize-proposal --account-alias gyevo-rh-mainnet-admin

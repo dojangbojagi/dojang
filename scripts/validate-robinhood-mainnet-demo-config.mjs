@@ -15,6 +15,7 @@ export const ADDRESS_KEYS = [
   "RH_MAINNET_DEMO_PARTICIPANT_A_ADDRESS",
   "RH_MAINNET_DEMO_PARTICIPANT_B_ADDRESS",
 ];
+export const OPTIONAL_ADDRESS_KEYS = ["RH_MAINNET_DEMO_PREVIOUS_PARTICIPANT_A_ADDRESS"];
 
 export const PARAMETER_KEYS = [
   "RH_MAINNET_DEMO_GOVERNANCE_VOTING_PERIOD",
@@ -62,7 +63,7 @@ function parseEnvValue(value) {
 
 /** Parse only the explicitly allowed public deployment keys; never execute .env text. */
 export function parseAllowedEnv(text) {
-  const allowed = new Set(REQUIRED_KEYS);
+  const allowed = new Set([...REQUIRED_KEYS, ...OPTIONAL_ADDRESS_KEYS]);
   const values = {};
   for (const line of text.split(/\r?\n/)) {
     const match = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)$/);
@@ -123,6 +124,12 @@ export function validateConfig(values) {
   for (const [key, normalized] of addresses) {
     if (seen.has(normalized)) errors.push(`${key} must be distinct from ${seen.get(normalized)}.`);
     else seen.set(normalized, key);
+  }
+  const previousA = values.RH_MAINNET_DEMO_PREVIOUS_PARTICIPANT_A_ADDRESS;
+  if (previousA) {
+    if (!isAddress(previousA)) errors.push("RH_MAINNET_DEMO_PREVIOUS_PARTICIPANT_A_ADDRESS must be a valid EVM address.");
+    else if (previousA.toLowerCase() === ZERO_ADDRESS) errors.push("RH_MAINNET_DEMO_PREVIOUS_PARTICIPANT_A_ADDRESS cannot be the zero address.");
+    else if (seen.has(previousA.toLowerCase())) errors.push(`RH_MAINNET_DEMO_PREVIOUS_PARTICIPANT_A_ADDRESS must be distinct from ${seen.get(previousA.toLowerCase())}.`);
   }
 
   const n = {};

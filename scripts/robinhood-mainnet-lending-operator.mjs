@@ -24,11 +24,14 @@ const AUTH = {
   mint: "token-mint",
   "issue-lending": "credential-policy-3",
   "unpause-pool": "unpause-lending",
+  "participant-revoke": "participant-revoke",
+  "participant-grant": "participant-grant",
 };
 const poolAbi = parseAbi([
   "function DEFAULT_ADMIN_ROLE() view returns (bytes32)", "function RISK_ADMIN_ROLE() view returns (bytes32)",
   "function PAUSER_ROLE() view returns (bytes32)", "function DEMO_PARTICIPANT_ROLE() view returns (bytes32)",
   "function hasRole(bytes32,address) view returns (bool)", "function paused() view returns (bool)",
+  "function grantRole(bytes32,address)", "function revokeRole(bytes32,address)",
   "function demoOnly() view returns (bool)", "function isDemoParticipant(address) view returns (bool)",
   "function credentialRegistry() view returns (address)", "function eligibilityVerifier() view returns (address)",
   "function priceOracle() view returns (address)", "function demoLoanAsset() view returns (address)",
@@ -85,6 +88,25 @@ export function assertDistinctParticipants(values) {
 export function assertExactDemoParticipants(actual, expected) {
   const normalize = (items) => [...items].map((value) => getAddress(value).toLowerCase()).sort();
   assert.deepEqual(normalize(actual), normalize(expected), "The pool's current DEMO_PARTICIPANT_ROLE holders differ from the two configured participants.");
+}
+
+export function classifyDemoParticipantMigration(actual, { previousParticipantA, participantA, participantB }) {
+  const normalize = (items) => [...items].map((value) => getAddress(value).toLowerCase()).sort();
+  const current = normalize(actual);
+  const target = normalize([participantA, participantB]);
+  if (!previousParticipantA) {
+    assert.deepEqual(current, target, "The pool's current DEMO_PARTICIPANT_ROLE holders differ from the two configured participants.");
+    return "complete";
+  }
+  const previous = getAddress(previousParticipantA).toLowerCase();
+  assert.notEqual(previous, getAddress(participantA).toLowerCase(), "Previous and replacement Wallet A must differ.");
+  assert.notEqual(previous, getAddress(participantB).toLowerCase(), "Previous Wallet A must differ from Wallet B.");
+  const legacy = normalize([previousParticipantA, participantB]);
+  const revoked = normalize([participantB]);
+  if (JSON.stringify(current) === JSON.stringify(legacy)) return "awaiting-revocation";
+  if (JSON.stringify(current) === JSON.stringify(revoked)) return "awaiting-grant";
+  if (JSON.stringify(current) === JSON.stringify(target)) return "complete";
+  throw new Error("The live participant-role history is outside the explicitly allowed Wallet A migration states.");
 }
 
 export function credentialIsActive(record, now) {
@@ -160,6 +182,16 @@ export function assertWriteAuthorization(options, expected) {
   assert.equal(options.authorization, expected, `Execution requires --authorize-mainnet-lending-write=${expected}.`);
 }
 
+export function assertCanonicalOperatorWrite({ hash, actor, target, data, receipt, transaction }) {
+  assert.equal(receipt.status, "success", `Mainnet transaction receipt failed: ${hash}`);
+  assert.equal(normalizedHash(receipt.transactionHash), hash.toLowerCase(), "Canonical receipt hash differs from the submitted transaction.");
+  assert.equal(normalizedHash(transaction.hash), hash.toLowerCase(), "Canonical transaction hash differs from the submitted transaction.");
+  assert.equal(transaction.chainId, CHAIN_ID, `Transaction is not on Robinhood Mainnet chain ${CHAIN_ID}.`);
+  assert.equal(getAddress(transaction.from).toLowerCase(), getAddress(actor).toLowerCase(), "Canonical transaction sender differs from the authorized role address.");
+  assert.equal(getAddress(transaction.to).toLowerCase(), getAddress(target).toLowerCase(), "Canonical transaction target differs from the simulated contract.");
+  assert.equal(normalizedHash(transaction.input), data.toLowerCase(), "Canonical transaction calldata differs from the simulated operation.");
+}
+
 function envAddress(name) {
   const value = process.env[name]?.trim();
   assert.ok(value && isAddress(value), `${name} is missing or invalid.`);
@@ -174,14 +206,23 @@ function rpc() {
 }
 
 function roles() {
+  const participantA = envAddress("RH_MAINNET_DEMO_PARTICIPANT_A_ADDRESS");
+  const participantB = envAddress("RH_MAINNET_DEMO_PARTICIPANT_B_ADDRESS");
   const result = {
     deployer: envAddress("RH_MAINNET_DEPLOYER_ADDRESS"), admin: envAddress("RH_MAINNET_ADMIN_ADDRESS"),
     issuer: envAddress("RH_MAINNET_ISSUER_ADDRESS"), oracleUpdater: envAddress("RH_MAINNET_ORACLE_UPDATER_ADDRESS"),
     riskAdmin: envAddress("RH_MAINNET_RISK_ADMIN_ADDRESS"), pauseAuthority: envAddress("RH_MAINNET_PAUSE_AUTHORITY_ADDRESS"),
-    minter: envAddress("RH_MAINNET_DEMO_MINTER_ADDRESS"), participantA: envAddress("RH_MAINNET_DEMO_PARTICIPANT_A_ADDRESS"),
-    participantB: envAddress("RH_MAINNET_DEMO_PARTICIPANT_B_ADDRESS"),
+    minter: envAddress("RH_MAINNET_DEMO_MINTER_ADDRESS"), participantA, participantB,
   };
   assertDistinctParticipants(Object.values(result));
+  const previousText = process.env.RH_MAINNET_DEMO_PREVIOUS_PARTICIPANT_A_ADDRESS?.trim();
+  if (previousText) {
+    assert.ok(isAddress(previousText), "RH_MAINNET_DEMO_PREVIOUS_PARTICIPANT_A_ADDRESS is invalid.");
+    result.previousParticipantA = getAddress(previousText);
+    assertDistinctParticipants([...Object.values(result).filter(Boolean)]);
+  } else {
+    result.previousParticipantA = undefined;
+  }
   return result;
 }
 
@@ -351,7 +392,7 @@ async function readDemoParticipantHolders(ctx) {
 async function showStatus(ctx) {
   const { client, roles: r } = ctx;
   const participantHistory = await readDemoParticipantHolders(ctx);
-  assertExactDemoParticipants(participantHistory.holders, [r.participantA, r.participantB]);
+  const migrationState = classifyDemoParticipantMigration(participantHistory.holders, r);
   const [paused, governancePaused, assets, loanSupply, loanCap, loanDecimals, loanSymbol, collSupply, collCap, collDecimals, collSymbol,
     loanPoolBalance, collateralPoolBalance, loanBounds, collBounds, loanConfig, collConfig, adminPool, riskAdmin, pauser, participantA, participantB,
     registryAdmin, issuer, oracleAdmin, updater, minterLoan, minterColl, governanceAdmin, governancePauser,
@@ -400,7 +441,12 @@ async function showStatus(ctx) {
   assert.ok(assets.some((asset) => asset.toLowerCase() === contracts.loanToken.toLowerCase()) && assets.some((asset) => asset.toLowerCase() === contracts.collateralToken.toLowerCase()), "Pool reserves do not match the receipt-derived Mainnet synthetic token pair.");
   const roleRows = [adminPool, riskAdmin, pauser, registryAdmin, issuer, oracleAdmin, updater, minterLoan, minterColl, governanceAdmin, governancePauser];
   assert.ok(roleRows.every(Boolean), "One or more configured operator addresses do not hold their expected on-chain role.");
-  assert.ok(participantA && participantB, "Both configured participants must have the pool's on-chain DEMO_PARTICIPANT_ROLE.");
+  const previousParticipant = r.previousParticipantA
+    ? await client.readContract({ address: contracts.lendingPool, abi: poolAbi, functionName: "isDemoParticipant", args: [r.previousParticipantA] })
+    : false;
+  assert.equal(participantA, migrationState === "complete", "Replacement Wallet A live role read differs from canonical role history.");
+  assert.equal(participantB, true, "Wallet B must retain its on-chain DEMO_PARTICIPANT_ROLE throughout migration.");
+  assert.equal(previousParticipant, migrationState === "awaiting-revocation", "Previous Wallet A live role read differs from canonical role history.");
   for (const [label, token, supply, cap, decimals, symbol] of [
     ["Loan", contracts.loanToken, loanSupply, loanCap, loanDecimals, loanSymbol],
     ["Collateral", contracts.collateralToken, collSupply, collCap, collDecimals, collSymbol],
@@ -410,8 +456,9 @@ async function showStatus(ctx) {
   }
   console.log(`Robinhood Mainnet ${CHAIN_ID} · live block ${now.number} · pool ${contracts.lendingPool} · ${paused ? "PAUSED" : "ACTIVE"} · Phase 1 Governance ${governancePaused ? "PAUSED" : "ACTIVE"}`);
   console.log(`Receipts and bytecode: 10/10 live-checked · dependencies and demo markers verified · no Testnet address fallback.`);
-  console.log(`Participants: A ${r.participantA} ${participantA ? "ALLOWLISTED" : "BLOCKED"} · B ${r.participantB} ${participantB ? "ALLOWLISTED" : "BLOCKED"}`);
-  console.log(`Complete participant-role history: exactly the configured two wallets through block ${participantHistory.head} · ${participantHistory.queryCount} bounded queries.`);
+  console.log(`Participants: A ${r.participantA} ${participantA ? "ALLOWLISTED" : "PENDING ROLE CHANGE"} · B ${r.participantB} ${participantB ? "ALLOWLISTED" : "BLOCKED"}`);
+  if (r.previousParticipantA) console.log(`Wallet A migration: ${migrationState} · prior address ${r.previousParticipantA} ${previousParticipant ? "still allowlisted" : "revoked"}.`);
+  console.log(`Complete participant-role history: migration state ${migrationState} through block ${participantHistory.head} · ${participantHistory.queryCount} bounded queries.`);
   console.log(`Roles: admin/pool=${adminPool} risk-admin=${riskAdmin} pause-authority=${pauser} issuer=${issuer} oracle-updater=${updater} minter=${minterLoan && minterColl} governance-admin=${governanceAdmin} governance-pauser=${governancePauser}`);
   const freshness = (price, updatedAt, maxAge) => {
     const value = BigInt(price), updated = BigInt(updatedAt), timestamp = BigInt(now.timestamp), ageLimit = BigInt(maxAge);
@@ -561,9 +608,51 @@ async function writeGuarded(ctx, command, actor, target, abi, functionName, args
   const hash = output.match(/0x[a-fA-F0-9]{64}/)?.[0];
   assert.ok(hash, "No transaction hash returned.");
   const receipt = await ctx.client.waitForTransactionReceipt({ hash });
-  assert.equal(receipt.status, "success", `Transaction receipt failed: ${hash}`);
-  assert.equal(await confirm(), true, "Receipt succeeded but post-transaction state did not match the requested operation.");
+  const canonicalTransaction = await ctx.client.getTransaction({ hash });
+  assertCanonicalOperatorWrite({ hash, actor, target, data, receipt, transaction: canonicalTransaction });
+  let confirmed = false;
+  let lastReadError;
+  for (const delay of [0, 500, 1500, 3000]) {
+    if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
+    try { confirmed = await confirm(); if (confirmed) break; }
+    catch (error) { lastReadError = error; }
+  }
+  assert.ok(confirmed, `Receipt ${hash} succeeded, but post-state was not confirmed${lastReadError ? ` (${lastReadError.name})` : ""}.`);
   console.log(`CONFIRMED ${hash}\n${EXPLORER}/tx/${hash}`);
+}
+
+async function migrateParticipantRole(ctx, action, options) {
+  const previous = ctx.roles.previousParticipantA;
+  assert.ok(previous, "Set RH_MAINNET_DEMO_PREVIOUS_PARTICIPANT_A_ADDRESS to the old Wallet A before using migration commands.");
+  const history = await readDemoParticipantHolders(ctx);
+  const state = classifyDemoParticipantMigration(history.holders, ctx.roles);
+  const target = action === "revoke" ? previous : ctx.roles.participantA;
+  const expectedState = action === "revoke" ? "awaiting-revocation" : "awaiting-grant";
+  const nextState = action === "revoke" ? "awaiting-grant" : "complete";
+  assert.equal(state, expectedState,
+    action === "revoke"
+      ? "Old Wallet A may be revoked only from the exact pre-migration holder set {old Wallet A, Wallet B}."
+      : "New Wallet A may be granted only after old Wallet A is revoked and the exact holder set is {Wallet B}."
+  );
+  const participantRole = await ctx.client.readContract({ address: contracts.lendingPool, abi: poolAbi, functionName: "DEMO_PARTICIPANT_ROLE" });
+  const adminRole = await ctx.client.readContract({ address: contracts.lendingPool, abi: poolAbi, functionName: "DEFAULT_ADMIN_ROLE" });
+  assert.equal(await ctx.client.readContract({ address: contracts.lendingPool, abi: poolAbi, functionName: "hasRole", args: [adminRole, ctx.roles.admin] }), true,
+    "Configured administrator does not hold the pool DEFAULT_ADMIN_ROLE.");
+  const [oldAllowed, newAllowed, walletBAllowed] = await Promise.all([
+    ctx.client.readContract({ address: contracts.lendingPool, abi: poolAbi, functionName: "isDemoParticipant", args: [previous] }),
+    ctx.client.readContract({ address: contracts.lendingPool, abi: poolAbi, functionName: "isDemoParticipant", args: [ctx.roles.participantA] }),
+    ctx.client.readContract({ address: contracts.lendingPool, abi: poolAbi, functionName: "isDemoParticipant", args: [ctx.roles.participantB] }),
+  ]);
+  assert.equal(oldAllowed, action === "revoke", "Old Wallet A role read does not match the expected migration stage.");
+  assert.equal(newAllowed, false, "Replacement Wallet A is already allowlisted; refusing a duplicate grant.");
+  assert.equal(walletBAllowed, true, "Wallet B must remain allowlisted during Wallet A migration.");
+  const command = action === "revoke" ? "participant-revoke" : "participant-grant";
+  const functionName = action === "revoke" ? "revokeRole" : "grantRole";
+  return writeGuarded(ctx, command, ctx.roles.admin, contracts.lendingPool, poolAbi, functionName,
+    [participantRole, target], options, async () => {
+      const after = await readDemoParticipantHolders(ctx);
+      return classifyDemoParticipantMigration(after.holders, ctx.roles) === nextState;
+    });
 }
 
 async function main() {
@@ -578,11 +667,13 @@ async function main() {
     else positional.push(arg);
   }
   if (["help", "--help"].includes(command)) {
-    console.log("Read-only: status | prepare-lending <participant> <expiry-days> <private-witness.json>. Simulated by default: price loan|collateral <price-wad> | mint loan|collateral <participant> <base-units> | issue-lending <private-witness.json> | unpause-pool.\n\nEvery write simulates first. Public Mainnet writes require --execute, exact --authorize-mainnet-lending-write=<label>, an encrypted Foundry keystore alias matching the required role, and an interactive typed confirmation. No operation grants roles, deploys, or initializes reserve configuration.");
+    console.log("Read-only: status | prepare-lending <participant> <expiry-days> <private-witness.json>. Simulated by default: participant-revoke | participant-grant | price loan|collateral <price-wad> | mint loan|collateral <participant> <base-units> | issue-lending <private-witness.json> | unpause-pool.\n\nParticipant replacement is ordered and fail-closed: revoke the previous Wallet A first, then grant the configured replacement only from the exact intermediate holder set {Wallet B}. This never allows a third participant. The interval between transactions has Wallet B as the sole participant. Every write simulates first; execution requires --execute, the matching --authorize-mainnet-lending-write=<label>, an encrypted Foundry keystore alias matching the required role, and an interactive typed confirmation.");
     return;
   }
   const ctx = await getContext();
   if (command === "status") return showStatus(ctx);
+  if (command === "participant-revoke") return migrateParticipantRole(ctx, "revoke", options);
+  if (command === "participant-grant") return migrateParticipantRole(ctx, "grant", options);
   if (command === "prepare-lending") return prepareCredential(ctx, positional[0], positional[1], positional[2]);
   if (command === "price") {
     assert.ok(["loan", "collateral"].includes(positional[0]) && /^\d+$/.test(positional[1] ?? ""), "Use price loan|collateral <price-in-WAD-base-units>.");
@@ -614,6 +705,8 @@ async function main() {
     assert.ok(amount <= BigInt(maxSingleMint), "Mint exceeds the owner-approved single-transaction allocation limit.");
     assert.ok(supply + amount <= cap, "Mint would exceed the immutable total supply cap.");
     assert.equal(balance, 0n, "Recipient already has a token balance; duplicate-safe mint is refused.");
+    assert.equal(await ctx.client.readContract({ address: contracts.lendingPool, abi: poolAbi, functionName: "isDemoParticipant", args: [recipient] }), true,
+      "Synthetic tokens can only be minted to a currently allowlisted Mainnet demo participant.");
     const history = await getCompleteMintHistory(ctx, token, recipient, entry.block);
     assert.equal(history.count, 0, `Recipient has ${history.count} historical mint event(s); refusing duplicate mint.`);
     console.log(`Complete mint-history scan: no prior mint to recipient · ${history.queries} bounded RPC query(ies) · through block ${history.head}.`);
@@ -628,6 +721,8 @@ async function main() {
     assert.equal(witness.format, "robinhood-demo-credential-v1", "Witness must use the Robinhood project credential format.");
     assert.equal(witness.policyId, Number(POLICY_ID), "Witness must be Policy 3.");
     assert.ok([ctx.roles.participantA, ctx.roles.participantB].some((wallet) => wallet.toLowerCase() === witness.wallet.toLowerCase()), "Witness wallet is not one of the configured demo participants.");
+    assert.equal(await ctx.client.readContract({ address: contracts.lendingPool, abi: poolAbi, functionName: "isDemoParticipant", args: [witness.wallet] }), true,
+      "A Policy 3 credential may only be issued to a currently allowlisted Mainnet demo participant.");
     const [current, block, role] = await Promise.all([
       ctx.client.readContract({ address: contracts.credentialRegistry, abi: registryAbi, functionName: "getCredential", args: [witness.wallet, POLICY_ID] }),
       ctx.client.getBlock({ blockTag: "latest" }),

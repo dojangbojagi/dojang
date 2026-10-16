@@ -96,4 +96,14 @@ describe("Robinhood Mainnet demo config validator", () => {
     });
     expect(JSON.stringify(parsed)).not.toContain("must-not-be-read");
   });
+
+  test("accepts an optional prior participant address only when it is valid and distinct", () => {
+    const values = completeConfig();
+    values.RH_MAINNET_DEMO_PREVIOUS_PARTICIPANT_A_ADDRESS = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    expect(validateConfig(values).ok).toBe(true);
+    values.RH_MAINNET_DEMO_PREVIOUS_PARTICIPANT_A_ADDRESS = values.RH_MAINNET_DEMO_PARTICIPANT_B_ADDRESS;
+    expect(validateConfig(values).errors).toContain("RH_MAINNET_DEMO_PREVIOUS_PARTICIPANT_A_ADDRESS must be distinct from RH_MAINNET_DEMO_PARTICIPANT_B_ADDRESS.");
+    const parsed = parseAllowedEnv("RH_MAINNET_DEMO_PREVIOUS_PARTICIPANT_A_ADDRESS=0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    expect(parsed.RH_MAINNET_DEMO_PREVIOUS_PARTICIPANT_A_ADDRESS).toBe("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+  });
 });
