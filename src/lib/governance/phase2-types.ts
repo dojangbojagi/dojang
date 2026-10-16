@@ -58,6 +58,7 @@ export interface Phase2Proposal {
 
 export interface Phase2Snapshot {
   paused: boolean;
+  reputationPaused: boolean;
   commitPeriod: bigint;
   revealPeriod: bigint;
   executionWindow: bigint;

@@ -135,9 +135,10 @@ export async function readPhase2Snapshot(
 ): Promise<Phase2Readiness> {
   const deployment = await checkPhase2Deployment(client, addresses, expectedChainId);
   if (deployment !== "ready") return { state: deployment };
-  const [paused, commitPeriod, revealPeriod, executionWindow, quorum, minimumReputation, nextProposalId, block] =
+  const [paused, reputationPaused, commitPeriod, revealPeriod, executionWindow, quorum, minimumReputation, nextProposalId, block] =
     await Promise.all([
       client.readContract({ address: addresses.governance, abi: robinhoodGovernancePhase2Abi, functionName: "paused" }),
+      client.readContract({ address: addresses.reputationRegistry, abi: robinhoodLendingReputationAbi, functionName: "paused" }),
       client.readContract({ address: addresses.governance, abi: robinhoodGovernancePhase2Abi, functionName: "commitPeriod" }),
       client.readContract({ address: addresses.governance, abi: robinhoodGovernancePhase2Abi, functionName: "revealPeriod" }),
       client.readContract({ address: addresses.governance, abi: robinhoodGovernancePhase2Abi, functionName: "executionWindow" }),
@@ -174,7 +175,7 @@ export async function readPhase2Snapshot(
   return {
     state: "ready",
     snapshot: {
-      paused, commitPeriod, revealPeriod, executionWindow, quorum, minimumReputation, nextProposalId,
+      paused, reputationPaused, commitPeriod, revealPeriod, executionWindow, quorum, minimumReputation, nextProposalId,
       credential, credentialActive, reputation, membership, proposal,
     },
   };

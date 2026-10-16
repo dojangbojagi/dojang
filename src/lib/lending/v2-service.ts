@@ -1,8 +1,11 @@
-import { zeroAddress, type Address, type PublicClient } from "viem";
-import { controlledTestOracleAbi, controlledTokenAbi, credentialIssuerRoleAbi, credentialRegistryAbi, eligibilityVerifierAdapterAbi, lendingPoolV2Abi } from "../contracts/abis";
+import { keccak256, stringToBytes, zeroAddress, type Address, type PublicClient } from "viem";
+import { controlledTestOracleAbi, controlledTokenAbi, credentialIssuerRoleAbi, credentialRegistryAbi, eligibilityVerifierAdapterAbi, lendingPoolV2Abi, robinhoodMainnetDemoMarkerAbi } from "../contracts/abis";
 import { LENDING_V2_ELIGIBILITY_THRESHOLD, LENDING_V2_POLICY_ID, LENDING_V2_POLICY_VERSION, LENDING_V2_RAY } from "./v2-config";
 import { GIWA_SEPOLIA_CHAIN_ID, type LendingV2ChainId } from "./v2-network";
 import type { DemoCredentialRecord } from "../protocol/types";
+
+const ROBINHOOD_MAINNET_CHAIN_ID = 4_663;
+const MAINNET_DEMO_ASSET_MARKER = keccak256(stringToBytes("ROBINHOOD_MAINNET_CONTROLLED_DEMO_ASSET_V1")).slice(0, 10);
 
 export type LendingV2OracleState = "fresh" | "missing" | "stale" | "future" | "unavailable";
 export type LendingV2MarketState =
@@ -98,6 +101,8 @@ export type LendingV2MarketSnapshot = {
   reserves: LendingV2ReserveSnapshot[];
   position?: {
     wallet: Address;
+    /** Present only for a wallet on the participant allowlist of the controlled Mainnet demo pool. */
+    demoParticipant?: boolean;
     byAsset: Record<string, LendingV2Position>;
     account?: LendingV2AccountData;
     riskMetricsState: "available" | "blocked-by-oracle";
@@ -164,6 +169,7 @@ export async function readLendingV2Deployment(
   expectedVerifier?: Address,
   expectedOracle?: Address,
   expectedHonkVerifier?: Address,
+  expectedAssets?: readonly Address[],
 ): Promise<{
   pool: Address;
   credentialRegistry: Address;
@@ -229,6 +235,35 @@ export async function readLendingV2Deployment(
   const honkVerifierCode = await client.getCode({ address: honkVerifier, blockNumber });
   if (!codeExists(honkVerifierCode)) {
     throw new LendingV2UnavailableError("The verifier adapter references a HonkVerifier without deployed bytecode.");
+  }
+  if (expectedChainId === ROBINHOOD_MAINNET_CHAIN_ID) {
+    if (!expectedAssets || expectedAssets.length !== 2) {
+      throw new LendingV2UnavailableError("Robinhood Mainnet Lending requires the two receipt-confirmed synthetic demo token addresses.");
+    }
+    const [demoOnly, loanAsset, collateralAsset, registryDemoOnly] = await Promise.all([
+      client.readContract({ address: pool, abi: robinhoodMainnetDemoMarkerAbi, functionName: "demoOnly", blockNumber }),
+      client.readContract({ address: pool, abi: lendingPoolV2Abi, functionName: "demoLoanAsset", blockNumber }),
+      client.readContract({ address: pool, abi: lendingPoolV2Abi, functionName: "demoCollateralAsset", blockNumber }),
+      client.readContract({ address: credentialRegistry, abi: robinhoodMainnetDemoMarkerAbi, functionName: "demoOnly", blockNumber }),
+    ]);
+    if (!demoOnly || !registryDemoOnly) {
+      throw new LendingV2UnavailableError("The Mainnet pool and credential registry must expose their controlled-demo markers.");
+    }
+    const expectedSet = new Set(expectedAssets.map((asset) => asset.toLowerCase()));
+    if (expectedSet.size !== 2 || !expectedSet.has(loanAsset.toLowerCase()) || !expectedSet.has(collateralAsset.toLowerCase()) || loanAsset.toLowerCase() === collateralAsset.toLowerCase()) {
+      throw new LendingV2UnavailableError("The Mainnet pool's immutable demo token addresses do not match the separate Mainnet registry.");
+    }
+    const markers = await Promise.all(expectedAssets.map(async (asset) => {
+      const [assetDemoOnly, marker, mintCap] = await Promise.all([
+        client.readContract({ address: asset, abi: controlledTokenAbi, functionName: "demoOnly", blockNumber }),
+        client.readContract({ address: asset, abi: controlledTokenAbi, functionName: "controlledDemoAssetMarker", blockNumber }),
+        client.readContract({ address: asset, abi: controlledTokenAbi, functionName: "mintCap", blockNumber }),
+      ]);
+      return assetDemoOnly && marker.toLowerCase() === MAINNET_DEMO_ASSET_MARKER.toLowerCase() && mintCap > 0n;
+    }));
+    if (markers.some((valid) => !valid)) {
+      throw new LendingV2UnavailableError("A configured Mainnet reserve token is not marked as a capped synthetic demo asset.");
+    }
   }
   return { pool, credentialRegistry, eligibilityVerifier, honkVerifier, oracle, policyId, policyVersion, threshold };
 }
@@ -297,11 +332,15 @@ export async function readLendingV2Market(
     input.expectedVerifier,
     input.expectedOracle,
     input.expectedHonkVerifier,
+    input.expectedAssets,
   );
   const [assets, riskPaused] = await Promise.all([
     client.readContract({ address: input.pool, abi: lendingPoolV2Abi, functionName: "getReserveAssets", blockNumber: block.number }),
     client.readContract({ address: input.pool, abi: lendingPoolV2Abi, functionName: "paused", blockNumber: block.number }),
   ]);
+  const demoParticipant = input.expectedChainId === ROBINHOOD_MAINNET_CHAIN_ID && input.wallet
+    ? await client.readContract({ address: input.pool, abi: lendingPoolV2Abi, functionName: "isDemoParticipant", args: [input.wallet], blockNumber: block.number })
+    : undefined;
   const reserveCount = await client.readContract({ address: input.pool, abi: lendingPoolV2Abi, functionName: "reserveCount", blockNumber: block.number });
   if (reserveCount !== BigInt(assets.length) || assets.length > 8 || new Set(assets.map((asset) => asset.toLowerCase())).size !== assets.length) {
     throw new LendingV2UnavailableError("The pool reserve count and reserve list are inconsistent.");
@@ -418,6 +457,7 @@ export async function readLendingV2Market(
     reserves: reservesWithMax,
     position: {
       wallet: input.wallet,
+      demoParticipant,
       byAsset,
       account: account ? {
         collateralValueWad: account.collateralValueWad,

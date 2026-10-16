@@ -227,6 +227,10 @@ export const lendingPoolAbi = parseAbi([
 /** LendingPoolV2 ABI. Kept separate so V1 callers remain source-compatible. */
 export const lendingPoolV2Abi = parseAbi([
   "function paused() view returns (bool)",
+  "function demoOnly() view returns (bool)",
+  "function demoLoanAsset() view returns (address)",
+  "function demoCollateralAsset() view returns (address)",
+  "function isDemoParticipant(address wallet) view returns (bool)",
   "function POLICY_ID() view returns (uint256)",
   "function POLICY_VERSION() view returns (uint256)",
   "function ELIGIBILITY_THRESHOLD() view returns (uint256)",
@@ -290,6 +294,8 @@ export const controlledTokenAbi = parseAbi([
   "function allowance(address owner, address spender) view returns (uint256)",
   "function balanceOf(address account) view returns (uint256)",
   "function symbol() view returns (string)",
+  "function demoOnly() view returns (bool)",
+  "function controlledDemoAssetMarker() view returns (bytes4)",
   "event Transfer(address indexed from, address indexed to, uint256 value)",
 ]);
 
@@ -299,6 +305,8 @@ export const eligibilityVerifierAdapterAbi = parseAbi([
 
 export const robinhoodMainnetDemoMarkerAbi = parseAbi([
   "function demoOnly() view returns (bool)",
+  "function controlledDemoAssetMarker() view returns (bytes4)",
+  "function mintCap() view returns (uint256)",
 ]);
 
 export const eligibilityVerifierProofAbi = parseAbi([

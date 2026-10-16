@@ -6,10 +6,10 @@ import { usePublicClient } from "wagmi";
 import type { Address } from "viem";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import { getLendingV2ContractSet } from "@/lib/config/network-registry";
-import { appEnv } from "@/lib/config/env";
 import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
+import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo";
 import { LENDING_V2_POLICY_ID } from "@/lib/lending/v2-config";
-import { isRobinhoodLendingV2ProofForContext, robinhoodLendingV2CredentialQueryKey, robinhoodLendingV2DeploymentQueryKey, robinhoodLendingV2ProofContextForCredential } from "@/lib/lending/v2-network";
+import { isRobinhoodLendingV2ProofForContext, robinhoodLendingV2CredentialQueryKey, robinhoodLendingV2DeploymentQueryKey, robinhoodLendingV2ProofContextForCredential, type LendingV2ChainId } from "@/lib/lending/v2-network";
 import { LendingV2UnavailableError, readLendingV2Credential, readLendingV2Deployment } from "@/lib/lending/v2-service";
 import { eligibilityVerifierProofAbi } from "@/lib/contracts/abis";
 import { generateEligibilityProof } from "@/lib/zk/eligibility-prover";
@@ -55,7 +55,7 @@ function matchesV2Witness(witness: DemoCredentialWitness | undefined, wallet: Ad
   );
 }
 
-export function useLendingV2EligibilityProof(witness?: DemoCredentialWitness): {
+export function useLendingV2EligibilityProof(witness?: DemoCredentialWitness, chainId: LendingV2ChainId = ROBINHOOD_TESTNET_CHAIN_ID): {
   state: LendingV2EligibilityState;
   credentialLabel: "Project Test Credential";
   credential?: DemoCredentialRecord;
@@ -65,33 +65,33 @@ export function useLendingV2EligibilityProof(witness?: DemoCredentialWitness): {
   generateProof: (witnessOverride?: DemoCredentialWitness) => Promise<EligibilityProof>;
   refetchCredential: () => Promise<void>;
 } {
-  const account = useWalletNetwork(ROBINHOOD_TESTNET_CHAIN_ID);
-  const client = usePublicClient({ chainId: ROBINHOOD_TESTNET_CHAIN_ID });
-  const robinhood = getLendingV2ContractSet(ROBINHOOD_TESTNET_CHAIN_ID)!;
-  const pool = robinhood.pool;
-  const verifier = robinhood.verifierAdapter;
-  const honkVerifier = robinhood.verifierDependencies[2];
-  const oracle = robinhood.oracle;
-  const configuredPoolValue = appEnv.robinhoodContracts.lendingV2Pool;
-  const invalidPoolConfig = robinhood.invalidConfigNames.length > 0 || robinhood.missingRequiredConfigNames.length > 0;
+  const account = useWalletNetwork(chainId);
+  const client = usePublicClient({ chainId });
+  const robinhood = getLendingV2ContractSet(chainId);
+  const pool = robinhood?.pool;
+  const verifier = robinhood?.verifierAdapter;
+  const honkVerifier = robinhood?.verifierDependencies[2];
+  const oracle = robinhood?.oracle;
+  const configuredPoolValue = robinhood?.pool;
+  const invalidPoolConfig = (robinhood?.invalidConfigNames.length ?? 0) > 0 || (robinhood?.missingRequiredConfigNames.length ?? 0) > 0;
   const deploymentQuery = useQuery({
-    queryKey: robinhoodLendingV2DeploymentQueryKey(pool),
+    queryKey: robinhoodLendingV2DeploymentQueryKey(pool, chainId),
     queryFn: () => {
       if (!client || !pool) throw new LendingV2UnavailableError("Lending V2 is not configured.");
-      return readLendingV2Deployment(client, pool, robinhood.credentialRegistry, undefined, ROBINHOOD_TESTNET_CHAIN_ID, verifier, oracle, honkVerifier);
+      return readLendingV2Deployment(client, pool, robinhood?.credentialRegistry, undefined, chainId, verifier, oracle, honkVerifier, robinhood?.configuredAssets);
     },
-    enabled: Boolean(pool && client && !invalidPoolConfig),
+    enabled: Boolean(pool && client && !invalidPoolConfig && !(robinhood?.missingRequiredConfigNames.length)),
     retry: 1,
     staleTime: 15_000,
   });
   const registry = deploymentQuery.data?.credentialRegistry;
   const credentialQuery = useQuery({
-    queryKey: robinhoodLendingV2CredentialQueryKey(registry, account.address),
+    queryKey: robinhoodLendingV2CredentialQueryKey(registry, account.address, chainId),
     queryFn: () => {
       if (!client || !registry || !account.address) throw new Error("The V2 credential read is not configured.");
       return readLendingV2Credential(client, registry, account.address);
     },
-    enabled: Boolean(client && registry && account.address && account.isRobinhoodTestnet),
+    enabled: Boolean(client && registry && account.address && account.isOnExpectedNetwork),
     retry: 1,
     staleTime: 5_000,
   });
@@ -105,23 +105,23 @@ export function useLendingV2EligibilityProof(witness?: DemoCredentialWitness): {
   const witnessMatches = Boolean(account.address && credential && matchesV2Witness(currentWitness, account.address, credential));
   const context = useMemo(() => {
     if (!pool || !account.address || !credential) return undefined;
-    return robinhoodLendingV2ProofContextForCredential({ subject: account.address, record: credential, lendingPool: pool });
-  }, [account.address, credential, pool]);
+    return robinhoodLendingV2ProofContextForCredential({ subject: account.address, record: credential, lendingPool: pool, chainId });
+  }, [account.address, chainId, credential, pool]);
   const proof = context && credentialQuery.data?.state === "active" && witnessMatches &&
-    isRobinhoodLendingV2ProofForContext(storedProof, context) ? storedProof : undefined;
+    isRobinhoodLendingV2ProofForContext(storedProof, context, chainId) ? storedProof : undefined;
 
   useEffect(() => {
     setStoredProof(undefined);
     setProofWitness(undefined);
     setGenerationError(undefined);
     setVerificationStatus("not-generated");
-  }, [account.address, credential?.commitment, credential?.expiresAt, pool, witness?.commitment]);
+  }, [account.address, chainId, credential?.commitment, credential?.expiresAt, pool, witness?.commitment]);
 
   let state: LendingV2EligibilityState;
   if (!configuredPoolValue) state = "unconfigured";
   else if (invalidPoolConfig) state = "unavailable";
   else if (!account.address) state = "disconnected";
-  else if (!account.isRobinhoodTestnet) state = "wrong-network";
+  else if (!account.isOnExpectedNetwork) state = "wrong-network";
   else if (deploymentQuery.isPending || credentialQuery.isPending) state = "checking";
   else if (deploymentQuery.error instanceof LendingV2UnavailableError) state = "unavailable";
   else if (deploymentQuery.isError || credentialQuery.isError) state = "read-error";
@@ -142,7 +142,7 @@ export function useLendingV2EligibilityProof(witness?: DemoCredentialWitness): {
   const generateProof = useCallback(async (witnessOverride?: DemoCredentialWitness): Promise<EligibilityProof> => {
     const selectedWitness = witnessOverride ?? witness;
     if (!account.address) throw new ProtocolError("WALLET_REQUIRED", "Connect the wallet that owns the V2 project test credential.");
-    if (!account.isRobinhoodTestnet) throw new ProtocolError("WRONG_NETWORK", "Switch to Robinhood Chain Testnet before generating a Lending V2 proof.");
+    if (!account.isOnExpectedNetwork) throw new ProtocolError("WRONG_NETWORK", `Switch to Robinhood Chain ${chainId === ROBINHOOD_MAINNET_CHAIN_ID ? "Mainnet" : "Testnet"} before generating a Lending V2 proof.`);
     if (!client || !pool || !deploymentQuery.data) {
       throw new ProtocolError("LENDING_NOT_CONFIGURED", "A compatible Lending V2 deployment is not available.");
     }
@@ -159,6 +159,7 @@ export function useLendingV2EligibilityProof(witness?: DemoCredentialWitness): {
       subject: account.address,
       record: refreshedCredential.record,
       lendingPool: pool,
+      chainId,
     });
     setIsGenerating(true);
     setGenerationError(undefined);
@@ -167,7 +168,7 @@ export function useLendingV2EligibilityProof(witness?: DemoCredentialWitness): {
     let verifierFailure: "deployed-verifier-rejected" | "deployed-verifier-unavailable" | undefined;
     try {
       const generated = await generateEligibilityProof(selectedWitness, publicContext);
-      if (!isRobinhoodLendingV2ProofForContext(generated, publicContext)) {
+      if (!isRobinhoodLendingV2ProofForContext(generated, publicContext, chainId)) {
         throw new ProtocolError("INVALID_PROOF", "The locally generated proof is not bound to the V2 policy and pool address.");
       }
       setVerificationStatus("locally-verified");
@@ -204,7 +205,7 @@ export function useLendingV2EligibilityProof(witness?: DemoCredentialWitness): {
     } finally {
       setIsGenerating(false);
     }
-  }, [account.address, account.isRobinhoodTestnet, client, deploymentQuery.data, pool, witness]);
+  }, [account.address, account.isOnExpectedNetwork, chainId, client, deploymentQuery.data, pool, witness]);
 
   const refetchCredential = useCallback(async () => {
     if (deploymentQuery.data && account.address) {
@@ -217,7 +218,7 @@ export function useLendingV2EligibilityProof(witness?: DemoCredentialWitness): {
     : state === "unavailable"
       ? deploymentQuery.error instanceof Error ? deploymentQuery.error.message : "The configured address is not a compatible deployed V2 pool."
       : state === "read-error"
-        ? "The V2 pool or policy-3 credential could not be read from Robinhood Chain Testnet."
+        ? `The V2 pool or policy-3 credential could not be read from Robinhood Chain ${chainId === ROBINHOOD_MAINNET_CHAIN_ID ? "Mainnet" : "Testnet"}.`
         : state === "credential-required"
           ? "No policy-3 Project Test Credential is registered for this wallet."
           : state === "credential-expired"

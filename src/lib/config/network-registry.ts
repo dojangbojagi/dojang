@@ -104,6 +104,35 @@ export function getLendingV2ContractSet(chainId: number): LendingV2ContractSet |
       }).filter(([, address]) => !address).map(([name]) => name),
     };
   }
+  if (chainId === ROBINHOOD_MAINNET_CHAIN_ID) {
+    const configuredAssets = [robinhoodMainnetDemoContracts.loanToken, robinhoodMainnetDemoContracts.collateralToken]
+      .filter((address): address is Address => Boolean(address));
+    const required = {
+      lendingPool: robinhoodMainnetDemoContracts.lendingPool,
+      credentialRegistry: robinhoodMainnetDemoContracts.credentialRegistry,
+      verifierAdapter: robinhoodMainnetDemoContracts.verifierAdapter,
+      honkVerifier: robinhoodMainnetDemoContracts.honkVerifier,
+      oracle: robinhoodMainnetDemoContracts.oracle,
+      loanToken: robinhoodMainnetDemoContracts.loanToken,
+      collateralToken: robinhoodMainnetDemoContracts.collateralToken,
+    };
+    return {
+      chainId: ROBINHOOD_MAINNET_CHAIN_ID,
+      explorerUrl: ROBINHOOD_MAINNET_DEMO_EXPLORER_URL,
+      pool: robinhoodMainnetDemoContracts.lendingPool,
+      credentialRegistry: robinhoodMainnetDemoContracts.credentialRegistry,
+      verifierAdapter: robinhoodMainnetDemoContracts.verifierAdapter,
+      oracle: robinhoodMainnetDemoContracts.oracle,
+      verifierDependencies: [
+        robinhoodMainnetDemoContracts.zkTranscriptLib,
+        robinhoodMainnetDemoContracts.relationsLib,
+        robinhoodMainnetDemoContracts.honkVerifier,
+      ],
+      configuredAssets,
+      invalidConfigNames: [],
+      missingRequiredConfigNames: Object.entries(required).filter(([, address]) => !address).map(([name]) => name),
+    };
+  }
   if (chainId === GIWA_CHAIN_ID) {
     return {
       chainId: GIWA_CHAIN_ID,
