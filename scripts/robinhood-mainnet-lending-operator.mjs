@@ -62,6 +62,10 @@ const governanceAbi = parseAbi([
   "function hasRole(bytes32,address) view returns (bool)", "function paused() view returns (bool)",
   "function demoOnly() view returns (bool)", "function credentialRegistry() view returns (address)",
 ]);
+const accessControlEventsAbi = parseAbi([
+  "event RoleGranted(bytes32 indexed role,address indexed account,address indexed sender)",
+  "event RoleRevoked(bytes32 indexed role,address indexed account,address indexed sender)",
+]);
 const eventsAbi = parseAbi(["event Transfer(address indexed from,address indexed to,uint256 value)"]);
 
 export function isSplittableRangeError(error) {
@@ -76,6 +80,11 @@ export function assertPriceWithinBounds(price, minimum, maximum) {
 export function assertDistinctParticipants(values) {
   const normalized = values.map((value) => getAddress(value).toLowerCase());
   assert.equal(new Set(normalized).size, normalized.length, "The Mainnet demo participant addresses must be distinct.");
+}
+
+export function assertExactDemoParticipants(actual, expected) {
+  const normalize = (items) => [...items].map((value) => getAddress(value).toLowerCase()).sort();
+  assert.deepEqual(normalize(actual), normalize(expected), "The pool's current DEMO_PARTICIPANT_ROLE holders differ from the two configured participants.");
 }
 
 export function credentialIsActive(record, now) {
@@ -206,8 +215,46 @@ async function hasRole(client, target, abi, roleFunction, account) {
   return client.readContract({ address: target, abi, functionName: "hasRole", args: [role, account] });
 }
 
+async function readDemoParticipantHolders(ctx) {
+  const role = await ctx.client.readContract({ address: contracts.lendingPool, abi: poolAbi, functionName: "DEMO_PARTICIPANT_ROLE" });
+  const head = await ctx.client.getBlockNumber();
+  const events = [];
+  let queryCount = 0;
+  async function readEventRange(event, fromBlock, toBlock) {
+    queryCount += 1;
+    assert.ok(queryCount <= 8192, "Demo participant role history exceeded its bounded 8192-query budget.");
+    try {
+      return await ctx.client.getLogs({ address: contracts.lendingPool, event, args: { role }, fromBlock, toBlock });
+    } catch (error) {
+      if (!isSplittableRangeError(error) || fromBlock >= toBlock) throw error;
+      const middle = fromBlock + (toBlock - fromBlock) / 2n;
+      return [...await readEventRange(event, fromBlock, middle), ...await readEventRange(event, middle + 1n, toBlock)];
+    }
+  }
+  for (let from = ctx.entries.pool.block; from <= head; from += 20_000n) {
+    const to = from + 19_999n > head ? head : from + 19_999n;
+    const [granted, revoked] = await Promise.all([
+      readEventRange(accessControlEventsAbi[0], from, to),
+      readEventRange(accessControlEventsAbi[1], from, to),
+    ]);
+    events.push(...granted, ...revoked);
+  }
+  events.sort((a, b) => a.blockNumber === b.blockNumber
+    ? Number(a.logIndex ?? 0n) - Number(b.logIndex ?? 0n)
+    : a.blockNumber < b.blockNumber ? -1 : 1);
+  const holders = new Set();
+  for (const event of events) {
+    const account = event.args.account.toLowerCase();
+    if (event.eventName === "RoleGranted") holders.add(account);
+    else holders.delete(account);
+  }
+  return { holders: [...holders], head, queryCount };
+}
+
 async function showStatus(ctx) {
   const { client, roles: r } = ctx;
+  const participantHistory = await readDemoParticipantHolders(ctx);
+  assertExactDemoParticipants(participantHistory.holders, [r.participantA, r.participantB]);
   const [paused, governancePaused, assets, loanSupply, loanCap, loanDecimals, loanSymbol, collSupply, collCap, collDecimals, collSymbol,
     loanPoolBalance, collateralPoolBalance, loanBounds, collBounds, loanConfig, collConfig, adminPool, riskAdmin, pauser, participantA, participantB,
     registryAdmin, issuer, oracleAdmin, updater, minterLoan, minterColl, governanceAdmin, governancePauser,
@@ -261,6 +308,7 @@ async function showStatus(ctx) {
   console.log(`Robinhood Mainnet ${CHAIN_ID} · live block ${now.number} · pool ${contracts.lendingPool} · ${paused ? "PAUSED" : "ACTIVE"} · Phase 1 Governance ${governancePaused ? "PAUSED" : "ACTIVE"}`);
   console.log(`Receipts and bytecode: 10/10 live-checked · dependencies and demo markers verified · no Testnet address fallback.`);
   console.log(`Participants: A ${r.participantA} ${participantA ? "ALLOWLISTED" : "BLOCKED"} · B ${r.participantB} ${participantB ? "ALLOWLISTED" : "BLOCKED"}`);
+  console.log(`Complete participant-role history: exactly the configured two wallets through block ${participantHistory.head} · ${participantHistory.queryCount} bounded queries.`);
   console.log(`Roles: admin/pool=${adminPool} risk-admin=${riskAdmin} pause-authority=${pauser} issuer=${issuer} oracle-updater=${updater} minter=${minterLoan && minterColl} governance-admin=${governanceAdmin} governance-pauser=${governancePauser}`);
   const freshness = (price, updatedAt, maxAge) => price === 0n || updatedAt === 0n ? "UNSEEDED" : updatedAt > now.timestamp ? "INVALID FUTURE TIMESTAMP" : now.timestamp - updatedAt > maxAge ? `STALE (${now.timestamp - updatedAt}s; max ${maxAge}s)` : `FRESH (${now.timestamp - updatedAt}s old)`;
   console.log(`Oracle loan bounds ${loanBounds.minimumPriceWad}..${loanBounds.maximumPriceWad} WAD · ${loanBounds.priceWad === 0n ? "UNSEEDED" : `price ${loanBounds.priceWad} WAD · ${freshness(loanBounds.priceWad, loanBounds.updatedAt, loanConfig.maxOracleAge)}`}`);
@@ -490,6 +538,8 @@ async function main() {
   }
   if (command === "unpause-pool") {
     const r = ctx.roles;
+    const participantHistory = await readDemoParticipantHolders(ctx);
+    assertExactDemoParticipants(participantHistory.holders, [r.participantA, r.participantB]);
     const [paused, latest, credentialA, credentialB, loanBounds, collateralBounds, loanConfig, collateralConfig,
       loanBalanceA, loanBalanceB, collateralBalanceA, collateralBalanceB, allowedA, allowedB] = await Promise.all([
       ctx.client.readContract({ address: contracts.lendingPool, abi: poolAbi, functionName: "paused" }),

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   assertDistinctParticipants,
+  assertExactDemoParticipants,
   assertFreshSyntheticPrice,
   assertMainnetActivationPrerequisites,
   assertPriceWithinBounds,
@@ -37,6 +38,12 @@ describe("Robinhood Mainnet controlled Lending operator guards", () => {
   test("requires distinct participants and operator identities", () => {
     expect(() => assertDistinctParticipants([A, B])).not.toThrow();
     expect(() => assertDistinctParticipants([A, A])).toThrow("must be distinct");
+  });
+
+  test("refuses a widened on-chain participant allowlist", () => {
+    expect(() => assertExactDemoParticipants([A, B], [A, B])).not.toThrow();
+    expect(() => assertExactDemoParticipants([A, B, "0x3333333333333333333333333333333333333333"], [A, B])).toThrow("differ from the two configured participants");
+    expect(() => assertExactDemoParticipants([A], [A, B])).toThrow();
   });
 
   test("accepts only seeded, nonfuture, fresh synthetic prices", () => {

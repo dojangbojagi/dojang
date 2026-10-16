@@ -47,8 +47,13 @@ const STATE_COPY: Record<V2Market["state"], { tone: Tone; label: string; text: s
 };
 
 export function marketStateCopy(state: V2Market["state"], chainId: LendingV2ChainId) {
-  if (state === "wrong-network") return { ...STATE_COPY[state], text: `This action requires Robinhood Chain ${chainId === ROBINHOOD_MAINNET_CHAIN_ID ? "Mainnet" : "Testnet"} (chain ${chainId}). Switch networks to continue.` };
-  if (state === "checking") return { ...STATE_COPY[state], text: `Reading the Lending V2 pool and your wallet from Robinhood Chain ${chainId === ROBINHOOD_MAINNET_CHAIN_ID ? "Mainnet" : "Testnet"}…` };
+  const networkName = `Robinhood Chain ${chainId === ROBINHOOD_MAINNET_CHAIN_ID ? "Mainnet" : "Testnet"}`;
+  if (state === "unconfigured") return { ...STATE_COPY[state], label: "Not configured", text: `No Lending V2 pool address is configured for ${networkName}. No balance or position is substituted from another network.` };
+  if (state === "disconnected") return { ...STATE_COPY[state], text: `Connect a wallet on ${networkName} to see your position. Market data can be read without connecting.` };
+  if (state === "wrong-network") return { ...STATE_COPY[state], text: `This action requires ${networkName} (chain ${chainId}). Switch networks to continue.` };
+  if (state === "checking") return { ...STATE_COPY[state], text: `Reading the Lending V2 pool and your wallet from ${networkName}…` };
+  if (state === "unavailable") return { ...STATE_COPY[state], text: `The configured address is not a compatible Lending V2 deployment on ${networkName}. Controls stay off.` };
+  if (state === "read-error") return { ...STATE_COPY[state], text: `A pool or wallet read failed on ${networkName}. This is not an empty position; refresh to retry.` };
   return STATE_COPY[state];
 }
 

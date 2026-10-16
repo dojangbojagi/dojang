@@ -50,6 +50,7 @@ contracts/lib/
 !/docs/LENDING_PROMO_VIDEO_HANDOFF.md
 !/docs/DAO_PHASE2_SECURITY_AND_DEPLOYMENT.md
 !/docs/ROBINHOOD_MAINNET_DEMO_APPROVAL_PACKAGE.md
+!/docs/MAINNET_DAO_PHASE2_CONTROLLED_DEMO_RUNBOOK.md
 
 # Playwright output
 playwright-report/

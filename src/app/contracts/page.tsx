@@ -2,7 +2,7 @@ import "./contracts.css";
 import type { Metadata } from "next";
 import { PageGlyphFigure } from "@/components/page-glyph";
 import { appEnv } from "@/lib/config/env";
-import { invalidRobinhoodContractConfig, robinhoodContracts } from "@/lib/config/contracts";
+import { invalidRobinhoodContractConfig, robinhoodContracts, robinhoodMainnetPhase2Contracts } from "@/lib/config/contracts";
 import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
 import { ROBINHOOD_MAINNET_CHAIN_ID, robinhoodMainnetDemoContracts } from "@/lib/config/robinhood-mainnet-demo";
 import { RobinhoodEvidenceLookup } from "@/components/evidence/robinhood-evidence-lookup";
@@ -12,7 +12,7 @@ import { LazyDetails } from "./lazy-details";
 
 export const metadata: Metadata = { title: `Contracts · ${appEnv.appName}` };
 
-/* The ten deployed contracts, in the order a visitor meets them. Names are for people; the technical name
+/* The deployed contracts, in the order a visitor meets them. Names are for people; the technical name
    sits under each one for anyone who wants to match it to source. */
 const ROWS: Omit<DirectoryRow, "address" | "invalid">[] = [
   { key: "credentialRegistry", group: "Credentials and proofs", name: "Credential Registry", tech: "RobinhoodDemoCredentialRegistry", purpose: "Records project credentials: one sealed commitment per wallet and policy, with expiry and revocation." },
@@ -43,6 +43,8 @@ export default function ContractsPage() {
       zkTranscriptLib: ["ZKTranscriptLib", robinhoodMainnetDemoContracts.zkTranscriptLib],
       relationsLib: ["RelationsLib", robinhoodMainnetDemoContracts.relationsLib],
       governance: ["RobinhoodMainnetDemoGovernancePhase1", robinhoodMainnetDemoContracts.governance],
+      phase2ReputationRegistry: ["RobinhoodLendingReputationPhase2", robinhoodMainnetPhase2Contracts.reputationRegistry],
+      phase2Governance: ["RobinhoodGovernancePhase2", robinhoodMainnetPhase2Contracts.governance],
       lendingV2Pool: ["RobinhoodMainnetDemoLendingPool", robinhoodMainnetDemoContracts.lendingPool],
       lendingV2Oracle: ["RobinhoodMainnetDemoOracle", robinhoodMainnetDemoContracts.oracle],
       lendingV2Asset: ["RobinhoodMainnetDemoToken · dUSD", robinhoodMainnetDemoContracts.loanToken],
@@ -55,6 +57,10 @@ export default function ContractsPage() {
         ? "Proof-gated Lending V2 pool. Paused on Mainnet; not available for public production use."
         : row.key === "governance"
           ? "Credential-gated governance contract. Paused on Mainnet."
+          : row.key === "phase2ReputationRegistry"
+            ? "Mainnet Phase 2 reputation registry. Activation state is checked live below; it is separate from Testnet."
+            : row.key === "phase2Governance"
+              ? "Mainnet Phase 2 commit–reveal governance. Activation state is checked live below; it is separate from Testnet."
           : row.purpose;
     return [{ ...row, tech: mainnet[0], address: mainnet[1], purpose }];
   });
@@ -66,7 +72,7 @@ export default function ContractsPage() {
         <p className="eyebrow">Contract Explorer</p>
         <h1>Contracts</h1>
         <p className="page-lead">
-          {appEnv.appName} is deployed on Robinhood Mainnet (chain {ROBINHOOD_MAINNET_CHAIN_ID}). Its interactive DAO and Lending journeys remain on Robinhood Testnet (chain {ROBINHOOD_TESTNET_CHAIN_ID}). Select a network to inspect contract evidence.
+          {appEnv.appName} has deployed contracts on Robinhood Mainnet (chain {ROBINHOOD_MAINNET_CHAIN_ID}). Mainnet Phase 2 governance is separately deployed and its activation state is checked live; the interactive Lending journey remains on Robinhood Testnet (chain {ROBINHOOD_TESTNET_CHAIN_ID}). Select a network to inspect contract evidence.
         </p>
       </header>
 
