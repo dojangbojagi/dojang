@@ -8,7 +8,7 @@ import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import { getDaoPhase2ContractSet } from "@/lib/config/network-registry";
 import type { SupportedProtocolChainId } from "@/lib/config/network-registry";
 import { ROBINHOOD_TESTNET_CHAIN_ID, ROBINHOOD_TESTNET_EXPLORER_URL } from "@/lib/config/robinhood-testnet";
-import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo";
+import { ROBINHOOD_MAINNET_CHAIN_ID, ROBINHOOD_MAINNET_DEMO_EXPLORER_URL } from "@/lib/config/robinhood-mainnet-demo";
 import {
   eligibilityVerifierProofAbi,
   robinhoodGovernancePhase2Abi,
@@ -23,6 +23,11 @@ import { ProtocolError } from "@/lib/protocol/types";
 const voteIndex = { against: 0, for: 1, abstain: 2 } as const;
 export type Phase2Vote = keyof typeof voteIndex;
 
+function ballotChainId(chainId: number): Phase2BallotSecret["chainId"] {
+  if (chainId === ROBINHOOD_TESTNET_CHAIN_ID || chainId === ROBINHOOD_MAINNET_CHAIN_ID) return chainId;
+  throw new ProtocolError("GOVERNANCE_NOT_CONFIGURED", `DAO Phase 2 is not configured for chain ${chainId}.`);
+}
+
 function randomSalt(): Hex {
   if (!globalThis.crypto?.getRandomValues) throw new Error("A secure browser random source is unavailable.");
   const bytes = globalThis.crypto.getRandomValues(new Uint8Array(32));
@@ -33,7 +38,7 @@ function errorMessage(error: unknown) {
   const raw = error instanceof Error ? error.message : "The Phase 2 request failed.";
   const lower = raw.toLowerCase();
   if (lower.includes("user rejected") || lower.includes("user denied")) return "The wallet request was rejected. No transaction was submitted.";
-  if (lower.includes("insufficient funds")) return "This wallet does not have enough Robinhood Testnet ETH for the network fee.";
+  if (lower.includes("insufficient funds")) return "This wallet does not have enough Robinhood Chain ETH for the network fee.";
   if (lower.includes("notactivemember")) return "Register a current Policy 5 reputation proof before using Phase 2 governance.";
   if (lower.includes("commitnotactive")) return "This proposal is not in its commit window.";
   if (lower.includes("revealnotactive")) return "This proposal is not in its reveal window.";
@@ -101,8 +106,7 @@ export function useRobinhoodDaoPhase2(proposalId?: bigint, chainId: SupportedPro
 
   const context = useCallback(() => {
     if (!account.address) throw new ProtocolError("WALLET_REQUIRED", "Connect a wallet before using DAO Phase 2.");
-      if (account.chainId !== chainId) throw new ProtocolError("WRONG_NETWORK", `Switch to ${contractSet?.chainId === ROBINHOOD_MAINNET_CHAIN_ID ? "Robinhood Mainnet (4663)" : "Robinhood Testnet (46630)"}.`);
-      if (chainId !== ROBINHOOD_TESTNET_CHAIN_ID) throw new ProtocolError("GOVERNANCE_NOT_CONFIGURED", "Mainnet Phase 2 actions are not enabled. Use Robinhood Testnet for the currently supported interactive flow.");
+    if (account.chainId !== chainId) throw new ProtocolError("WRONG_NETWORK", `Switch to ${contractSet?.chainId === ROBINHOOD_MAINNET_CHAIN_ID ? "Robinhood Mainnet (4663)" : "Robinhood Testnet (46630)"}.`);
     if (!client || !addresses) throw new ProtocolError("GOVERNANCE_NOT_CONFIGURED", "DAO Phase 2 is not deployed or configured.");
     return { wallet: account.address, client, addresses };
   }, [account.address, account.chainId, addresses, chainId, client, contractSet]);
@@ -123,7 +127,8 @@ export function useRobinhoodDaoPhase2(proposalId?: bigint, chainId: SupportedPro
       const simulation = await prepare();
       setTransaction({ state: "awaiting-signature" });
       hash = await writer.writeContractAsync(simulation.request as Parameters<typeof writer.writeContractAsync>[0]);
-      explorerUrl = `${contractSet?.explorerUrl ?? ROBINHOOD_TESTNET_EXPLORER_URL}/tx/${hash}`;
+      const explorerBase = contractSet?.explorerUrl ?? (chainId === ROBINHOOD_MAINNET_CHAIN_ID ? ROBINHOOD_MAINNET_DEMO_EXPLORER_URL : ROBINHOOD_TESTNET_EXPLORER_URL);
+      explorerUrl = `${explorerBase}/tx/${hash}`;
       setTransaction({ state: "submitted", hash, explorerUrl });
       setTransaction({ state: "confirming", hash, explorerUrl });
       const receipt = await client!.waitForTransactionReceipt({ hash });
@@ -148,7 +153,7 @@ export function useRobinhoodDaoPhase2(proposalId?: bigint, chainId: SupportedPro
       });
       throw new Error(message, { cause: error });
     }
-  }, [client, contractSet?.explorerUrl, queryClient, writer]);
+  }, [chainId, client, contractSet?.explorerUrl, queryClient, writer]);
 
   const generateMembershipProof = useCallback(async (witness: DemoCredentialWitness) => {
     const current = context();
@@ -259,7 +264,7 @@ export function useRobinhoodDaoPhase2(proposalId?: bigint, chainId: SupportedPro
     ]);
     const ballot: Phase2BallotSecret = {
       format: "gyevo-dao-phase2-ballot-v1",
-      chainId: ROBINHOOD_TESTNET_CHAIN_ID,
+      chainId: ballotChainId(chainId),
       governance: current.addresses.governance,
       voter: current.wallet,
       proposalId: targetProposalId.toString(),
@@ -292,7 +297,7 @@ export function useRobinhoodDaoPhase2(proposalId?: bigint, chainId: SupportedPro
   const revealVote = useCallback(async (ballot: Phase2BallotSecret) => {
     const current = context();
     if (
-      ballot.format !== "gyevo-dao-phase2-ballot-v1" || ballot.chainId !== ROBINHOOD_TESTNET_CHAIN_ID
+      ballot.format !== "gyevo-dao-phase2-ballot-v1" || ballot.chainId !== chainId
         || !isAddressEqual(ballot.governance, current.addresses.governance)
         || !isAddressEqual(ballot.voter, current.wallet) || !/^[0-2]$/.test(String(ballot.voteType))
         || !/^0x[0-9a-fA-F]{64}$/.test(ballot.salt)

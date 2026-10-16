@@ -1,33 +1,22 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { isAddress, type Address, type Hex } from "viem";
 import { WitnessUpload, type WitnessUploadStatus } from "@/components/lending-v2/v2-witness-upload";
 import { WalletControl } from "@/components/wallet-control";
 import { useRobinhoodDaoPhase2, type Phase2Vote } from "@/hooks/use-robinhood-dao-phase2";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
 import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo";
+import { getDaoPhase2ContractSet } from "@/lib/config/network-registry";
 import { parseDemoCredentialWitness, type DemoCredentialWitness } from "@/lib/credential/witness";
 import { computeEligibilityCommitment } from "@/lib/zk/commitment";
+import { parsePhase2Ballot } from "@/lib/governance/phase2-ballot";
 import type { Phase2BallotSecret } from "@/lib/governance/phase2-types";
 import type { ProtocolChainId } from "@/hooks/use-wallet-network";
 
-function parseBallot(value: unknown): Phase2BallotSecret {
-  if (!value || typeof value !== "object") throw new Error("The ballot reveal file is not a JSON object.");
-  const candidate = value as Partial<Phase2BallotSecret>;
-  if (
-    candidate.format !== "gyevo-dao-phase2-ballot-v1" || candidate.chainId !== 46630
-      || !candidate.governance || !isAddress(candidate.governance)
-      || !candidate.voter || !isAddress(candidate.voter)
-      || typeof candidate.proposalId !== "string" || !/^[1-9][0-9]*$/.test(candidate.proposalId)
-      || ![0, 1, 2].includes(candidate.voteType as number)
-      || !candidate.salt || !/^0x[0-9a-fA-F]{64}$/.test(candidate.salt)
-      || !candidate.commitment || !/^0x[0-9a-fA-F]{64}$/.test(candidate.commitment)
-      || !candidate.nullifier || !/^0x[0-9a-fA-F]{64}$/.test(candidate.nullifier)
-  ) throw new Error("The ballot reveal file is incomplete or invalid.");
-  return candidate as Phase2BallotSecret;
-}
+const DEFAULT_DAO_PHASE2_CHAIN_ID = process.env.NODE_ENV === "production"
+  ? ROBINHOOD_MAINNET_CHAIN_ID
+  : ROBINHOOD_TESTNET_CHAIN_ID;
 
 function downloadBallot(ballot: Phase2BallotSecret) {
   const blob = new Blob([`${JSON.stringify(ballot, null, 2)}\n`], { type: "application/json" });
@@ -44,7 +33,7 @@ function formatTime(value?: bigint) {
 }
 
 export function DaoPhase2Workspace() {
-  const [selectedChainId, setSelectedChainId] = useState<ProtocolChainId>(ROBINHOOD_TESTNET_CHAIN_ID);
+  const [selectedChainId, setSelectedChainId] = useState<ProtocolChainId>(DEFAULT_DAO_PHASE2_CHAIN_ID);
   const wallet = useWalletNetwork(selectedChainId);
   const [selectedIdText, setSelectedIdText] = useState("");
   const selectedId = useMemo(() => /^[1-9][0-9]*$/.test(selectedIdText) ? BigInt(selectedIdText) : undefined, [selectedIdText]);
@@ -55,6 +44,9 @@ export function DaoPhase2Workspace() {
   const [witnessFileName, setWitnessFileName] = useState("");
   const [witnessMessage, setWitnessMessage] = useState("");
   const [ballot, setBallot] = useState<Phase2BallotSecret>();
+  const [ballotStatus, setBallotStatus] = useState<WitnessUploadStatus>("idle");
+  const [ballotFileName, setBallotFileName] = useState("");
+  const [ballotMessage, setBallotMessage] = useState("");
   const [message, setMessage] = useState("");
   const [contentReference, setContentReference] = useState("");
   const [proposedThreshold, setProposedThreshold] = useState("3");
@@ -69,6 +61,9 @@ export function DaoPhase2Workspace() {
     setWitnessFileName("");
     setWitnessMessage("");
     setBallot(undefined);
+    setBallotStatus("idle");
+    setBallotFileName("");
+    setBallotMessage("");
     dao.clearProof();
   }, [dao.clearProof, selectedChainId, wallet.address, wallet.chainId]);
 
@@ -100,9 +95,6 @@ export function DaoPhase2Workspace() {
     setWitnessFileName(file.name);
     setWitnessMessage("");
     try {
-      if (selectedChainId !== ROBINHOOD_TESTNET_CHAIN_ID) {
-        throw new Error("DAO Phase 2 Policy 5 witnesses are currently supported on Robinhood Testnet only.");
-      }
       if (!wallet.address) throw new Error("Connect the wallet that owns this witness before importing it.");
       if (wallet.chainId !== selectedChainId) throw new Error(`Switch to ${networkName} (chain ${selectedChainId}) before checking this witness.`);
       if (dao.state !== "ready" || !snapshot) throw new Error("The Phase 2 deployment is not ready for an on-chain witness check. Refresh the DAO state and try again.");
@@ -134,7 +126,7 @@ export function DaoPhase2Workspace() {
         threshold: snapshot.minimumReputation,
         credentialVersion: snapshot.credential.version,
         expiresAt: snapshot.credential.expiresAt,
-        chainId: BigInt(ROBINHOOD_TESTNET_CHAIN_ID),
+        chainId: BigInt(selectedChainId),
         vault: dao.deployment.governance,
       });
       if (
@@ -143,7 +135,7 @@ export function DaoPhase2Workspace() {
       ) throw new Error("The witness score and salt do not match the active commitment for this wallet, chain, policy, version, and DAO contract.");
       setWitness(parsed);
       setWitnessStatus("loaded");
-      setWitnessMessage("Wallet, policy version, credential version, commitment, expiry, chain, and DAO address match the active Testnet records. Private values were checked locally and remain in browser memory.");
+      setWitnessMessage(`Wallet, policy version, credential version, commitment, expiry, chain, and DAO address match the active ${networkName} records. Private values were checked locally and remain in browser memory.`);
     } catch (error) {
       setWitness(undefined);
       setWitnessStatus("invalid");
@@ -160,44 +152,62 @@ export function DaoPhase2Workspace() {
 
   async function importBallot(file?: File) {
     if (!file) return;
+    setBallot(undefined);
+    setBallotStatus("loading");
+    setBallotFileName(file.name);
+    setBallotMessage("");
     try {
-      const parsed = parseBallot(JSON.parse(await file.text()));
+      if (!wallet.address) throw new Error("Connect the wallet that created this ballot before importing its reveal file.");
+      if (wallet.chainId !== selectedChainId) throw new Error(`Switch to ${networkName} (chain ${selectedChainId}) before checking this ballot.`);
+      if (dao.state !== "ready") throw new Error(`The ${networkName} Phase 2 contracts are not ready for a ballot check.`);
+      const parsed = parsePhase2Ballot(JSON.parse(await file.text()), selectedChainId);
+      const governance = getDaoPhase2ContractSet(selectedChainId)?.governance;
+      if (!governance || parsed.governance.toLowerCase() !== governance.toLowerCase()) {
+        throw new Error("This reveal file belongs to a different DAO contract.");
+      }
+      if (parsed.voter.toLowerCase() !== wallet.address.toLowerCase()) {
+        throw new Error("This reveal file belongs to a different wallet.");
+      }
       setBallot(parsed);
+      setBallotStatus("loaded");
       setSelectedIdText(parsed.proposalId);
-      setMessage("Ballot reveal file loaded locally. Check the proposal is in its reveal window before signing.");
+      setBallotMessage("Ballot file matches this wallet, chain, and DAO. Its private salt stays in browser memory. Check the on-chain reveal window before signing.");
     } catch (error) {
       setBallot(undefined);
-      setMessage(error instanceof Error ? error.message : "The ballot reveal file is invalid.");
+      setBallotStatus("invalid");
+      setBallotMessage(error instanceof Error ? error.message : "The ballot reveal file is invalid.");
     }
+  }
+
+  function rejectBallot(_file: File, reason: string) {
+    setBallot(undefined);
+    setBallotStatus("invalid");
+    setBallotMessage(reason);
   }
 
   const proposal = snapshot?.proposal;
   const connectionUnavailable = dao.state !== "ready" || !wallet.address || wallet.chainId !== selectedChainId;
-  const riskIncreasingUnavailable = connectionUnavailable || Boolean(snapshot?.paused) || !isTestnet;
+  const riskIncreasingUnavailable = connectionUnavailable || Boolean(snapshot?.paused);
   const memberUnavailable = riskIncreasingUnavailable || !snapshot?.membership?.active;
-  const witnessControlDisabledReason = !isTestnet
-    ? "Mainnet Phase 2 contracts are not deployed or configured. Testnet witnesses cannot be used on Mainnet."
-    : !wallet.address
+  const witnessControlDisabledReason = !wallet.address
       ? "Connect the wallet that owns the Policy 5 credential first."
       : wallet.chainId !== selectedChainId
-        ? `Switch to Robinhood Testnet (chain ${selectedChainId}) before importing and checking this witness.`
+        ? `Switch to ${networkName} (chain ${selectedChainId}) before importing and checking this witness.`
         : dao.state !== "ready"
-          ? "Wait for the Testnet Phase 2 contract and eligibility reads to finish before importing."
+          ? `Wait for the ${networkName} Phase 2 contract and eligibility reads to finish before importing.`
           : undefined;
-  const proofPrerequisite = !isTestnet
-    ? "Mainnet Phase 2 is deployment-pending. No Mainnet credential or proof action is available."
-    : !wallet.address
+  const proofPrerequisite = !wallet.address
       ? "Connect the wallet that owns the Policy 5 credential."
       : wallet.chainId !== selectedChainId
-        ? "Switch to Robinhood Testnet (chain 46630) to generate this proof."
+        ? `Switch to ${networkName} (chain ${selectedChainId}) to generate this proof.`
         : dao.state === "checking"
           ? "Checking the Phase 2 contracts and this wallet's on-chain records."
           : dao.state === "read-error"
-            ? "The Testnet state read failed. Refresh the on-chain status before generating a proof."
+            ? `The ${networkName} state read failed. Refresh the on-chain status before generating a proof.`
             : dao.state !== "ready"
               ? "The Phase 2 deployment or its dependencies are not ready. Check the deployment status above."
               : snapshot?.paused
-                ? "Governance is paused. Proof generation and membership actions are unavailable until an authorized admin unpauses it."
+                ? "Governance is paused. Membership actions are unavailable until an authorized admin unpauses it."
                 : !snapshot?.credentialActive
                   ? "This wallet needs an active project-issued Policy 5 credential. Ask the authorized issuer; the app cannot issue one."
                   : !snapshot.reputation?.active
@@ -214,10 +224,10 @@ export function DaoPhase2Workspace() {
     <section className="panel panel--ticks protocol-panel" aria-labelledby="dao-phase2-heading">
       <div className="protocol-panel__head">
         <div>
-          <p className="eyebrow">Private Lending Council · Phase 2</p>
+          <p className="eyebrow">Reputation-Gated Governance · Phase 2</p>
           <h2 id="dao-phase2-heading">Prove reputation, then commit a protected ballot.</h2>
         </div>
-        <span className="chip">{dao.state === "ready" ? snapshot?.paused ? "PAUSED" : isTestnet ? "TESTNET READY" : "MAINNET READ ONLY" : dao.state.toUpperCase().replaceAll("-", " ")}</span>
+        <span className="chip">{dao.state === "ready" ? snapshot?.paused ? "PAUSED" : isTestnet ? "TESTNET QA READY" : "MAINNET READY" : dao.state.toUpperCase().replaceAll("-", " ")}</span>
       </div>
       <p className="protocol-copy">
         Policy 5 proves a private reputation score derived by an authorized issuer from canonical Lending V2 events.
@@ -232,7 +242,7 @@ export function DaoPhase2Workspace() {
           Robinhood Testnet · Interactive
         </button>
         <button className={`btn btn--${!isTestnet ? "primary" : "secondary"} btn--sm`} type="button" aria-pressed={!isTestnet} onClick={() => setSelectedChainId(ROBINHOOD_MAINNET_CHAIN_ID)}>
-          Robinhood Mainnet · Phase 2
+          Robinhood Mainnet · Production
         </button>
         <WalletControl expectedChainId={selectedChainId} showRecoveryAction />
       </div>
@@ -245,11 +255,12 @@ export function DaoPhase2Workspace() {
       </div>
 
       {dao.state === "unconfigured" && (
-        <p className="callout">Phase 2 has not been configured from confirmed deployment receipts. Phase 1 below remains available.</p>
+        <p className="callout">Phase 2 has not been configured from confirmed deployment receipts.</p>
       )}
       {dao.state === "deployment-pending" && (
-        <p className="callout">DAO Phase 2 has not been deployed or configured on Robinhood Mainnet. Its Mainnet credential registry, verifier, and Lending pool are kept separate from Testnet. Mainnet Phase 2 is read-only and unavailable until its chain-specific contracts are prepared, deployed, and verified.</p>
+        <p className="callout">DAO Phase 2 has not been deployed or configured on Robinhood Mainnet. Mainnet addresses and proofs are isolated from Testnet. Transactions remain unavailable until the Mainnet contracts and dependencies are deployed, verified, and active.</p>
       )}
+      {!isTestnet && <p className="callout callout--demo">Mainnet Phase 2 is designed around project-issued credentials and controlled synthetic Lending evidence. It is not official GIWA or Upbit verification and is not public production credit infrastructure.</p>}
       {dao.state === "no-code" && <p className="callout">No contract bytecode exists at one or more configured Phase 2 addresses.</p>}
       {dao.state === "dependency-mismatch" && <p className="callout">The configured Phase 2 contracts do not reference the expected credential, verifier, reputation, and Lending V2 contracts.</p>}
       {dao.state === "read-error" && <p className="callout">The {networkName} RPC or one of the configured Phase 2 contract reads failed. Check the network configuration and try the read again.</p>}
@@ -279,6 +290,11 @@ export function DaoPhase2Workspace() {
         <h3>1. Establish membership</h3>
         <p className="small muted">Import the issuer-delivered Policy 5 witness. The browser generates a genuine Noir/Barretenberg proof and checks it against the deployed verifier before registration.</p>
         <WitnessUpload
+          title="Import Policy 5 witness"
+          idleTitle="Drop the Policy 5 witness JSON here"
+          idleHint="or choose the matching witness delivered by the authorized issuer. It is checked locally and stays in this browser."
+          loadedLabel="Witness verified"
+          fileDescription="Policy 5 witness"
           disabled={Boolean(witnessControlDisabledReason) || busy || witnessStatus === "loading"}
           disabledReason={witnessControlDisabledReason}
           fileName={witnessFileName}
@@ -291,7 +307,7 @@ export function DaoPhase2Workspace() {
         />
         <div className="protocol-actions">
           <button className="btn btn--secondary" type="button" disabled={busy || Boolean(proofPrerequisite)} onClick={() => void run(() => dao.generateMembershipProof(witness!), "The genuine Policy 5 proof passed local and deployed-verifier checks.")}>Generate Reputation Proof</button>
-          <button className="btn btn--primary" type="button" disabled={busy || riskIncreasingUnavailable || !dao.proof || Boolean(snapshot?.membership?.active)} onClick={() => void run(() => dao.registerMembership(), "Phase 2 membership was confirmed on Robinhood Testnet.")}>Register Membership</button>
+          <button className="btn btn--primary" type="button" disabled={busy || riskIncreasingUnavailable || !dao.proof || Boolean(snapshot?.membership?.active)} onClick={() => void run(() => dao.registerMembership(), `Phase 2 membership was confirmed on ${networkName}.`)}>Register Membership</button>
         </div>
         {proofPrerequisite && <p className="small muted" role="status">{proofPrerequisite}</p>}
         {dao.proof && <p className="small muted" role="status">Proof generated for chain {dao.proof.publicContext.chainId.toString()} and the selected DAO contract. Local and deployed-verifier checks passed; no private score or salt is displayed.</p>}
@@ -335,16 +351,35 @@ export function DaoPhase2Workspace() {
         <div className="protocol-actions">
           <button className="btn btn--primary" type="button" disabled={busy || memberUnavailable || !selectedId || proposal?.state !== "commit" || proposal.walletCommitted} onClick={() => void run(async () => {
             const saved = await dao.commitVote(selectedId!, vote);
-            if (saved) { setBallot(saved); downloadBallot(saved); }
+            if (saved) {
+              setBallot(saved);
+              setBallotStatus("loaded");
+              setBallotFileName(`gyevo-phase2-proposal-${saved.proposalId}-reveal.json`);
+              setBallotMessage("Reveal file saved to your device and kept in browser memory. Keep its private salt secret until the reveal window.");
+              downloadBallot(saved);
+            }
           }, "The sealed ballot was confirmed. Keep the downloaded reveal file private until the reveal window.")}>Commit Vote</button>
           <button className="btn btn--secondary" type="button" disabled={!ballot} onClick={() => ballot && downloadBallot(ballot)}>Download Reveal File</button>
         </div>
-        <label className="protocol-field"><span>Saved ballot reveal file</span>
-          <input type="file" accept="application/json,.json" onChange={(event) => void importBallot(event.currentTarget.files?.[0])} />
-        </label>
+        <WitnessUpload
+          title="Import ballot reveal file"
+          idleTitle="Drop the reveal JSON here"
+          idleHint="or choose the ballot file saved after your commit transaction. Its salt stays in this browser."
+          loadedLabel="Reveal file ready"
+          fileDescription="ballot reveal file"
+          disabled={busy || !wallet.address || wallet.chainId !== selectedChainId || dao.state !== "ready"}
+          disabledReason={!wallet.address ? "Connect the wallet that created the ballot." : wallet.chainId !== selectedChainId ? `Switch to ${networkName} (chain ${selectedChainId}) first.` : `Wait for ${networkName} contract checks to finish.`}
+          fileName={ballotFileName}
+          status={ballotStatus}
+          message={ballotMessage}
+          loadedFor={ballot?.voter}
+          onFile={(file) => void importBallot(file)}
+          onRejected={rejectBallot}
+          onRemove={() => { setBallot(undefined); setBallotStatus("idle"); setBallotFileName(""); setBallotMessage(""); }}
+        />
         <div className="protocol-actions">
-          <button className="btn btn--primary" type="button" disabled={busy || connectionUnavailable || !isTestnet || !ballot || proposal?.state !== "reveal" || proposal.walletRevealed} onClick={() => void run(() => dao.revealVote(ballot!), "The ballot reveal receipt and public tally were confirmed.")}>Reveal Vote</button>
-          <button className="btn btn--secondary" type="button" disabled={busy || connectionUnavailable || !isTestnet || !selectedId || proposal?.state === "pending" || proposal?.state === "commit" || proposal?.state === "reveal" || proposal?.finalized} onClick={() => void run(() => dao.finalizeProposal(selectedId!), "The proposal result was finalized on-chain.")}>Finalize</button>
+          <button className="btn btn--primary" type="button" disabled={busy || connectionUnavailable || !ballot || proposal?.state !== "reveal" || proposal.walletRevealed} onClick={() => void run(() => dao.revealVote(ballot!), "The ballot reveal receipt and public tally were confirmed.")}>Reveal Vote</button>
+          <button className="btn btn--secondary" type="button" disabled={busy || connectionUnavailable || !selectedId || proposal?.state === "pending" || proposal?.state === "commit" || proposal?.state === "reveal" || proposal?.finalized} onClick={() => void run(() => dao.finalizeProposal(selectedId!), "The proposal result was finalized on-chain.")}>Finalize</button>
           <button className="btn btn--secondary" type="button" disabled={busy || riskIncreasingUnavailable || !selectedId || proposal?.state !== "succeeded"} onClick={() => void run(() => dao.executeProposal(selectedId!), "The bounded reputation-threshold action was executed.")}>Execute</button>
         </div>
       </div>

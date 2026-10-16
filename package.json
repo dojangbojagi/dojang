@@ -36,6 +36,7 @@
     "robinhood:mainnet:dao2:build": "forge build --root contracts --profile robinhood_mainnet --use \"$PWD/contracts/solc-wrapper.sh\"",
     "robinhood:mainnet:dao2:simulate": "bun run robinhood:mainnet:dao2:build && bash scripts/forge-simulate.sh script/DeployRobinhoodMainnetDaoPhase2.s.sol:DeployRobinhoodMainnetDaoPhase2 --profile robinhood_mainnet --chain-id 4663 --rpc-timeout 20 --rpc-url \"$RH_MAINNET_RPC_URL\"",
     "robinhood:mainnet:dao2:status": "bun scripts/robinhood-mainnet-dao2-status.mjs",
+    "robinhood:mainnet:dao2:deploy": "bun scripts/robinhood-mainnet-dao2-deploy.mjs",
     "robinhood:mainnet:demo:check": "bun scripts/robinhood-mainnet-demo-postdeploy.mjs",
     "robinhood:mainnet:demo:replay": "bun scripts/robinhood-mainnet-demo-postdeploy.mjs --replay",
     "robinhood:mainnet:deploy": "bun scripts/robinhood-mainnet-deploy-show.mjs",

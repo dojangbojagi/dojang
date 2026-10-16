@@ -5,7 +5,7 @@ export const ROBINHOOD_MAINNET_CHAIN_ID = 4_663;
 export const ROBINHOOD_MAINNET_PUBLIC_RPC_URL = "https://rpc.mainnet.chain.robinhood.com";
 export const ROBINHOOD_MAINNET_DEMO_EXPLORER_URL = "https://robinhoodchain.blockscout.com";
 
-/** Dormant config only: deliberately absent from active wallet/network selection. */
+/** Mainnet network configuration used by the production DAO selector and read-only integrations. */
 export const robinhoodMainnetDemoChain = defineChain({
   id: ROBINHOOD_MAINNET_CHAIN_ID,
   name: "Robinhood Chain Mainnet",

@@ -28,13 +28,22 @@ const FileIcon = () => (
  * A real <input type="file"> sits under the custom surface, so the keyboard, assistive technology and the
  * operating system's own picker all keep working.
  */
-export function WitnessUpload({ disabled, disabledReason, fileName, status, message, loadedFor, onFile, onRejected, onRemove }: {
+export function WitnessUpload({ disabled, disabledReason, fileName, status, message, loadedFor, onFile, onRejected, onRemove,
+  title = "Import private witness", idleTitle = "Drop the witness JSON here",
+  idleHint = "or choose it from your device. The file your project issuer delivered, ending in .json.",
+  loadedLabel = "Witness loaded", fileDescription = "witness file",
+}: {
   disabled: boolean;
   disabledReason?: string;
   fileName: string;
   status: WitnessUploadStatus;
   message: string;
   loadedFor?: string;
+  title?: string;
+  idleTitle?: string;
+  idleHint?: string;
+  loadedLabel?: string;
+  fileDescription?: string;
   onFile: (file: File) => void;
   onRejected?: (file: File, reason: string) => void;
   onRemove: () => void;
@@ -55,13 +64,13 @@ export function WitnessUpload({ disabled, disabledReason, fileName, status, mess
     setLocalError("");
     setLocalFileName(file.name);
     if (!/\.json$/i.test(file.name) && file.type !== "application/json") {
-      const reason = "That is not a .json file. Choose the witness file your project issuer delivered.";
+      const reason = `That is not a .json file. Choose the ${fileDescription} prepared for this wallet.`;
       setLocalError(reason);
       onRejected?.(file, reason);
       return;
     }
     if (file.size > MAX_BYTES) {
-      const reason = "That file is too large to be a witness (the limit is 256 KB).";
+      const reason = `That file is too large to be a ${fileDescription} (the limit is 256 KB).`;
       setLocalError(reason);
       onRejected?.(file, reason);
       return;
@@ -109,9 +118,9 @@ export function WitnessUpload({ disabled, disabledReason, fileName, status, mess
       onDrop={onDrop}
     >
       <div className="lendv2-witness__head">
-        <h3 id={titleId} className="lendv2-witness__title">Import private witness</h3>
+        <h3 id={titleId} className="lendv2-witness__title">{title}</h3>
         <Chip tone={status === "loaded" ? "valid" : rejected ? "invalid" : status === "loading" ? "pending" : "demo"}>
-          {status === "loaded" ? "Witness loaded" : rejected ? "Not accepted" : status === "loading" ? "Reading locally" : "Stays in this browser"}
+          {status === "loaded" ? loadedLabel : rejected ? "Not accepted" : status === "loading" ? "Reading locally" : "Stays in this browser"}
         </Chip>
       </div>
 
@@ -131,9 +140,9 @@ export function WitnessUpload({ disabled, disabledReason, fileName, status, mess
         <label className="lendv2-drop" htmlFor={id}>
           <span className="lendv2-drop__icon" aria-hidden="true"><FileIcon /></span>
           <span className="lendv2-drop__copy">
-            <span className="lendv2-drop__title">{over ? "Release to import" : "Drop the witness JSON here"}</span>
+          <span className="lendv2-drop__title">{over ? "Release to import" : idleTitle}</span>
             <span className="lendv2-drop__hint" id={hintId}>
-              {disabled && disabledReason ? disabledReason : "or choose it from your device. The file your project issuer delivered, ending in .json."}
+              {disabled && disabledReason ? disabledReason : idleHint}
             </span>
           </span>
           <span className="btn btn--secondary btn--sm lendv2-drop__cta" aria-hidden="true">Choose file</span>

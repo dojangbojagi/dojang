@@ -14,7 +14,7 @@ export default function DaoPage() {
       status="DAO Governance"
       glyph={{ shape: "assembly", label: "Tiered half-circle seating made of characters: a governing body voting in public.", caption: "Verified wallets, public votes", legend: ["public"] }}
       title="Govern with verified membership and lending reputation."
-      lead="Phase 2 uses a genuine Policy 5 zero-knowledge proof of private Lending V2 reputation, then a commit–reveal ballot. The wallet is public and each choice becomes public when revealed. Phase 1 remains available below, and Mainnet governance remains paused."
+      lead="The production DAO network is Robinhood Mainnet; Robinhood Testnet remains available for QA. Phase 2 uses a genuine Policy 5 proof of private Lending reputation and a commit–reveal ballot. Mainnet actions unlock only after its contracts and live state are verified. The wallet stays public, and each vote becomes linkable when revealed."
     >
       <div className="protocol-section">
         <DaoPhase2Workspace />

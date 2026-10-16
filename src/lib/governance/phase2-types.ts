@@ -73,7 +73,7 @@ export interface Phase2Snapshot {
 
 export interface Phase2BallotSecret {
   format: "gyevo-dao-phase2-ballot-v1";
-  chainId: 46630;
+  chainId: 4663 | 46630;
   governance: Address;
   voter: Address;
   proposalId: string;
