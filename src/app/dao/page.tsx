@@ -1,4 +1,5 @@
 import "@/components/lending/lending.css";
+import "@/components/lending-v2/lending-v2.css";
 import "@/components/dao/dao.css";
 import { DaoWorkspace } from "@/components/dao/dao-workspace";
 import { DaoPhase2Workspace } from "@/components/dao/dao-phase2-workspace";

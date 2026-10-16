@@ -2,11 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { isAddress, type Address, type Hex } from "viem";
+import { WitnessUpload, type WitnessUploadStatus } from "@/components/lending-v2/v2-witness-upload";
+import { WalletControl } from "@/components/wallet-control";
 import { useRobinhoodDaoPhase2, type Phase2Vote } from "@/hooks/use-robinhood-dao-phase2";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
+import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo";
 import { parseDemoCredentialWitness, type DemoCredentialWitness } from "@/lib/credential/witness";
+import { computeEligibilityCommitment } from "@/lib/zk/commitment";
 import type { Phase2BallotSecret } from "@/lib/governance/phase2-types";
+import type { ProtocolChainId } from "@/hooks/use-wallet-network";
 
 function parseBallot(value: unknown): Phase2BallotSecret {
   if (!value || typeof value !== "object") throw new Error("The ballot reveal file is not a JSON object.");
@@ -39,17 +44,33 @@ function formatTime(value?: bigint) {
 }
 
 export function DaoPhase2Workspace() {
-  const wallet = useWalletNetwork(ROBINHOOD_TESTNET_CHAIN_ID);
+  const [selectedChainId, setSelectedChainId] = useState<ProtocolChainId>(ROBINHOOD_TESTNET_CHAIN_ID);
+  const wallet = useWalletNetwork(selectedChainId);
   const [selectedIdText, setSelectedIdText] = useState("");
   const selectedId = useMemo(() => /^[1-9][0-9]*$/.test(selectedIdText) ? BigInt(selectedIdText) : undefined, [selectedIdText]);
-  const dao = useRobinhoodDaoPhase2(selectedId);
+  const dao = useRobinhoodDaoPhase2(selectedId, selectedChainId);
+  const snapshot = dao.snapshot;
   const [witness, setWitness] = useState<DemoCredentialWitness>();
+  const [witnessStatus, setWitnessStatus] = useState<WitnessUploadStatus>("idle");
+  const [witnessFileName, setWitnessFileName] = useState("");
+  const [witnessMessage, setWitnessMessage] = useState("");
   const [ballot, setBallot] = useState<Phase2BallotSecret>();
   const [message, setMessage] = useState("");
   const [contentReference, setContentReference] = useState("");
   const [proposedThreshold, setProposedThreshold] = useState("3");
   const [vote, setVote] = useState<Phase2Vote>("for");
   const [busy, setBusy] = useState(false);
+  const isTestnet = selectedChainId === ROBINHOOD_TESTNET_CHAIN_ID;
+  const networkName = isTestnet ? "Robinhood Testnet" : "Robinhood Mainnet";
+
+  useEffect(() => {
+    setWitness(undefined);
+    setWitnessStatus("idle");
+    setWitnessFileName("");
+    setWitnessMessage("");
+    setBallot(undefined);
+    dao.clearProof();
+  }, [dao.clearProof, selectedChainId, wallet.address, wallet.chainId]);
 
   useEffect(() => {
     if (!selectedIdText && dao.snapshot && dao.snapshot.nextProposalId > 1n) {
@@ -73,20 +94,68 @@ export function DaoPhase2Workspace() {
 
   async function importWitness(file?: File) {
     if (!file) return;
+    setWitness(undefined);
+    dao.clearProof();
+    setWitnessStatus("loading");
+    setWitnessFileName(file.name);
+    setWitnessMessage("");
     try {
+      if (selectedChainId !== ROBINHOOD_TESTNET_CHAIN_ID) {
+        throw new Error("DAO Phase 2 Policy 5 witnesses are currently supported on Robinhood Testnet only.");
+      }
+      if (!wallet.address) throw new Error("Connect the wallet that owns this witness before importing it.");
+      if (wallet.chainId !== selectedChainId) throw new Error(`Switch to ${networkName} (chain ${selectedChainId}) before checking this witness.`);
+      if (dao.state !== "ready" || !snapshot) throw new Error("The Phase 2 deployment is not ready for an on-chain witness check. Refresh the DAO state and try again.");
+      if (!snapshot.credentialActive || !snapshot.credential) throw new Error("This wallet needs an active project-issued Policy 5 credential before its witness can be accepted.");
+      if (!snapshot.reputation?.active) throw new Error("This wallet needs an active Lending V2 reputation claim before its witness can be accepted.");
+      if (
+        snapshot.reputation.commitment.toLowerCase() !== snapshot.credential.commitment.toLowerCase()
+          || snapshot.reputation.credentialVersion !== snapshot.credential.version
+          || snapshot.reputation.expiresAt !== snapshot.credential.expiresAt
+      ) throw new Error("The active Policy 5 credential and reputation claim do not match the same commitment and version.");
       const parsed = parseDemoCredentialWitness(JSON.parse(await file.text()));
       if (parsed.format !== "robinhood-demo-credential-v1" || parsed.policyId !== 5) {
         throw new Error("Choose the Robinhood Policy 5 reputation witness issued for DAO Phase 2.");
       }
-      if (!wallet.address || parsed.wallet.toLowerCase() !== wallet.address.toLowerCase()) {
+      if (parsed.wallet.toLowerCase() !== wallet.address.toLowerCase()) {
         throw new Error("The witness is not bound to the connected wallet.");
       }
+      if (
+        parsed.commitment.toLowerCase() !== snapshot.credential.commitment.toLowerCase()
+          || BigInt(parsed.expiresAt) !== snapshot.credential.expiresAt
+      ) throw new Error("The witness commitment or expiry does not match this wallet's active on-chain Policy 5 credential.");
+      if (!dao.deployment?.governance) throw new Error("The selected Phase 2 governance address is not configured.");
+      const recomputedCommitment = await computeEligibilityCommitment({
+        subject: wallet.address,
+        privateValue: parsed.privateValue,
+        salt: parsed.salt,
+        policyId: 5n,
+        policyVersion: 1n,
+        threshold: snapshot.minimumReputation,
+        credentialVersion: snapshot.credential.version,
+        expiresAt: snapshot.credential.expiresAt,
+        chainId: BigInt(ROBINHOOD_TESTNET_CHAIN_ID),
+        vault: dao.deployment.governance,
+      });
+      if (
+        recomputedCommitment.toLowerCase() !== parsed.commitment.toLowerCase()
+          || recomputedCommitment.toLowerCase() !== snapshot.credential.commitment.toLowerCase()
+      ) throw new Error("The witness score and salt do not match the active commitment for this wallet, chain, policy, version, and DAO contract.");
       setWitness(parsed);
-      setMessage("Policy 5 witness loaded in browser memory. Its private score and salt have not been uploaded.");
+      setWitnessStatus("loaded");
+      setWitnessMessage("Wallet, policy version, credential version, commitment, expiry, chain, and DAO address match the active Testnet records. Private values were checked locally and remain in browser memory.");
     } catch (error) {
       setWitness(undefined);
-      setMessage(error instanceof Error ? error.message : "The witness file is invalid.");
+      setWitnessStatus("invalid");
+      setWitnessMessage(error instanceof Error ? error.message : "The witness file is invalid.");
     }
+  }
+
+  function rejectWitness(_file: File, reason: string) {
+    setWitness(undefined);
+    dao.clearProof();
+    setWitnessStatus("invalid");
+    setWitnessMessage(reason);
   }
 
   async function importBallot(file?: File) {
@@ -102,11 +171,44 @@ export function DaoPhase2Workspace() {
     }
   }
 
-  const snapshot = dao.snapshot;
   const proposal = snapshot?.proposal;
-  const connectionUnavailable = dao.state !== "ready" || !wallet.address || !wallet.isRobinhoodTestnet;
-  const riskIncreasingUnavailable = connectionUnavailable || Boolean(snapshot?.paused);
+  const connectionUnavailable = dao.state !== "ready" || !wallet.address || wallet.chainId !== selectedChainId;
+  const riskIncreasingUnavailable = connectionUnavailable || Boolean(snapshot?.paused) || !isTestnet;
   const memberUnavailable = riskIncreasingUnavailable || !snapshot?.membership?.active;
+  const witnessControlDisabledReason = !isTestnet
+    ? "Mainnet Phase 2 contracts are not deployed or configured. Testnet witnesses cannot be used on Mainnet."
+    : !wallet.address
+      ? "Connect the wallet that owns the Policy 5 credential first."
+      : wallet.chainId !== selectedChainId
+        ? `Switch to Robinhood Testnet (chain ${selectedChainId}) before importing and checking this witness.`
+        : dao.state !== "ready"
+          ? "Wait for the Testnet Phase 2 contract and eligibility reads to finish before importing."
+          : undefined;
+  const proofPrerequisite = !isTestnet
+    ? "Mainnet Phase 2 is deployment-pending. No Mainnet credential or proof action is available."
+    : !wallet.address
+      ? "Connect the wallet that owns the Policy 5 credential."
+      : wallet.chainId !== selectedChainId
+        ? "Switch to Robinhood Testnet (chain 46630) to generate this proof."
+        : dao.state === "checking"
+          ? "Checking the Phase 2 contracts and this wallet's on-chain records."
+          : dao.state === "read-error"
+            ? "The Testnet state read failed. Refresh the on-chain status before generating a proof."
+            : dao.state !== "ready"
+              ? "The Phase 2 deployment or its dependencies are not ready. Check the deployment status above."
+              : snapshot?.paused
+                ? "Governance is paused. Proof generation and membership actions are unavailable until an authorized admin unpauses it."
+                : !snapshot?.credentialActive
+                  ? "This wallet needs an active project-issued Policy 5 credential. Ask the authorized issuer; the app cannot issue one."
+                  : !snapshot.reputation?.active
+                    ? "This wallet needs an active Lending V2 reputation claim from the authorized issuer."
+                    : snapshot.reputation.commitment.toLowerCase() !== snapshot.credential?.commitment.toLowerCase()
+                      || snapshot.reputation.credentialVersion !== snapshot.credential?.version
+                      || snapshot.reputation.expiresAt !== snapshot.credential?.expiresAt
+                      ? "The active credential and reputation claim do not match the same commitment, version, and expiry. Contact the authorized issuer."
+                      : witnessStatus !== "loaded" || !witness
+                        ? "Import the matching Policy 5 witness delivered by the authorized issuer. The file stays in this browser."
+                        : undefined;
 
   return (
     <section className="panel panel--ticks protocol-panel" aria-labelledby="dao-phase2-heading">
@@ -115,7 +217,7 @@ export function DaoPhase2Workspace() {
           <p className="eyebrow">Private Lending Council · Phase 2</p>
           <h2 id="dao-phase2-heading">Prove reputation, then commit a protected ballot.</h2>
         </div>
-        <span className="chip">{dao.state === "ready" ? snapshot?.paused ? "PAUSED" : "TESTNET READY" : dao.state.toUpperCase()}</span>
+        <span className="chip">{dao.state === "ready" ? snapshot?.paused ? "PAUSED" : isTestnet ? "TESTNET READY" : "MAINNET READ ONLY" : dao.state.toUpperCase().replaceAll("-", " ")}</span>
       </div>
       <p className="protocol-copy">
         Policy 5 proves a private reputation score derived by an authorized issuer from canonical Lending V2 events.
@@ -125,18 +227,50 @@ export function DaoPhase2Workspace() {
         Ballot privacy is temporary: the commitment hides your choice during the commit window. The reveal transaction later makes the choice public and linkable to your wallet. This is not anonymous voting.
       </p>
 
+      <div className="dao-phase2-network" role="group" aria-label="DAO Phase 2 network">
+        <button className={`btn btn--${isTestnet ? "primary" : "secondary"} btn--sm`} type="button" aria-pressed={isTestnet} onClick={() => setSelectedChainId(ROBINHOOD_TESTNET_CHAIN_ID)}>
+          Robinhood Testnet · Interactive
+        </button>
+        <button className={`btn btn--${!isTestnet ? "primary" : "secondary"} btn--sm`} type="button" aria-pressed={!isTestnet} onClick={() => setSelectedChainId(ROBINHOOD_MAINNET_CHAIN_ID)}>
+          Robinhood Mainnet · Phase 2
+        </button>
+        <WalletControl expectedChainId={selectedChainId} showRecoveryAction />
+      </div>
+      <div className="dao-phase2-network__meta">
+        <span>{networkName} · chain {selectedChainId}</span>
+        {wallet.address && <span className="addr">{wallet.address}</span>}
+        <button className="btn btn--secondary btn--sm" type="button" onClick={() => void dao.refresh()} disabled={dao.state === "checking" || dao.state === "deployment-pending" || dao.state === "unconfigured"}>
+          Check on-chain status again
+        </button>
+      </div>
+
       {dao.state === "unconfigured" && (
         <p className="callout">Phase 2 has not been configured from confirmed deployment receipts. Phase 1 below remains available.</p>
       )}
+      {dao.state === "deployment-pending" && (
+        <p className="callout">DAO Phase 2 has not been deployed or configured on Robinhood Mainnet. Its Mainnet credential registry, verifier, and Lending pool are kept separate from Testnet. Mainnet Phase 2 is read-only and unavailable until its chain-specific contracts are prepared, deployed, and verified.</p>
+      )}
       {dao.state === "no-code" && <p className="callout">No contract bytecode exists at one or more configured Phase 2 addresses.</p>}
       {dao.state === "dependency-mismatch" && <p className="callout">The configured Phase 2 contracts do not reference the expected credential, verifier, reputation, and Lending V2 contracts.</p>}
-      {dao.state === "read-error" && <p className="callout">The Phase 2 state could not be read: {dao.error}</p>}
+      {dao.state === "read-error" && <p className="callout">The {networkName} RPC or one of the configured Phase 2 contract reads failed. Check the network configuration and try the read again.</p>}
+
+      <details className="protocol-notice">
+        <summary>Phase 2 contract configuration</summary>
+        <p className="small muted">These are the build-time addresses selected for {networkName}; the page verifies code and dependencies before reporting wallet eligibility.</p>
+        <dl className="kv protocol-kv">
+          <div className="kv__row"><dt>Governance</dt><dd className="addr">{dao.deployment?.governance ?? "Not configured"}</dd></div>
+          <div className="kv__row"><dt>Reputation registry</dt><dd className="addr">{dao.deployment?.reputationRegistry ?? "Not configured"}</dd></div>
+          <div className="kv__row"><dt>Credential registry</dt><dd className="addr">{dao.deployment?.credentialRegistry ?? "Not configured"}</dd></div>
+          <div className="kv__row"><dt>Proof verifier</dt><dd className="addr">{dao.deployment?.verifier ?? "Not configured"}</dd></div>
+          <div className="kv__row"><dt>Lending evidence source</dt><dd className="addr">{dao.deployment?.lendingPool ?? "Not configured"}</dd></div>
+        </dl>
+      </details>
 
       <dl className="protocol-kv kv">
         <div className="kv__row"><dt>Connected wallet</dt><dd className="addr">{wallet.address ?? "Not connected"}</dd></div>
-        <div className="kv__row"><dt>Policy 5 credential</dt><dd>{snapshot?.credentialActive ? `Active · version ${snapshot.credential?.version}` : "Missing or inactive"}</dd></div>
-        <div className="kv__row"><dt>Lending reputation claim</dt><dd>{snapshot?.reputation?.active ? `Active · evidence ${snapshot.reputation.evidenceHash.slice(0, 10)}…` : "Missing or inactive"}</dd></div>
-        <div className="kv__row"><dt>Proof-backed membership</dt><dd>{snapshot?.membership?.active ? "Active" : snapshot?.membership ? "Registration is stale" : "Not registered"}</dd></div>
+        <div className="kv__row"><dt>Policy 5 credential · {networkName}</dt><dd>{!wallet.address ? "Connect a wallet to check" : dao.state === "checking" ? "Checking on-chain status…" : dao.state !== "ready" ? "Unavailable until contract reads succeed" : snapshot?.credentialActive ? `Active · version ${snapshot.credential?.version}` : "No active Policy 5 credential found"}</dd></div>
+        <div className="kv__row"><dt>Lending reputation claim · {networkName}</dt><dd>{!wallet.address ? "Connect a wallet to check" : dao.state === "checking" ? "Checking on-chain status…" : dao.state !== "ready" ? "Unavailable until contract reads succeed" : snapshot?.reputation?.active ? `Active · evidence ${snapshot.reputation.evidenceHash.slice(0, 10)}…` : "No active reputation claim found"}</dd></div>
+        <div className="kv__row"><dt>Proof-backed membership · {networkName}</dt><dd>{!wallet.address ? "Connect a wallet to check" : dao.state === "checking" ? "Checking on-chain status…" : dao.state !== "ready" ? "Unavailable until contract reads succeed" : snapshot?.membership?.active ? "Active" : snapshot?.membership ? "Registration is stale" : "Not registered"}</dd></div>
         <div className="kv__row"><dt>Minimum private reputation</dt><dd>{snapshot?.minimumReputation.toString() ?? "—"}</dd></div>
         <div className="kv__row"><dt>Quorum</dt><dd>{snapshot?.quorum.toString() ?? "—"} revealed ballots</dd></div>
       </dl>
@@ -144,13 +278,23 @@ export function DaoPhase2Workspace() {
       <div className="protocol-stack">
         <h3>1. Establish membership</h3>
         <p className="small muted">Import the issuer-delivered Policy 5 witness. The browser generates a genuine Noir/Barretenberg proof and checks it against the deployed verifier before registration.</p>
-        <label className="protocol-field"><span>Private Policy 5 witness</span>
-          <input type="file" accept="application/json,.json" onChange={(event) => void importWitness(event.currentTarget.files?.[0])} />
-        </label>
+        <WitnessUpload
+          disabled={Boolean(witnessControlDisabledReason) || busy || witnessStatus === "loading"}
+          disabledReason={witnessControlDisabledReason}
+          fileName={witnessFileName}
+          status={witnessStatus}
+          message={witnessMessage}
+          loadedFor={witness?.wallet}
+          onFile={(file) => void importWitness(file)}
+          onRejected={rejectWitness}
+          onRemove={() => { setWitness(undefined); setWitnessStatus("idle"); setWitnessFileName(""); setWitnessMessage(""); dao.clearProof(); }}
+        />
         <div className="protocol-actions">
-          <button className="btn btn--secondary" type="button" disabled={busy || connectionUnavailable || !witness || !snapshot?.credentialActive || !snapshot.reputation?.active} onClick={() => void run(() => dao.generateMembershipProof(witness!), "The genuine Policy 5 proof passed local and deployed-verifier checks.")}>Generate Reputation Proof</button>
+          <button className="btn btn--secondary" type="button" disabled={busy || Boolean(proofPrerequisite)} onClick={() => void run(() => dao.generateMembershipProof(witness!), "The genuine Policy 5 proof passed local and deployed-verifier checks.")}>Generate Reputation Proof</button>
           <button className="btn btn--primary" type="button" disabled={busy || riskIncreasingUnavailable || !dao.proof || Boolean(snapshot?.membership?.active)} onClick={() => void run(() => dao.registerMembership(), "Phase 2 membership was confirmed on Robinhood Testnet.")}>Register Membership</button>
         </div>
+        {proofPrerequisite && <p className="small muted" role="status">{proofPrerequisite}</p>}
+        {dao.proof && <p className="small muted" role="status">Proof generated for chain {dao.proof.publicContext.chainId.toString()} and the selected DAO contract. Local and deployed-verifier checks passed; no private score or salt is displayed.</p>}
       </div>
 
       <div className="protocol-stack">
@@ -199,8 +343,8 @@ export function DaoPhase2Workspace() {
           <input type="file" accept="application/json,.json" onChange={(event) => void importBallot(event.currentTarget.files?.[0])} />
         </label>
         <div className="protocol-actions">
-          <button className="btn btn--primary" type="button" disabled={busy || connectionUnavailable || !ballot || proposal?.state !== "reveal" || proposal.walletRevealed} onClick={() => void run(() => dao.revealVote(ballot!), "The ballot reveal receipt and public tally were confirmed.")}>Reveal Vote</button>
-          <button className="btn btn--secondary" type="button" disabled={busy || connectionUnavailable || !selectedId || proposal?.state === "pending" || proposal?.state === "commit" || proposal?.state === "reveal" || proposal?.finalized} onClick={() => void run(() => dao.finalizeProposal(selectedId!), "The proposal result was finalized on-chain.")}>Finalize</button>
+          <button className="btn btn--primary" type="button" disabled={busy || connectionUnavailable || !isTestnet || !ballot || proposal?.state !== "reveal" || proposal.walletRevealed} onClick={() => void run(() => dao.revealVote(ballot!), "The ballot reveal receipt and public tally were confirmed.")}>Reveal Vote</button>
+          <button className="btn btn--secondary" type="button" disabled={busy || connectionUnavailable || !isTestnet || !selectedId || proposal?.state === "pending" || proposal?.state === "commit" || proposal?.state === "reveal" || proposal?.finalized} onClick={() => void run(() => dao.finalizeProposal(selectedId!), "The proposal result was finalized on-chain.")}>Finalize</button>
           <button className="btn btn--secondary" type="button" disabled={busy || riskIncreasingUnavailable || !selectedId || proposal?.state !== "succeeded"} onClick={() => void run(() => dao.executeProposal(selectedId!), "The bounded reputation-threshold action was executed.")}>Execute</button>
         </div>
       </div>

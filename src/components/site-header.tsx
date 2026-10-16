@@ -3,11 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useAccount } from "wagmi";
 import { appEnv } from "@/lib/config/env";
 import { BrandLogo } from "@/components/brand-logo";
 import { WalletControl } from "@/components/wallet-control";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
+import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo";
 
 /* The application bar: its own sections, a way back to the website, the network and the wallet. The public
    website (the landing) has its own bar with the introductions and "Launch App". */
@@ -18,7 +20,11 @@ const APP_LINKS = [
 
 export function SiteHeader() {
   const pathname = usePathname();
-  const wallet = useWalletNetwork(ROBINHOOD_TESTNET_CHAIN_ID);
+  const activeAccount = useAccount();
+  const headerChainId = pathname === "/dao" && activeAccount.chainId === ROBINHOOD_MAINNET_CHAIN_ID
+    ? ROBINHOOD_MAINNET_CHAIN_ID
+    : ROBINHOOD_TESTNET_CHAIN_ID;
+  const wallet = useWalletNetwork(headerChainId);
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -42,7 +48,9 @@ export function SiteHeader() {
 
   if (pathname === "/") return null;
   const walletState = wallet.state;
-  const networkText = walletState === "wrong-network" ? "Switch to Robinhood Testnet" : "Robinhood Testnet";
+  const networkName = headerChainId === ROBINHOOD_MAINNET_CHAIN_ID ? "Robinhood Mainnet" : "Robinhood Testnet";
+  const networkLabel = headerChainId === ROBINHOOD_MAINNET_CHAIN_ID ? "Mainnet" : "Testnet";
+  const networkText = walletState === "wrong-network" ? `Switch to ${networkName}` : networkName;
 
   return (
     <header className="site-header site-header--app" data-scrolled={scrolled}>
@@ -73,11 +81,11 @@ export function SiteHeader() {
             </svg>
           </button>
           <span className="site-header__net">
-            <span className="net-pill" title={`${networkText}, expected chain ID ${ROBINHOOD_TESTNET_CHAIN_ID}`}>
-              <i className="net-pill__dot" aria-hidden="true" /><b>{networkText}</b><i>Testnet</i>
+            <span className="net-pill" title={`${networkText}, expected chain ID ${headerChainId}`}>
+              <i className="net-pill__dot" aria-hidden="true" /><b>{networkText}</b><i>{networkLabel}</i>
             </span>
           </span>
-          <WalletControl expectedChainId={ROBINHOOD_TESTNET_CHAIN_ID} showRecoveryAction />
+          <WalletControl expectedChainId={headerChainId} showRecoveryAction />
           <button
             className="menu-toggle"
             type="button"
@@ -97,7 +105,7 @@ export function SiteHeader() {
             <li><Link href="/" onClick={() => setMenuOpen(false)}><span>← Website</span></Link></li>
           </ul>
         </nav>
-        <div className="mobile-nav__net"><span className="net-pill"><i className="net-pill__dot" aria-hidden="true" /><b>{networkText}</b><i>Testnet</i></span></div>
+        <div className="mobile-nav__net"><span className="net-pill"><i className="net-pill__dot" aria-hidden="true" /><b>{networkText}</b><i>{networkLabel}</i></span></div>
       </div>
     </header>
   );

@@ -5,6 +5,7 @@ import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import type { ProtocolChainId } from "@/hooks/use-wallet-network";
 import { GIWA_CHAIN_ID } from "@/lib/config/chain";
 import { ROBINHOOD_TESTNET_CHAIN_ID, ROBINHOOD_TESTNET_PUBLIC_RPC_URL } from "@/lib/config/robinhood-testnet";
+import { ROBINHOOD_MAINNET_CHAIN_ID, ROBINHOOD_MAINNET_PUBLIC_RPC_URL } from "@/lib/config/robinhood-mainnet-demo";
 import { supportedProtocolChains } from "@/lib/config/network-registry";
 import { StateChip } from "@/components/protocol-state";
 
@@ -13,12 +14,20 @@ export function WalletNetworkCard({ expectedChainId = ROBINHOOD_TESTNET_CHAIN_ID
   const expectedChain = supportedProtocolChains.find((chain) => chain.id === expectedChainId);
   const manualRpcUrl = expectedChainId === ROBINHOOD_TESTNET_CHAIN_ID
     ? ROBINHOOD_TESTNET_PUBLIC_RPC_URL
-    : "Use the RPC configured for this network; its URL is hidden here for safety.";
-  const expectedName = expectedChainId === GIWA_CHAIN_ID ? "GIWA Sepolia" : "Robinhood Chain Testnet";
+    : expectedChainId === ROBINHOOD_MAINNET_CHAIN_ID
+      ? ROBINHOOD_MAINNET_PUBLIC_RPC_URL
+      : "Use the RPC configured for this network; its URL is hidden here for safety.";
+  const expectedName = expectedChainId === GIWA_CHAIN_ID
+    ? "GIWA Sepolia"
+    : expectedChainId === ROBINHOOD_MAINNET_CHAIN_ID
+      ? "Robinhood Chain Mainnet"
+      : "Robinhood Chain Testnet";
   const activeName = wallet.chainId === GIWA_CHAIN_ID
     ? "GIWA Sepolia"
     : wallet.chainId === ROBINHOOD_TESTNET_CHAIN_ID
       ? "Robinhood Chain Testnet"
+      : wallet.chainId === ROBINHOOD_MAINNET_CHAIN_ID
+        ? "Robinhood Chain Mainnet"
       : wallet.chainId === undefined
         ? "No active wallet network"
         : "Unsupported network";

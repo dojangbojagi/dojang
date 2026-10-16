@@ -12,7 +12,10 @@ const root = path.resolve(here, "../..");
 const circuit = JSON.parse(await readFile(path.join(root, "public/circuits/private_eligibility.json"), "utf8"));
 const crsPath = process.env.BB_CRS_PATH || path.join(os.homedir(), ".bb-crs");
 const subject = "0xBE390374Ac7304A792c50EA37AB301b659a56Df7";
-const governance = "0x2222222222222222222222222222222222222222";
+const chainId = BigInt(process.env.DAO_PHASE2_CHAIN_ID || "46630");
+assert.ok([4_663n, 46_630n].includes(chainId), "DAO_PHASE2_CHAIN_ID must be Robinhood Testnet 46630 or Mainnet 4663.");
+const governance = process.env.DAO_PHASE2_GOVERNANCE_ADDRESS || "0x2222222222222222222222222222222222222222";
+assert.match(governance, /^0x[0-9a-fA-F]{40}$/, "DAO_PHASE2_GOVERNANCE_ADDRESS must be an EVM address.");
 const score = "4";
 const salt = `0x${12345n.toString(16).padStart(64, "0")}`;
 const context = {
@@ -22,7 +25,7 @@ const context = {
   threshold: 3n,
   credentialVersion: 1n,
   expiresAt: 4_102_444_800n,
-  chainId: 46_630n,
+  chainId,
   vault: governance,
 };
 const commitment = await computeEligibilityCommitment({ ...context, privateValue: score, salt });
@@ -56,19 +59,20 @@ try {
     proof.publicInputs.map(BigInt),
     [
       BigInt(subject), BigInt(commitment), 5n, 1n, 3n, 1n,
-      context.expiresAt, 46_630n, BigInt(governance),
+      context.expiresAt, context.chainId, BigInt(governance),
     ],
     "Phase 2 public inputs are not wallet, policy, threshold, version, chain, and DAO bound.",
   );
   await assert.rejects(noir.execute(inputs({ private_value: "2" })), "under-threshold score was accepted");
-  await assert.rejects(noir.execute(inputs({ chain_id: "91342" })), "wrong-chain context was accepted");
+  const otherRobinhoodChainId = context.chainId === 46_630n ? "4663" : "46630";
+  await assert.rejects(noir.execute(inputs({ chain_id: otherRobinhoodChainId })), "wrong-chain context was accepted");
   await assert.rejects(
     noir.execute(inputs({ vault_address: BigInt("0x3333333333333333333333333333333333333333").toString() })),
     "wrong-governance context was accepted",
   );
   console.log(JSON.stringify({
     result: "Policy 5 proof locally verified; under-threshold, wrong-chain, and wrong-DAO witnesses rejected",
-    chainId: 46630,
+    chainId: Number(context.chainId),
     policyId: 5,
     threshold: 3,
     publicInputCount: proof.publicInputs.length,

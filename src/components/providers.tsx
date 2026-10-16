@@ -8,6 +8,9 @@ import { createConfig, http, WagmiProvider, injected } from "wagmi";
 import type { CreateConnectorFn } from "wagmi";
 import { supportedProtocolChains } from "@/lib/config/network-registry";
 import { appEnv } from "@/lib/config/env";
+import { robinhoodMainnetDemoChain } from "@/lib/config/robinhood-mainnet-demo";
+import { giwaSepolia } from "@/lib/config/chain";
+import { robinhoodTestnet } from "@/lib/config/robinhood-testnet";
 import { DemoWitnessProvider } from "@/components/witness-context";
 import { hasExplicitEvmWalletProvider, type ExplicitEvmWallet } from "@/lib/wallet/provider-detection";
 
@@ -69,8 +72,9 @@ const wagmiConfig = createConfig({
   // Wagmi discovers EIP-6963 wallets and exposes each announced provider as its own connector.
   multiInjectedProviderDiscovery: true,
   transports: {
-    [supportedProtocolChains[0].id]: http(appEnv.robinhoodRpcUrl),
-    [supportedProtocolChains[1].id]: http(appEnv.giwaRpcUrl),
+    [robinhoodTestnet.id]: http(appEnv.robinhoodRpcUrl),
+    [giwaSepolia.id]: http(appEnv.giwaRpcUrl),
+    [robinhoodMainnetDemoChain.id]: http(appEnv.robinhoodMainnetRpcUrl),
   },
   ssr: true,
 });
