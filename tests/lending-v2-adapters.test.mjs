@@ -7,6 +7,7 @@ import {
   isLendingV2ProofForContext,
 } from "../src/lib/lending/v2-config.ts";
 import { effectiveLendingV2MaxBorrowable, lendingV2OracleState } from "../src/lib/lending/v2-service.ts";
+import { mainnetParticipantBlockReason, reserveBlockReason } from "../src/components/lending-v2/v2-format.ts";
 import { mapLendingV2Error } from "../src/lib/lending/v2-errors.ts";
 
 const pool = "0x0000000000000000000000000000000000001234";
@@ -85,6 +86,22 @@ test("V2 oracle freshness and effective borrowing bounds reflect on-chain inputs
     totalDebt: 15_000n,
     borrowEnabled: false,
   })).toBe(0n);
+});
+
+test("paused Mainnet UI blocks new collateral actions but preserves safe exit paths", () => {
+  const collateralReserve = { symbol: "dCOL", data: { config: { active: true, collateralEnabled: true } } };
+  expect(reserveBlockReason(collateralReserve, true, "collateral", true)).toContain("unavailable while the pool is paused");
+  expect(reserveBlockReason(collateralReserve, false, "collateral", true)).toBeNull();
+  expect(reserveBlockReason(collateralReserve, true, "collateral")).toBeNull(); // preserve existing Testnet contract/UI behavior
+  expect(reserveBlockReason(collateralReserve, true, "supply")).toContain("paused");
+  expect(reserveBlockReason(collateralReserve, true, "borrow")).toContain("paused");
+});
+
+test("Mainnet risk actions fail closed until the connected wallet allowlist is confirmed", () => {
+  expect(mainnetParticipantBlockReason(4663, true, true)).toBeNull();
+  expect(mainnetParticipantBlockReason(4663, true, false)).toContain("not allowlisted");
+  expect(mainnetParticipantBlockReason(4663, true, undefined)).toContain("not been confirmed");
+  expect(mainnetParticipantBlockReason(46630, true, false)).toBeNull();
 });
 
 test("V2 protocol error mapping keeps oracle, eligibility, cap, and wallet failures distinct", () => {

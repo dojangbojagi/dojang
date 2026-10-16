@@ -20,7 +20,7 @@ export function V2LimitationsNotice({ configured, chainId, riskPaused }: { confi
           <li><strong>Variable rates, simple interest.</strong> Interest accrues linearly, not compounded, and changes with utilization.</li>
           <li><strong>Project-issued credential.</strong> Eligibility uses a policy-3 GYEVO credential, not an official GIWA, Dojang or Upbit credential.</li>
           <li><strong>Private eligibility only.</strong> Wallets, amounts, positions and actions are public on-chain.</li>
-          {isMainnet && riskPaused && <li><strong>Currently paused.</strong> New supply and borrowing actions are unavailable while the Mainnet pool is paused.</li>}
+          {isMainnet && riskPaused && <li><strong>Currently paused.</strong> This app keeps new supply, collateral deposits and borrowing unavailable; collateral activation is paused on-chain. Repayment and eligible withdrawals remain exit paths.</li>}
           {!isMainnet && (configured
             ? <li><strong>Check the address.</strong> A configured pool address is not an audit. Verify the pool and its tokens on the explorer before using it.</li>
             : <li><strong>Not yet deployed.</strong> Controls stay off until a real Lending V2 pool is configured for Robinhood Chain Testnet.</li>)}
@@ -65,6 +65,20 @@ export function ContextBar({ market, walletAddress, eligibility }: {
 }) {
   const copy = marketStateCopy(market.state, market.chainId);
   const pool = market.poolAddress;
+  const mainnetAccess = market.snapshot?.position?.demoParticipant;
+  const access = !walletAddress
+    ? { tone: "neutral" as const, label: "Connect wallet" }
+    : market.state === "wrong-network"
+      ? { tone: "warn" as const, label: "Switch network" }
+      : market.state === "read-error"
+        ? { tone: "invalid" as const, label: "Read unavailable" }
+        : market.state === "unconfigured" || market.state === "unavailable"
+          ? { tone: "invalid" as const, label: "Unavailable" }
+          : market.state === "ready" && mainnetAccess === true
+            ? { tone: "valid" as const, label: "Allowlisted" }
+            : market.state === "ready" && mainnetAccess === false
+              ? { tone: "invalid" as const, label: "Not allowlisted" }
+              : { tone: "pending" as const, label: "Checking" };
   return (
     <section className="lendv2-context" aria-label="Lending V2 status">
       <ul>
@@ -77,6 +91,12 @@ export function ContextBar({ market, walletAddress, eligibility }: {
             : <strong>Not configured</strong>}
         </li>
         <li><span>Market</span><Chip tone={copy.tone}>{copy.label}</Chip></li>
+        {market.chainId === ROBINHOOD_MAINNET_CHAIN_ID && (
+          <li>
+            <span>Demo access</span>
+            <Chip tone={access.tone}>{access.label}</Chip>
+          </li>
+        )}
         <li><span>Eligibility</span><Chip tone={eligibility.tone}>{eligibility.label}</Chip></li>
         <li className="lendv2-context__links">
           <Link className="protocol-inline-link" href="/dojang">Dojang ↗</Link>

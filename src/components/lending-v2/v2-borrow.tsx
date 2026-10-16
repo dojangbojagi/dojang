@@ -5,12 +5,13 @@ import { formatAmount } from "@/components/lending/format";
 import type { ActionRunner } from "@/components/lending/types";
 import { AssetPicker } from "@/components/lending-v2/v2-asset-picker";
 import {
-  ageText, formatBps, formatHealthFactor, formatWad, oracleLabel, oracleTone, reserveBlockReason,
+  ageText, formatBps, formatHealthFactor, formatWad, mainnetParticipantBlockReason, oracleLabel, oracleTone, reserveBlockReason,
 } from "@/components/lending-v2/v2-format";
 import { Chip, Meter, Metric, Unavailable } from "@/components/lending-v2/v2-parts";
 import { ReviewedAction } from "@/components/lending-v2/reviewed-action";
 import { classifyPosition, previewBorrow } from "@/components/lending-v2/v2-risk";
 import { positionOf, type V2Market, type V2Proof } from "@/components/lending-v2/v2-types";
+import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo";
 import { ProtocolError } from "@/lib/protocol/types";
 
 /** Borrowing, in the order the pool requires it: collateral, then enabling it with a proof, then the borrow. */
@@ -54,13 +55,15 @@ export function BorrowView({ market, proof, runner, borrowAsset, onBorrowAsset, 
   const account = walletPosition?.account;
   const risk = classifyPosition(walletPosition);
   const proofValue = proof.proof;
+  const participantBlocked = mainnetParticipantBlockReason(market.chainId, Boolean(walletPosition), walletPosition?.demoParticipant);
   const maxBorrowable = debtReserve.maxBorrowable;
   const oracleAge = debtReserve.oracle.updatedAt !== undefined && debtReserve.oracle.updatedAt > 0n && debtReserve.oracle.updatedAt <= snapshot.blockTimestamp
     ? snapshot.blockTimestamp - debtReserve.oracle.updatedAt
     : undefined;
 
-  const collateralBlocked = reserveBlockReason(collReserve, snapshot.riskPaused, "collateral");
-  const borrowBlocked = reserveBlockReason(debtReserve, snapshot.riskPaused, "borrow");
+  const mainnetControlled = market.chainId === ROBINHOOD_MAINNET_CHAIN_ID;
+  const collateralBlocked = reserveBlockReason(collReserve, snapshot.riskPaused, "collateral", mainnetControlled) ?? participantBlocked;
+  const borrowBlocked = reserveBlockReason(debtReserve, snapshot.riskPaused, "borrow") ?? participantBlocked;
   const collateralState = !collPos ? "unknown" : collPos.collateral === 0n ? "none" : collPos.isCollateralEnabled ? "enabled" : "deposited";
   const capHeadroom = debtData.config.borrowCap > debtData.totalDebtAssets ? debtData.config.borrowCap - debtData.totalDebtAssets : 0n;
 
@@ -126,7 +129,7 @@ export function BorrowView({ market, proof, runner, borrowAsset, onBorrowAsset, 
               reserves={collaterals}
               value={collReserve.asset}
               onChange={onCollateralAsset}
-              disabledReason={(item) => reserveBlockReason(item, snapshot.riskPaused, "collateral")}
+              disabledReason={(item) => reserveBlockReason(item, snapshot.riskPaused, "collateral", mainnetControlled)}
             />
             <dl className="lendv2-metrics">
               <Metric label={`Your ${collSymbol} balance`}>{collPos ? formatAmount(collPos.walletBalance, collReserve.decimals) : "Connect a wallet"}</Metric>

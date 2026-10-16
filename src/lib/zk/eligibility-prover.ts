@@ -118,6 +118,48 @@ export async function generateEligibilityProof(
   onProgress?: ProverProgress,
 ): Promise<EligibilityProof> {
   const [{ noir }, { api, backend }] = await Promise.all([loadRuntime(onProgress), loadBackend(onProgress)]);
+  return createEligibilityProof(witness, context, noir, backend, onProgress);
+}
+
+/**
+ * Generate the same real circuit proof for an operator CLI. The circuit artifact
+ * is supplied from the checked-in public build output so Node does not try to
+ * fetch the browser-relative `/circuits/...` URL. WASM is explicit here because
+ * it is the same SRS-backed prover used by the browser; @aztec/bb.js 5.2.1
+ * downloads/caches the canonical CRS from its configured primary/fallback URLs.
+ */
+export async function generateEligibilityProofFromArtifact(
+  witness: DemoCredentialWitness,
+  context: PublicProofInputs,
+  circuit: any,
+  onProgress?: ProverProgress,
+): Promise<EligibilityProof> {
+  const [{ Noir }, bbModule] = await Promise.all([
+    import("@noir-lang/noir_js"),
+    import("@aztec/bb.js"),
+  ]);
+  const api = await bbModule.Barretenberg.new({
+    backend: bbModule.BackendType.Wasm,
+    threads: 1,
+    srsSize: 2 ** 17,
+    logger: onProgress ? (message: string) => onProgress(`Barretenberg: ${message}`) : undefined,
+  });
+  try {
+    const noir = new Noir(circuit);
+    const backend = new bbModule.UltraHonkBackend(circuit.bytecode, api);
+    return await createEligibilityProof(witness, context, noir, backend, onProgress);
+  } finally {
+    await api.destroy();
+  }
+}
+
+async function createEligibilityProof(
+  witness: DemoCredentialWitness,
+  context: PublicProofInputs,
+  noir: InstanceType<ProverRuntime["Noir"]>,
+  backend: InstanceType<ProverRuntime["UltraHonkBackend"]>,
+  onProgress?: ProverProgress,
+): Promise<EligibilityProof> {
   onProgress?.("executing Noir witness");
   const { witness: compressedWitness } = await noir.execute(toCircuitInputs(witness, context));
   onProgress?.("generating UltraHonk proof");

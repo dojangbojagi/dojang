@@ -1,5 +1,6 @@
 import { maxUint256 } from "viem";
 import { formatAmount } from "@/components/lending/format";
+import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo";
 import type { LendingV2OracleState, LendingV2ReserveSnapshot } from "@/lib/lending/v2-service";
 
 /* Presentation helpers only. Every number is produced by the pool, the oracle or the token; these functions turn
@@ -90,12 +91,29 @@ export function reserveBlockReason(
   reserve: LendingV2ReserveSnapshot,
   riskPaused: boolean,
   action: "supply" | "borrow" | "collateral",
+  controlledMainnetDemo = false,
 ): string | null {
   const { config } = reserve.data;
   const symbol = reserve.symbol;
   if (!config.active) return `${symbol} is inactive in this pool.`;
-  if (action === "collateral") return config.collateralEnabled ? null : `${symbol} is not accepted as collateral.`;
+  if (action === "collateral") {
+    if (!config.collateralEnabled) return `${symbol} is not accepted as collateral.`;
+    if (riskPaused && controlledMainnetDemo) return "This app keeps new collateral deposits unavailable while the pool is paused; collateral activation is also paused on-chain.";
+    return null;
+  }
   if (riskPaused) return "Risk-increasing actions are paused in this pool.";
   if (action === "supply") return config.supplyEnabled ? null : `Supplying ${symbol} is disabled.`;
   return config.borrowEnabled ? null : `Borrowing ${symbol} is disabled.`;
+}
+
+/** Mainnet is a two-participant controlled demonstration. Unknown allowlist reads fail closed for new actions. */
+export function mainnetParticipantBlockReason(
+  chainId: number,
+  hasConnectedPosition: boolean,
+  isDemoParticipant: boolean | undefined,
+): string | null {
+  if (chainId !== ROBINHOOD_MAINNET_CHAIN_ID || !hasConnectedPosition) return null;
+  if (isDemoParticipant === true) return null;
+  if (isDemoParticipant === false) return "This wallet is not allowlisted for the Robinhood Mainnet controlled demonstration.";
+  return "The Mainnet participant allowlist has not been confirmed; refresh the on-chain read before continuing.";
 }

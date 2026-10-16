@@ -4,7 +4,7 @@ import type { Address } from "viem";
 import { formatAmount, minBigint } from "@/components/lending/format";
 import type { ActionRunner } from "@/components/lending/types";
 import { AssetPicker } from "@/components/lending-v2/v2-asset-picker";
-import { formatBps, reserveBlockReason, usageBps } from "@/components/lending-v2/v2-format";
+import { formatBps, mainnetParticipantBlockReason, reserveBlockReason, usageBps } from "@/components/lending-v2/v2-format";
 import { Chip, Metric, Unavailable } from "@/components/lending-v2/v2-parts";
 import { ReviewedAction } from "@/components/lending-v2/reviewed-action";
 import { positionOf, type V2Market, type V2Proof } from "@/components/lending-v2/v2-types";
@@ -42,11 +42,13 @@ export function SupplyView({ market, proof, runner, asset, onAsset }: {
   const headroom = config.supplyCap > data.totalSupplyAssets ? config.supplyCap - data.totalSupplyAssets : 0n;
   const withdrawable = position ? minBigint(position.supplied, data.availableLiquidity) : 0n;
   const proofValue = proof.proof;
+  const participantBlocked = mainnetParticipantBlockReason(market.chainId, Boolean(snapshot.position), snapshot.position?.demoParticipant);
   const capUse = usageBps(data.totalSupplyAssets, config.supplyCap);
 
   const supplyPrecondition =
     blocked ??
     (!position ? `Connect a wallet on ${market.networkName} to see your balance.` : null) ??
+    participantBlocked ??
     (headroom === 0n ? `The ${symbol} supply cap has been reached.` : null) ??
     (!proofValue ? "Supplying needs a locally verified policy-3 proof. Generate one in the Eligibility card first." : null);
 
