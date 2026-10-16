@@ -91,6 +91,54 @@ export function credentialIsActive(record, now) {
   return record.wallet !== zeroAddress && !record.revoked && record.issuedAt <= BigInt(now) && record.expiresAt > BigInt(now);
 }
 
+function tupleValue(value, name, index) {
+  const result = Array.isArray(value) ? value[index] : value?.[name];
+  assert.notEqual(result, undefined, `RPC tuple is missing ${name} at index ${index}.`);
+  return result;
+}
+
+export function normalizePriceBounds(value) {
+  return {
+    minimumPriceWad: BigInt(tupleValue(value, "minimumPriceWad", 0)),
+    maximumPriceWad: BigInt(tupleValue(value, "maximumPriceWad", 1)),
+    priceWad: BigInt(tupleValue(value, "priceWad", 2)),
+    updatedAt: BigInt(tupleValue(value, "updatedAt", 3)),
+  };
+}
+
+const reserveConfigFields = [
+  "supplyCap", "borrowCap", "collateralCap", "minBorrowAmount", "maxOracleAge", "maxLtvBps",
+  "liquidationThresholdBps", "liquidationBonusBps", "closeFactorBps", "reserveFactorBps",
+  "optimalUtilizationBps", "baseBorrowRateBps", "slope1Bps", "slope2Bps", "active",
+  "supplyEnabled", "borrowEnabled", "collateralEnabled",
+];
+
+export function normalizeReserveConfig(value) {
+  return Object.fromEntries(reserveConfigFields.map((name, index) => {
+    const field = tupleValue(value, name, index);
+    if (index < 14) return [name, BigInt(field)];
+    assert.equal(typeof field, "boolean", `RPC tuple field ${name} is not a boolean.`);
+    return [name, field];
+  }));
+}
+
+export function assertSafeDemoReserveConfig(config, label) {
+  assert.ok(config.active && config.maxOracleAge > 0n, `${label} reserve must be active with a positive oracle freshness limit.`);
+  assert.ok(config.maxLtvBps > 0n && config.maxLtvBps < config.liquidationThresholdBps && config.liquidationThresholdBps <= 10_000n,
+    `${label} reserve LTV must remain below a valid liquidation threshold.`);
+  assert.ok(config.liquidationBonusBps < 10_000n && config.closeFactorBps > 0n && config.closeFactorBps <= 10_000n,
+    `${label} reserve liquidation parameters exceed safe basis-point bounds.`);
+  assert.ok(config.reserveFactorBps <= 10_000n && config.optimalUtilizationBps <= 10_000n,
+    `${label} reserve factor or utilization exceeds 100%.`);
+  if (label === "loan") {
+    assert.ok(config.supplyEnabled && config.borrowEnabled && config.supplyCap > 0n && config.borrowCap > 0n,
+      "Loan reserve must have positive supply/borrow caps and enabled supply and borrowing.");
+  } else {
+    assert.ok(config.collateralEnabled && config.collateralCap > 0n, "Collateral reserve must be enabled with a positive collateral cap.");
+  }
+  return config;
+}
+
 export function assertFreshSyntheticPrice({ price, updatedAt, now, maxAge }) {
   const value = BigInt(price), updated = BigInt(updatedAt), timestamp = BigInt(now), ageLimit = BigInt(maxAge);
   assert.ok(value > 0n && updated > 0n, "Synthetic oracle price is not seeded.");
@@ -137,25 +185,74 @@ function roles() {
   return result;
 }
 
+function normalizedHash(value) {
+  return typeof value === "string" ? value.toLowerCase() : "";
+}
+
+export function artifactReceiptFrom(file, name, address, chainId = CHAIN_ID) {
+  assert.equal(BigInt(file.chain), BigInt(chainId), `Mainnet deployment artifact is not chain ${chainId}.`);
+  const expectedAddress = getAddress(address);
+  const candidates = (file.transactions ?? []).filter((tx) => {
+    const create = /^(CREATE|CREATE2)$/i.test(String(tx.transactionType ?? ""));
+    return create && normalizedHash(tx.contractAddress) === expectedAddress.toLowerCase();
+  });
+  assert.equal(candidates.length, 1, `${name} must have exactly one CREATE transaction for configured address ${expectedAddress}; found ${candidates.length}.`);
+  const tx = candidates[0];
+  const hash = tx.hash ?? tx.transactionHash ?? tx.transaction?.hash;
+  assert.match(hash ?? "", /^0x[0-9a-fA-F]{64}$/, `${name} CREATE transaction has no valid transaction hash.`);
+  const receipt = (file.receipts ?? []).find((item) => normalizedHash(item.transactionHash ?? item.hash) === hash.toLowerCase());
+  assert.ok(receipt, `${name} has no receipt matching CREATE transaction ${hash}.`);
+  assert.ok(["0x1", "1", 1, 1n].includes(receipt.status), `${name} artifact receipt ${hash} did not succeed.`);
+  assert.equal(normalizedHash(receipt.contractAddress), expectedAddress.toLowerCase(), `${name} receipt address does not match configured address.`);
+  assert.equal(normalizedHash(tx.contractAddress), expectedAddress.toLowerCase(), `${name} CREATE address does not match configured address.`);
+  assert.ok(/^(0x[0-9a-fA-F]+|[0-9]+)$/.test(String(receipt.blockNumber ?? "")), `${name} receipt has no valid block number.`);
+  const artifactSender = tx.from ?? tx.transaction?.from ?? receipt.from ?? null;
+  const nestedChainId = tx.transaction?.chainId;
+  if (nestedChainId !== undefined && nestedChainId !== null) {
+    assert.equal(BigInt(nestedChainId), BigInt(chainId), `${name} recorded transaction is not bound to chain ${chainId}.`);
+  }
+  return {
+    name,
+    hash,
+    block: BigInt(receipt.blockNumber),
+    address: expectedAddress,
+    artifactSender: artifactSender ? getAddress(artifactSender) : null,
+    artifactInput: tx.transaction?.input ?? tx.input ?? null,
+  };
+}
+
 function artifactReceipt(name, address) {
   assert.ok(fs.existsSync(ARTIFACT), "Missing Mainnet deployment artifact: contracts/broadcast/DeployRobinhoodMainnetDemoStack.s.sol/4663/run-latest.json");
   const file = JSON.parse(fs.readFileSync(ARTIFACT, "utf8"));
-  assert.equal(Number(file.chain), CHAIN_ID, "Mainnet deployment artifact is not chain 4663.");
-  const matches = (file.transactions ?? []).filter((item) => item.transactionType === "CREATE" && item.contractName === name);
-  for (const tx of matches) {
-    const receipt = (file.receipts ?? []).find((item) => item.transactionHash?.toLowerCase() === tx.hash?.toLowerCase());
-    const created = receipt?.contractAddress ?? tx.contractAddress;
-    if (created?.toLowerCase() === address.toLowerCase() && receipt?.status === "0x1") {
-      return { hash: tx.hash, block: BigInt(receipt.blockNumber), address: getAddress(created) };
-    }
-  }
-  throw new Error(`${name} has no successful receipt for the configured address in the chain-4663 artifact.`);
+  return artifactReceiptFrom(file, name, address);
 }
 
-async function confirmedCode(client, item) {
-  const receipt = await client.getTransactionReceipt({ hash: item.hash });
-  assert.equal(receipt.status, "success", `Recorded deployment receipt is not successful: ${item.hash}`);
-  assert.equal(receipt.contractAddress?.toLowerCase(), item.address.toLowerCase(), "Live receipt contract address differs from artifact.");
+export function assertCanonicalDeploymentEvidence({ item, receipt, transaction, block, deployer }) {
+  const expectedDeployer = getAddress(deployer);
+  assert.equal(receipt.status, "success", `${item.name} canonical Mainnet receipt is not successful: ${item.hash}`);
+  assert.equal(normalizedHash(receipt.transactionHash), item.hash.toLowerCase(), `${item.name} canonical receipt hash differs from deployment artifact.`);
+  assert.equal(normalizedHash(receipt.contractAddress), item.address.toLowerCase(), `${item.name} canonical receipt address differs from configured registry.`);
+  assert.equal(receipt.blockNumber, item.block, `${item.name} canonical receipt block differs from deployment artifact.`);
+  assert.equal(normalizedHash(transaction.hash), item.hash.toLowerCase(), `${item.name} canonical transaction hash differs from deployment artifact.`);
+  assert.equal(transaction.chainId, CHAIN_ID, `${item.name} canonical transaction is not on chain ${CHAIN_ID}.`);
+  assert.equal(transaction.to, null, `${item.name} recorded transaction is not a contract creation.`);
+  assert.equal(getAddress(transaction.from), expectedDeployer, `${item.name} canonical RPC sender does not match configured Mainnet deployer.`);
+  if (item.artifactSender) {
+    assert.equal(item.artifactSender, expectedDeployer, `${item.name} artifact sender does not match configured Mainnet deployer.`);
+  }
+  if (item.artifactInput) {
+    assert.equal(normalizedHash(transaction.input), normalizedHash(item.artifactInput), `${item.name} canonical transaction input differs from deployment artifact.`);
+  }
+  assert.ok(receipt.blockHash && normalizedHash(block.hash) === normalizedHash(receipt.blockHash), `${item.name} receipt block is not canonical at its recorded height.`);
+}
+
+async function confirmedCode(client, item, deployer) {
+  const [receipt, transaction] = await Promise.all([
+    client.getTransactionReceipt({ hash: item.hash }),
+    client.getTransaction({ hash: item.hash }),
+  ]);
+  const block = await client.getBlock({ blockNumber: receipt.blockNumber });
+  assertCanonicalDeploymentEvidence({ item, receipt, transaction, block, deployer });
   const code = await client.getBytecode({ address: item.address });
   assert.ok(code && code !== "0x", `Runtime bytecode is absent at ${item.address}.`);
 }
@@ -176,7 +273,7 @@ async function getContext() {
     relations: artifactReceipt("RelationsLib", contracts.relationsLib),
     governance: artifactReceipt("RobinhoodMainnetDemoGovernancePhase1", contracts.governance),
   };
-  await Promise.all(Object.values(entries).map((item) => confirmedCode(client, item)));
+  await Promise.all(Object.values(entries).map((item) => confirmedCode(client, item, configuredRoles.deployer)));
   const [poolRegistry, verifier, oracle, loan, collateral, poolDemo, registryDemo, oracleDemo, loanDemo, collDemo, loanMarker, collMarker, honk] = await Promise.all([
     client.readContract({ address: contracts.lendingPool, abi: poolAbi, functionName: "credentialRegistry" }),
     client.readContract({ address: contracts.lendingPool, abi: poolAbi, functionName: "eligibilityVerifier" }),
@@ -293,6 +390,12 @@ async function showStatus(ctx) {
     client.readContract({ address: contracts.credentialRegistry, abi: registryAbi, functionName: "getCredential", args: [r.participantB, POLICY_ID] }),
     client.getBlock({ blockTag: "latest" }),
   ]);
+  const loanPriceState = normalizePriceBounds(loanBounds);
+  const collateralPriceState = normalizePriceBounds(collBounds);
+  const loanReserveState = normalizeReserveConfig(loanConfig);
+  const collateralReserveState = normalizeReserveConfig(collConfig);
+  assertSafeDemoReserveConfig(loanReserveState, "loan");
+  assertSafeDemoReserveConfig(collateralReserveState, "collateral");
   assert.equal(assets.length, 2, "Pool must contain exactly the two controlled demo reserves.");
   assert.ok(assets.some((asset) => asset.toLowerCase() === contracts.loanToken.toLowerCase()) && assets.some((asset) => asset.toLowerCase() === contracts.collateralToken.toLowerCase()), "Pool reserves do not match the receipt-derived Mainnet synthetic token pair.");
   const roleRows = [adminPool, riskAdmin, pauser, registryAdmin, issuer, oracleAdmin, updater, minterLoan, minterColl, governanceAdmin, governancePauser];
@@ -310,11 +413,20 @@ async function showStatus(ctx) {
   console.log(`Participants: A ${r.participantA} ${participantA ? "ALLOWLISTED" : "BLOCKED"} · B ${r.participantB} ${participantB ? "ALLOWLISTED" : "BLOCKED"}`);
   console.log(`Complete participant-role history: exactly the configured two wallets through block ${participantHistory.head} · ${participantHistory.queryCount} bounded queries.`);
   console.log(`Roles: admin/pool=${adminPool} risk-admin=${riskAdmin} pause-authority=${pauser} issuer=${issuer} oracle-updater=${updater} minter=${minterLoan && minterColl} governance-admin=${governanceAdmin} governance-pauser=${governancePauser}`);
-  const freshness = (price, updatedAt, maxAge) => price === 0n || updatedAt === 0n ? "UNSEEDED" : updatedAt > now.timestamp ? "INVALID FUTURE TIMESTAMP" : now.timestamp - updatedAt > maxAge ? `STALE (${now.timestamp - updatedAt}s; max ${maxAge}s)` : `FRESH (${now.timestamp - updatedAt}s old)`;
-  console.log(`Oracle loan bounds ${loanBounds.minimumPriceWad}..${loanBounds.maximumPriceWad} WAD · ${loanBounds.priceWad === 0n ? "UNSEEDED" : `price ${loanBounds.priceWad} WAD · ${freshness(loanBounds.priceWad, loanBounds.updatedAt, loanConfig.maxOracleAge)}`}`);
-  console.log(`Oracle collateral bounds ${collBounds.minimumPriceWad}..${collBounds.maximumPriceWad} WAD · ${collBounds.priceWad === 0n ? "UNSEEDED" : `price ${collBounds.priceWad} WAD · ${freshness(collBounds.priceWad, collBounds.updatedAt, collConfig.maxOracleAge)}`}`);
+  const freshness = (price, updatedAt, maxAge) => {
+    const value = BigInt(price), updated = BigInt(updatedAt), timestamp = BigInt(now.timestamp), ageLimit = BigInt(maxAge);
+    if (value === 0n || updated === 0n) return "UNSEEDED";
+    if (updated > timestamp) return "INVALID FUTURE TIMESTAMP";
+    const age = timestamp - updated;
+    return age > ageLimit ? `STALE (${age}s; max ${ageLimit}s)` : `FRESH (${age}s old)`;
+  };
+  console.log(`Oracle loan bounds ${loanPriceState.minimumPriceWad}..${loanPriceState.maximumPriceWad} WAD · ${loanPriceState.priceWad === 0n ? "UNSEEDED" : `price ${loanPriceState.priceWad} WAD · ${freshness(loanPriceState.priceWad, loanPriceState.updatedAt, loanReserveState.maxOracleAge)}`}`);
+  console.log(`Oracle collateral bounds ${collateralPriceState.minimumPriceWad}..${collateralPriceState.maximumPriceWad} WAD · ${collateralPriceState.priceWad === 0n ? "UNSEEDED" : `price ${collateralPriceState.priceWad} WAD · ${freshness(collateralPriceState.priceWad, collateralPriceState.updatedAt, collateralReserveState.maxOracleAge)}`}`);
   console.log(`Actual pool token balances: loan ${loanPoolBalance} · collateral ${collateralPoolBalance} base units.`);
-  console.log(`Loan reserve: active=${loanConfig.active} supply=${loanConfig.supplyEnabled} borrow=${loanConfig.borrowEnabled} caps=${loanConfig.supplyCap}/${loanConfig.borrowCap} · collateral reserve: active=${collConfig.active} accepted=${collConfig.collateralEnabled} cap=${collConfig.collateralCap}`);
+  console.log(`Loan reserve: active=${loanReserveState.active} supply=${loanReserveState.supplyEnabled} borrow=${loanReserveState.borrowEnabled} caps=${loanReserveState.supplyCap}/${loanReserveState.borrowCap} · collateral reserve: active=${collateralReserveState.active} accepted=${collateralReserveState.collateralEnabled} cap=${collateralReserveState.collateralCap}`);
+  for (const [label, config] of [["loan", loanReserveState], ["collateral", collateralReserveState]]) {
+    console.log(`${label} risk limits: maxLTV=${config.maxLtvBps}bps · liquidation=${config.liquidationThresholdBps}bps + ${config.liquidationBonusBps}bps bonus · close=${config.closeFactorBps}bps · reserve=${config.reserveFactorBps}bps · maxOracleAge=${config.maxOracleAge}s · minBorrow=${config.minBorrowAmount} base units`);
+  }
   for (const [label, credential] of [["A", credentialA], ["B", credentialB]]) {
     const current = credentialIsActive(credential, now.timestamp);
     console.log(`Policy 3 ${label}: ${current ? `credential active · version ${credential.version} · expires ${credential.expiresAt}` : "no active project credential"}`);
@@ -476,7 +588,7 @@ async function main() {
     assert.ok(["loan", "collateral"].includes(positional[0]) && /^\d+$/.test(positional[1] ?? ""), "Use price loan|collateral <price-in-WAD-base-units>.");
     const asset = positional[0] === "loan" ? contracts.loanToken : contracts.collateralToken;
     const price = BigInt(positional[1]);
-    const [bounds] = await Promise.all([ctx.client.readContract({ address: contracts.oracle, abi: oracleAbi, functionName: "getPriceBounds", args: [asset] })]);
+    const bounds = normalizePriceBounds(await ctx.client.readContract({ address: contracts.oracle, abi: oracleAbi, functionName: "getPriceBounds", args: [asset] }));
     assertPriceWithinBounds(price, bounds.minimumPriceWad, bounds.maximumPriceWad);
     const role = await ctx.client.readContract({ address: contracts.oracle, abi: oracleAbi, functionName: "PRICE_UPDATER_ROLE" });
     const updater = ctx.roles.oracleUpdater;
@@ -484,7 +596,7 @@ async function main() {
     const before = bounds.priceWad;
     if (before === price) return console.log("SKIPPED — requested synthetic price already matches on-chain state.");
     return writeGuarded(ctx, command, updater, contracts.oracle, oracleAbi, "setPrice", [asset, price], options,
-      async () => (await ctx.client.readContract({ address: contracts.oracle, abi: oracleAbi, functionName: "getPriceBounds", args: [asset] })).priceWad === price);
+      async () => normalizePriceBounds(await ctx.client.readContract({ address: contracts.oracle, abi: oracleAbi, functionName: "getPriceBounds", args: [asset] })).priceWad === price);
   }
   if (command === "mint") {
     assert.ok(["loan", "collateral"].includes(positional[0]) && /^\d+$/.test(positional[2] ?? ""), "Use mint loan|collateral <participant> <amount-in-base-units>.");
@@ -557,13 +669,17 @@ async function main() {
       ctx.client.readContract({ address: contracts.lendingPool, abi: poolAbi, functionName: "isDemoParticipant", args: [r.participantA] }),
       ctx.client.readContract({ address: contracts.lendingPool, abi: poolAbi, functionName: "isDemoParticipant", args: [r.participantB] }),
     ]);
+    const loanPriceState = normalizePriceBounds(loanBounds);
+    const collateralPriceState = normalizePriceBounds(collateralBounds);
+    const loanReserveState = normalizeReserveConfig(loanConfig);
+    const collateralReserveState = normalizeReserveConfig(collateralConfig);
     assert.ok(allowedA && allowedB, "Both configured participants must remain allowlisted immediately before unpause.");
-    assert.ok(loanConfig.active && loanConfig.supplyEnabled && loanConfig.borrowEnabled, "The loan reserve is not configured for the intended demo journey.");
-    assert.ok(collateralConfig.active && collateralConfig.collateralEnabled, "The collateral reserve is not configured for the intended demo journey.");
+    assert.ok(loanReserveState.active && loanReserveState.supplyEnabled && loanReserveState.borrowEnabled, "The loan reserve is not configured for the intended demo journey.");
+    assert.ok(collateralReserveState.active && collateralReserveState.collateralEnabled, "The collateral reserve is not configured for the intended demo journey.");
     assertMainnetActivationPrerequisites({ paused, now: latest.timestamp, credentialA, credentialB,
-      loanPrice: { price: loanBounds.priceWad, updatedAt: loanBounds.updatedAt },
-      collateralPrice: { price: collateralBounds.priceWad, updatedAt: collateralBounds.updatedAt },
-      loanMaxAge: loanConfig.maxOracleAge, collateralMaxAge: collateralConfig.maxOracleAge,
+      loanPrice: { price: loanPriceState.priceWad, updatedAt: loanPriceState.updatedAt },
+      collateralPrice: { price: collateralPriceState.priceWad, updatedAt: collateralPriceState.updatedAt },
+      loanMaxAge: loanReserveState.maxOracleAge, collateralMaxAge: collateralReserveState.maxOracleAge,
       loanBalanceA, loanBalanceB, collateralBalanceA, collateralBalanceB });
     assert.equal(await hasRole(ctx.client, contracts.lendingPool, poolAbi, "PAUSER_ROLE", ctx.roles.pauseAuthority), true, "Configured pause authority lacks pool PAUSER_ROLE.");
     return writeGuarded(ctx, command, ctx.roles.pauseAuthority, contracts.lendingPool, poolAbi, "unpauseRisk", [], options,

@@ -6,12 +6,19 @@ import {
   assertMainnetActivationPrerequisites,
   assertPriceWithinBounds,
   assertWriteAuthorization,
+  artifactReceiptFrom,
+  assertCanonicalDeploymentEvidence,
+  assertSafeDemoReserveConfig,
   credentialIsActive,
   isSplittableRangeError,
+  normalizePriceBounds,
+  normalizeReserveConfig,
 } from "../scripts/robinhood-mainnet-lending-operator.mjs";
 
 const A = "0x1111111111111111111111111111111111111111";
 const B = "0x2222222222222222222222222222222222222222";
+const HASH = `0x${"ab".repeat(32)}`;
+const BLOCK_HASH = `0x${"cd".repeat(32)}`;
 const activeCredential = (wallet) => ({ wallet, revoked: false, issuedAt: 900n, expiresAt: 2_000n });
 const readyState = {
   paused: true,
@@ -29,6 +36,51 @@ const readyState = {
 };
 
 describe("Robinhood Mainnet controlled Lending operator guards", () => {
+  test("resolves a successful CREATE receipt by configured address when Foundry omits the contract name", () => {
+    const result = artifactReceiptFrom({
+      chain: "4663",
+      transactions: [{ transactionType: "CREATE", contractName: null, contractAddress: A, hash: HASH, transaction: { chainId: 4663, from: B, input: "0x1234" } }],
+      receipts: [{ transactionHash: HASH, contractAddress: A, status: "0x1", blockNumber: "0x2a" }],
+    }, "HonkVerifier", A);
+    expect(result).toMatchObject({ name: "HonkVerifier", hash: HASH, block: 42n, address: A, artifactSender: B, artifactInput: "0x1234" });
+  });
+
+  test("requires artifact receipt hash, success status, address, and chain to agree", () => {
+    const valid = {
+      chain: 4663,
+      transactions: [{ transactionType: "CREATE", contractName: "DifferentArtifactAlias", contractAddress: A, transactionHash: HASH }],
+      receipts: [{ hash: HASH, contractAddress: A, status: 1, blockNumber: 42 }],
+    };
+    expect(() => artifactReceiptFrom(valid, "HonkVerifier", A)).not.toThrow();
+    expect(() => artifactReceiptFrom({ ...valid, chain: 91342 }, "HonkVerifier", A)).toThrow("not chain 4663");
+    expect(() => artifactReceiptFrom({ ...valid, receipts: [{ ...valid.receipts[0], status: "0x0" }] }, "HonkVerifier", A)).toThrow("did not succeed");
+    expect(() => artifactReceiptFrom({ ...valid, receipts: [{ ...valid.receipts[0], contractAddress: B }] }, "HonkVerifier", A)).toThrow("receipt address");
+  });
+
+  test("validates canonical RPC sender even when deployment artifact sender is absent", () => {
+    const item = { name: "HonkVerifier", hash: HASH, block: 42n, address: A, artifactSender: null, artifactInput: null };
+    const receipt = { status: "success", transactionHash: HASH, contractAddress: A, blockNumber: 42n, blockHash: BLOCK_HASH };
+    const transaction = { hash: HASH, chainId: 4663, to: null, from: B, input: "0x1234" };
+    const block = { hash: BLOCK_HASH };
+    expect(() => assertCanonicalDeploymentEvidence({ item, receipt, transaction, block, deployer: B })).not.toThrow();
+    expect(() => assertCanonicalDeploymentEvidence({ item, receipt, transaction: { ...transaction, from: A }, block, deployer: B })).toThrow("canonical RPC sender does not match");
+  });
+
+  test("normalizes viem tuple arrays and named tuple objects before status arithmetic", () => {
+    expect(normalizePriceBounds([950n, 1_050n, 1_000n, 900n])).toEqual({
+      minimumPriceWad: 950n, maximumPriceWad: 1_050n, priceWad: 1_000n, updatedAt: 900n,
+    });
+    expect(normalizePriceBounds({ minimumPriceWad: 950, maximumPriceWad: 1_050, priceWad: 1_000, updatedAt: 900 })).toEqual({
+      minimumPriceWad: 950n, maximumPriceWad: 1_050n, priceWad: 1_000n, updatedAt: 900n,
+    });
+    const config = [100n, 80n, 70n, 1n, 3_600n, 5_000n, 6_500n, 500n, 5_000n, 1_000n, 8_000n, 200n, 400n, 6_000n, true, true, true, false];
+    const normalized = normalizeReserveConfig(config);
+    expect(normalized).toMatchObject({ maxOracleAge: 3_600n, active: true, supplyEnabled: true, borrowEnabled: true, collateralEnabled: false });
+    expect(() => assertSafeDemoReserveConfig(normalized, "loan")).not.toThrow();
+    expect(() => assertSafeDemoReserveConfig({ ...normalized, maxLtvBps: 6_500n }, "loan")).toThrow("below a valid liquidation threshold");
+    expect(() => normalizePriceBounds([])).toThrow("missing minimumPriceWad");
+  });
+
   test("requires positive price values inside the on-chain bounds", () => {
     expect(() => assertPriceWithinBounds("100", "90", "110")).not.toThrow();
     expect(() => assertPriceWithinBounds("0", "90", "110")).toThrow();
