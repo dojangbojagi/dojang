@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { robinhoodTestnet } from "../src/lib/config/robinhood-testnet.ts";
+import { robinhoodMainnetDemoContracts } from "../src/lib/config/robinhood-mainnet-demo.ts";
 import { projectContracts, robinhoodContracts } from "../src/lib/config/contracts.ts";
 import { getLendingV2ContractSet, primaryProtocolChainId, supportedProtocolChains } from "../src/lib/config/network-registry.ts";
 import {
@@ -25,11 +26,14 @@ describe("Robinhood Testnet configuration", () => {
     expect(supportedProtocolChains.map((chain) => chain.id)).toEqual([46_630, 91_342, 4_663]);
     expect(supportedProtocolChains[0]?.id).toBe(46_630);
     const robinhood = getLendingV2ContractSet(46_630);
+    const mainnet = getLendingV2ContractSet(4_663);
     const giwa = getLendingV2ContractSet(91_342);
     expect(robinhood?.pool).toBe(robinhoodContracts.lendingV2Pool);
     expect(robinhood?.credentialRegistry).toBe(robinhoodContracts.credentialRegistry);
     expect(giwa?.pool).toBe(projectContracts.lendingPoolV2);
-    expect(getLendingV2ContractSet(4_663)).toBeUndefined();
+    expect(mainnet?.pool).toBe(robinhoodMainnetDemoContracts.lendingPool);
+    expect(mainnet?.chainId).toBe(4_663);
+    expect(mainnet?.pool).not.toBe(robinhood?.pool);
   });
 
   test("builds a proof context bound to chain, user, policy, and pool", () => {

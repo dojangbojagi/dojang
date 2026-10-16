@@ -34,7 +34,8 @@ test("primary Lending route only mounts Robinhood V2 and isolates legacy GIWA V1
   expect(experience).not.toContain("<LendingWorkspace />");
   expect(experience).toContain("/lending/legacy");
   expect(legacyRoute).toContain("<LendingWorkspace />");
-  expect(v2Workspace).toContain("useWalletNetwork(ROBINHOOD_TESTNET_CHAIN_ID)");
+  expect(v2Workspace).toContain("useWalletNetwork(chainId)");
+  expect(v2Workspace).toContain("ROBINHOOD_MAINNET_CHAIN_ID");
 });
 
 test("DAO unit choices preserve their exact seconds conversion", () => {

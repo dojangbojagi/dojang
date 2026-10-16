@@ -41,6 +41,7 @@
     "robinhood:mainnet:demo:check": "bun scripts/robinhood-mainnet-demo-postdeploy.mjs",
     "robinhood:mainnet:demo:replay": "bun scripts/robinhood-mainnet-demo-postdeploy.mjs --replay",
     "robinhood:mainnet:lending:operator": "bun scripts/robinhood-mainnet-lending-operator.mjs",
+    "robinhood:mainnet:lending:user": "bun scripts/robinhood-mainnet-lending-user.mjs",
     "robinhood:mainnet:deploy": "bun scripts/robinhood-mainnet-deploy-show.mjs",
     "robinhood:mainnet:deploy:show": "bun scripts/robinhood-mainnet-deploy-show.mjs",
     "robinhood:deploy:show": "bun scripts/robinhood-deploy-show.mjs",

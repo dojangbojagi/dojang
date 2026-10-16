@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { createInterface } from "node:readline/promises";
@@ -12,7 +13,7 @@ import {
   controlledTestOracleAbi, controlledTokenAbi, eligibilityVerifierAdapterAbi,
   eligibilityVerifierProofAbi, lendingPoolV2Abi,
 } from "../src/lib/contracts/abis.ts";
-import { generateEligibilityProofFromArtifact } from "../src/lib/zk/eligibility-prover.ts";
+import { generateEligibilityProofFromArtifact, initializeEligibilityProverSrs } from "../src/lib/zk/eligibility-prover.ts";
 import { parseDemoCredentialWitness } from "../src/lib/credential/witness.ts";
 import { ROBINHOOD_MAINNET_CHAIN_ID, robinhoodMainnetDemoContracts as contracts } from "../src/lib/config/robinhood-mainnet-demo.ts";
 import {
@@ -68,6 +69,25 @@ function parseArgs(argv) {
     else positional.push(arg);
   }
   return { positional, options };
+}
+
+function srsCacheStatus() {
+  const directory = process.env.CRS_PATH?.trim() || path.join(os.homedir(), ".bb-crs");
+  const files = {
+    "bn254_g1_compressed.dat": 2 ** 17 * 32,
+    "bn254_g1.dat": 2 ** 17 * 64,
+    "bn254_g2.dat": 128,
+    "grumpkin_g1_v2.flat.dat": 2 ** 16 * 64,
+  };
+  const present = {};
+  for (const [name, minimum] of Object.entries(files)) {
+    try { present[name] = fs.statSync(path.join(directory, name)).size; }
+    catch { present[name] = 0; }
+  }
+  const g1Ready = present["bn254_g1.dat"] >= files["bn254_g1.dat"] ||
+    (present["bn254_g1_compressed.dat"] >= files["bn254_g1_compressed.dat"] && present["bn254_g1_compressed.dat"] % 32 === 0);
+  const ready = g1Ready && present["bn254_g2.dat"] === 128 && present["grumpkin_g1_v2.flat.dat"] >= files["grumpkin_g1_v2.flat.dat"];
+  return { directory, present, ready };
 }
 
 function rpc() {
@@ -261,6 +281,17 @@ function hasPoolEvent(ctx, receipt, eventName, predicate) {
   });
 }
 
+function poolEventArgs(receipt, eventName, predicate) {
+  for (const log of receipt.logs) {
+    if (log.address.toLowerCase() !== contracts.lendingPool.toLowerCase()) continue;
+    try {
+      const event = decodeEventLog({ abi: lendingPoolV2Abi, data: log.data, topics: log.topics, strict: true });
+      if (event.eventName === eventName && predicate(event.args)) return event.args;
+    } catch { /* Skip unrelated pool events. */ }
+  }
+  return undefined;
+}
+
 async function writeParticipant(ctx, action, wallet, alias, target, abi, functionName, args, proofInputs, options, expectedEvent, readback) {
   const request = { account: wallet, address: target, abi, functionName, args };
   const simulation = await ctx.client.simulateContract(request);
@@ -332,7 +363,28 @@ async function executeCommand() {
   const command = process.argv[2] ?? "help";
   const { positional, options } = parseArgs(process.argv.slice(3));
   if (command === "help" || command === "--help") {
-    console.log(`Robinhood Mainnet participant Lending operator · chain ${CHAIN_ID}\n\nRead-only:\n  status <A|B>\n  check-wallet-alias <A|B>\n  proof <A|B> <private-policy3-witness.json>\n\nSimulated by default (base-unit amounts only):\n  approve <A|B> <loan|collateral> <amount>\n  approve-repay <A|B>\n  supply <A|B> <amount> <private-policy3-witness.json>\n  deposit-collateral <A|B> <amount>\n  enable-collateral <A|B> <private-policy3-witness.json>\n  borrow <A|B> <amount> <private-policy3-witness.json>\n  repay-all <A|B>\n  withdraw-supply <A|B> <amount>\n  withdraw-collateral <A|B> <amount>\n\nWrites require --execute, the exact --authorize-mainnet-lending-user-write=<action> flag, the matching encrypted alias, and a typed per-transaction confirmation. No credentials, witnesses, keystore data, or private keys are emitted.`);
+    console.log(`Robinhood Mainnet participant Lending operator · chain ${CHAIN_ID}\n\nLocal prover cache:\n  crs-status\n  crs-check  (downloads/caches official Aztec SRS files; no chain access)\n\nRead-only:\n  status <A|B>\n  check-wallet-alias <A|B>\n  proof <A|B> <private-policy3-witness.json>\n\nSimulated by default (base-unit amounts only):\n  approve <A|B> <loan|collateral> <amount>\n  approve-repay <A|B>\n  supply <A|B> <amount> <private-policy3-witness.json>\n  deposit-collateral <A|B> <amount>\n  enable-collateral <A|B> <private-policy3-witness.json>\n  borrow <A|B> <amount> <private-policy3-witness.json>\n  repay-all <A|B>\n  withdraw-supply <A|B> <amount>\n  withdraw-collateral <A|B> <amount>\n\nWrites require --execute, the exact --authorize-mainnet-lending-user-write=<action> flag, the matching encrypted alias, and a typed per-transaction confirmation. No credentials, witnesses, keystore data, or private keys are emitted.`);
+    return;
+  }
+  if (command === "crs-status") {
+    const cache = srsCacheStatus();
+    console.log(`Barretenberg 5.2.1 local SRS cache: ${cache.ready ? "READY" : "INCOMPLETE"} · ${cache.directory}`);
+    for (const [name, size] of Object.entries(cache.present)) console.log(`  ${name}: ${size ? `${size} bytes` : "missing"}`);
+    if (!cache.ready) process.exitCode = 1;
+    return;
+  }
+  if (command === "crs-check") {
+    console.log("Initializing the pinned Barretenberg 5.2.1 WASM CRS/SRS. The package uses its primary Aztec CRS host and built-in fallback, then caches locally.");
+    try {
+      await initializeEligibilityProverSrs((stage) => console.log(stage));
+    } catch {
+      console.error("CRS initialization failed: required CRS/SRS cache is incomplete and the configured HTTPS sources could not be reached.");
+      process.exitCode = 1;
+      return;
+    }
+    const cache = srsCacheStatus();
+    assert.ok(cache.ready, "Barretenberg initialized, but its local CRS cache did not pass the expected file-size checks.");
+    console.log(`PASS Barretenberg SRS initialization and local cache verification · ${cache.directory}. No chain access or wallet was used.`);
     return;
   }
   if (command === "check-wallet-alias") {
@@ -396,7 +448,13 @@ async function executeCommand() {
     assert.ok(balance >= amount, "Insufficient dUSD balance."); assert.ok(allowance >= amount, "Insufficient pool allowance; simulate and approve exact dUSD first.");
     return writeParticipant(ctx, command, walletAddress, alias, contracts.lendingPool, lendingPoolV2Abi, "supply", [contracts.loanToken, amount, proof.proof, [...proof.publicInputs]], options,
       eventFor("LiquiditySupplied", { asset: contracts.loanToken, supplier: walletAddress, amount }),
-      async () => (await ctx.client.readContract({ address: contracts.lendingPool, abi: lendingPoolV2Abi, functionName: "getSupplyBalance", args: [walletAddress, contracts.loanToken] })) > before);
+      async () => {
+        const [after, balanceAfter] = await Promise.all([
+          ctx.client.readContract({ address: contracts.lendingPool, abi: lendingPoolV2Abi, functionName: "getSupplyBalance", args: [walletAddress, contracts.loanToken] }),
+          ctx.client.readContract({ address: contracts.loanToken, abi: controlledTokenAbi, functionName: "balanceOf", args: [walletAddress] }),
+        ]);
+        return after > before && balanceAfter === balance - amount;
+      });
   }
   if (command === "deposit-collateral") {
     const amount = assertPositiveBaseUnits(positional[1]);
@@ -409,7 +467,13 @@ async function executeCommand() {
     assert.ok(balance >= amount, "Insufficient dCOL balance."); assert.ok(allowance >= amount, "Insufficient pool allowance; simulate and approve exact dCOL first.");
     return writeParticipant(ctx, command, walletAddress, alias, contracts.lendingPool, lendingPoolV2Abi, "depositCollateral", [contracts.collateralToken, amount], options,
       eventFor("CollateralDeposited", { asset: contracts.collateralToken, user: walletAddress, amount }),
-      async () => (await ctx.client.readContract({ address: contracts.lendingPool, abi: lendingPoolV2Abi, functionName: "getCollateralBalance", args: [walletAddress, contracts.collateralToken] })) === before + amount);
+      async () => {
+        const [after, balanceAfter] = await Promise.all([
+          ctx.client.readContract({ address: contracts.lendingPool, abi: lendingPoolV2Abi, functionName: "getCollateralBalance", args: [walletAddress, contracts.collateralToken] }),
+          ctx.client.readContract({ address: contracts.collateralToken, abi: controlledTokenAbi, functionName: "balanceOf", args: [walletAddress] }),
+        ]);
+        return after === before + amount && balanceAfter === balance - amount;
+      });
   }
   if (command === "enable-collateral") {
     assert.ok(positional[1], "Use enable-collateral <A|B> <private-policy3-witness.json>.");
@@ -424,10 +488,11 @@ async function executeCommand() {
     assert.ok(positional[2], "Borrow requires a local Policy 3 witness file.");
     const walletAddress = await actionContext(ctx, label, true);
     const proof = await requireProof(ctx, label, positional[2]);
-    const [before, maxBorrowable, available] = await Promise.all([
+    const [before, maxBorrowable, available, balanceBefore] = await Promise.all([
       ctx.client.readContract({ address: contracts.lendingPool, abi: lendingPoolV2Abi, functionName: "getDebtBalance", args: [walletAddress, contracts.loanToken] }),
       ctx.client.readContract({ address: contracts.lendingPool, abi: lendingPoolV2Abi, functionName: "getMaxBorrowable", args: [walletAddress, contracts.loanToken] }),
       ctx.client.readContract({ address: contracts.lendingPool, abi: lendingPoolV2Abi, functionName: "availableLiquidity", args: [contracts.loanToken] }),
+      ctx.client.readContract({ address: contracts.loanToken, abi: controlledTokenAbi, functionName: "balanceOf", args: [walletAddress] }),
     ]);
     assert.ok(amount <= maxBorrowable && amount <= available, "Borrow amount exceeds live health-factor capacity or available dUSD liquidity.");
     const now = await ctx.client.getBlock({ blockTag: "latest" });
@@ -441,7 +506,13 @@ async function executeCommand() {
     assert.ok(isFreshPrice(collateralPrice, now.timestamp, tuple(collateralConfig, "maxOracleAge", 4)), "dCOL synthetic oracle price is unseeded or stale.");
     return writeParticipant(ctx, command, walletAddress, alias, contracts.lendingPool, lendingPoolV2Abi, "borrow", [contracts.loanToken, amount, proof.proof, [...proof.publicInputs]], options,
       eventFor("Borrowed", { asset: contracts.loanToken, borrower: walletAddress, amount }),
-      async () => (await ctx.client.readContract({ address: contracts.lendingPool, abi: lendingPoolV2Abi, functionName: "getDebtBalance", args: [walletAddress, contracts.loanToken] })) >= before + amount);
+      async () => {
+        const [after, balanceAfter] = await Promise.all([
+          ctx.client.readContract({ address: contracts.lendingPool, abi: lendingPoolV2Abi, functionName: "getDebtBalance", args: [walletAddress, contracts.loanToken] }),
+          ctx.client.readContract({ address: contracts.loanToken, abi: controlledTokenAbi, functionName: "balanceOf", args: [walletAddress] }),
+        ]);
+        return after >= before + amount && balanceAfter === balanceBefore + amount;
+      });
   }
   if (command === "repay-all") {
     const walletAddress = await actionContext(ctx, label, false);
@@ -457,19 +528,36 @@ async function executeCommand() {
     assert.ok(allowance >= required, "Current dUSD allowance is below debt plus the 15-minute interest margin. Run approve-repay first.");
     return writeParticipant(ctx, command, walletAddress, alias, contracts.lendingPool, lendingPoolV2Abi, "repay", [contracts.loanToken, maxUint256], options,
       eventFor("Repaid", { asset: contracts.loanToken, borrower: walletAddress }),
-      async () => (await ctx.client.readContract({ address: contracts.lendingPool, abi: lendingPoolV2Abi, functionName: "getDebtBalance", args: [walletAddress, contracts.loanToken] })) === 0n);
+      async (receipt) => {
+        const event = poolEventArgs(receipt, "Repaid", (args) => args.asset.toLowerCase() === contracts.loanToken.toLowerCase() && args.borrower.toLowerCase() === walletAddress.toLowerCase());
+        if (!event) return false;
+        const [after, balanceAfter] = await Promise.all([
+          ctx.client.readContract({ address: contracts.lendingPool, abi: lendingPoolV2Abi, functionName: "getDebtBalance", args: [walletAddress, contracts.loanToken] }),
+          ctx.client.readContract({ address: contracts.loanToken, abi: controlledTokenAbi, functionName: "balanceOf", args: [walletAddress] }),
+        ]);
+        return after === 0n && BigInt(event.debtBalance) === 0n && balanceAfter === balance - BigInt(event.amount);
+      });
   }
   if (command === "withdraw-collateral" || command === "withdraw-supply") {
     const amount = assertPositiveBaseUnits(positional[1]);
     const walletAddress = await actionContext(ctx, label, false);
     const asset = command === "withdraw-supply" ? contracts.loanToken : contracts.collateralToken;
-    const before = await ctx.client.readContract({ address: contracts.lendingPool, abi: lendingPoolV2Abi, functionName: command === "withdraw-supply" ? "getSupplyBalance" : "getCollateralBalance", args: [walletAddress, asset] });
+    const [before, walletBalanceBefore] = await Promise.all([
+      ctx.client.readContract({ address: contracts.lendingPool, abi: lendingPoolV2Abi, functionName: command === "withdraw-supply" ? "getSupplyBalance" : "getCollateralBalance", args: [walletAddress, asset] }),
+      ctx.client.readContract({ address: asset, abi: controlledTokenAbi, functionName: "balanceOf", args: [walletAddress] }),
+    ]);
     const fn = command === "withdraw-supply" ? "withdrawSupply" : "withdrawCollateral";
     const eventName = command === "withdraw-supply" ? "LiquidityWithdrawn" : "CollateralWithdrawn";
     const eventFields = command === "withdraw-supply" ? { asset, supplier: walletAddress, amount } : { asset, user: walletAddress, amount };
     return writeParticipant(ctx, command, walletAddress, alias, contracts.lendingPool, lendingPoolV2Abi, fn, [asset, amount], options,
       eventFor(eventName, eventFields),
-      async () => (await ctx.client.readContract({ address: contracts.lendingPool, abi: lendingPoolV2Abi, functionName: command === "withdraw-supply" ? "getSupplyBalance" : "getCollateralBalance", args: [walletAddress, asset] })) < before);
+      async () => {
+        const [after, walletBalanceAfter] = await Promise.all([
+          ctx.client.readContract({ address: contracts.lendingPool, abi: lendingPoolV2Abi, functionName: command === "withdraw-supply" ? "getSupplyBalance" : "getCollateralBalance", args: [walletAddress, asset] }),
+          ctx.client.readContract({ address: asset, abi: controlledTokenAbi, functionName: "balanceOf", args: [walletAddress] }),
+        ]);
+        return after < before && walletBalanceAfter === walletBalanceBefore + amount;
+      });
   }
   throw new Error(`Unknown participant command: ${command}`);
 }

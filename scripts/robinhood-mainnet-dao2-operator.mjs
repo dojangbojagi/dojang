@@ -10,9 +10,14 @@ import {
   isAddress, keccak256, parseAbi, toBytes,
 } from "viem";
 import { computeEligibilityCommitment, generateFieldSalt } from "../src/lib/zk/commitment.ts";
+import { generateEligibilityProofFromArtifact } from "../src/lib/zk/eligibility-prover.ts";
 import { parseDemoCredentialWitness } from "../src/lib/credential/witness.ts";
 import { parsePhase2Ballot } from "../src/lib/governance/phase2-ballot.ts";
 import { robinhoodMainnetDemoContracts as contracts, ROBINHOOD_MAINNET_CHAIN_ID } from "../src/lib/config/robinhood-mainnet-demo.ts";
+import {
+  assertMainnetProposalCreationReady, assertMainnetProposalExecutionReady,
+  assertMainnetProposalFinalizationReady, mainnetPolicy5ProofContext,
+} from "./robinhood-mainnet-dao2-proof-core.mjs";
 
 const ROOT = process.cwd();
 const CHAIN_ID = ROBINHOOD_MAINNET_CHAIN_ID;
@@ -21,7 +26,12 @@ const POLICY_VERSION = 1n;
 const EXPLORER = "https://robinhoodchain.blockscout.com";
 const BASE_ARTIFACT = path.join(ROOT, "contracts/broadcast/DeployRobinhoodMainnetDemoStack.s.sol/4663/run-latest.json");
 const PHASE2_ARTIFACT = path.join(ROOT, "contracts/broadcast/DeployRobinhoodMainnetDaoPhase2.s.sol/4663/run-latest.json");
+const CIRCUIT_ARTIFACT = path.join(ROOT, "public/circuits/private_eligibility.json");
 const AUTH = {
+  "register-membership": "mainnet-dao2-register-membership",
+  "create-proposal": "mainnet-dao2-create-proposal",
+  "finalize-proposal": "mainnet-dao2-finalize-proposal",
+  "execute-proposal": "mainnet-dao2-execute-proposal",
   "issue-reputation": "mainnet-dao2-reputation",
   "issue-credential": "mainnet-dao2-credential",
   "unpause-reputation": "mainnet-dao2-unpause-reputation",
@@ -43,7 +53,11 @@ const govAbi = parseAbi([
   "function commitPeriod() view returns (uint64)", "function revealPeriod() view returns (uint64)",
   "function executionWindow() view returns (uint64)", "function quorum() view returns (uint256)",
   "function minimumReputation() view returns (uint256)", "function unpause()",
-  "function isActiveMember(address) view returns (bool)",
+  "function MAX_REPUTATION_THRESHOLD() view returns (uint256)",
+  "function nextProposalId() view returns (uint256)", "function isActiveMember(address) view returns (bool)",
+  "function registerMembership(bytes,uint256[9])", "function createProposal(string,uint256) returns (uint256)",
+  "function finalizeProposal(uint256)", "function executeProposal(uint256)",
+  "function proposalVoteCounts(uint256) view returns (uint256 forVotes,uint256 againstVotes,uint256 abstainVotes,uint256 committedVotes)",
   "function proposalState(uint256) view returns (uint8)",
   "function getProposal(uint256) view returns ((address proposer,string contentReference,uint64 createdAt,uint64 startAt,uint64 commitDeadline,uint64 revealDeadline,uint64 executionDeadline,uint256 proposedMinimumReputation,uint256 forVotes,uint256 againstVotes,uint256 abstainVotes,uint256 committedVotes,bool finalized,bool approved,bool executed))",
   "function voteNullifier(uint256,address) view returns (bytes32)",
@@ -52,12 +66,14 @@ const govAbi = parseAbi([
   "function ballotRevealed(uint256,bytes32) view returns (bool)",
   "function commitVote(uint256,bytes32) returns (bytes32)",
   "function revealVote(uint256,uint8,bytes32)",
+  "event ProposalCreated(uint256 indexed proposalId,address indexed proposer,uint64 startAt,uint64 commitDeadline,uint64 revealDeadline,uint64 executionDeadline,uint256 proposedMinimumReputation,string contentReference)",
 ]);
 const credentialAbi = parseAbi([
   "function ISSUER_ROLE() view returns (bytes32)", "function hasRole(bytes32,address) view returns (bool)",
   "function getCredential(address,uint256) view returns ((address wallet,bytes32 commitment,address issuer,uint64 issuedAt,uint64 expiresAt,uint64 version,bool revoked))",
   "function recordCredential(address,uint256,bytes32,uint64,uint64) returns (uint64)",
 ]);
+const verifierAbi = parseAbi(["function verifyProof(bytes proof,uint256[9] publicInputs) view returns (bool)"]);
 const eventsAbi = parseAbi([
   "event LiquiditySupplied(address indexed asset,address indexed supplier,uint256 amount,uint256 shares)",
   "event CollateralDeposited(address indexed asset,address indexed user,uint256 amount,uint256 balance)",
@@ -277,7 +293,7 @@ async function writeGuarded(ctx, command, actor, target, abi, functionName, args
   assert.ok(hash, "No transaction hash returned.");
   const receipt = await ctx.client.waitForTransactionReceipt({ hash });
   assert.equal(receipt.status, "success", "Transaction receipt failed: " + hash);
-  assert.equal(await confirm(), true, "Transaction receipt succeeded but post-state check failed.");
+  assert.equal(await confirm(receipt), true, "Transaction receipt succeeded but post-state check failed.");
   console.log("CONFIRMED " + hash + "\n" + EXPLORER + "/tx/" + hash);
 }
 
@@ -294,12 +310,50 @@ async function showStatus(wallet) {
   if (!wallet) return;
   assert.ok(isAddress(wallet), "Invalid wallet.");
   const address = getAddress(wallet);
-  const [claim, active] = await Promise.all([
+  const [claim, active, member] = await Promise.all([
     ctx.client.readContract({ address: ctx.reputation, abi: repAbi, functionName: "getClaim", args: [address] }),
     ctx.client.readContract({ address: ctx.reputation, abi: repAbi, functionName: "isActiveClaim", args: [address] }),
+    ctx.client.readContract({ address: ctx.governance, abi: govAbi, functionName: "isActiveMember", args: [address] }),
   ]);
   const credential = await ctx.client.readContract({ address: contracts.credentialRegistry, abi: credentialAbi, functionName: "getCredential", args: [address, POLICY_ID] });
-  console.log("Wallet " + address + " · Policy 5 version " + credential.version + " · active reputation claim " + active + " · claim version " + claim.credentialVersion);
+  console.log("Wallet " + address + " · Policy 5 version " + credential.version + " · active reputation claim " + active + " · claim version " + claim.credentialVersion + " · proof-backed DAO member " + member);
+}
+
+async function buildMainnetPolicy5Proof(witnessFile) {
+  const witness = secureRead(witnessFile, parseDemoCredentialWitness);
+  assert.equal(witness.format, "robinhood-demo-credential-v1", "Expected a private Mainnet-domain credential witness.");
+  assert.equal(witness.policyId, Number(POLICY_ID), "DAO Phase 2 requires a Policy 5 witness.");
+  const ctx = await getContext(true), wallet = getAddress(witness.wallet);
+  const [block, credential, claim, activeClaim, threshold, credentialIssuerRole, claimIssuerRole] = await Promise.all([
+    ctx.client.getBlock({ blockTag: "latest" }),
+    ctx.client.readContract({ address: contracts.credentialRegistry, abi: credentialAbi, functionName: "getCredential", args: [wallet, POLICY_ID] }),
+    ctx.client.readContract({ address: ctx.reputation, abi: repAbi, functionName: "getClaim", args: [wallet] }),
+    ctx.client.readContract({ address: ctx.reputation, abi: repAbi, functionName: "isActiveClaim", args: [wallet] }),
+    ctx.client.readContract({ address: ctx.governance, abi: govAbi, functionName: "minimumReputation" }),
+    ctx.client.readContract({ address: contracts.credentialRegistry, abi: credentialAbi, functionName: "ISSUER_ROLE" }),
+    ctx.client.readContract({ address: ctx.reputation, abi: repAbi, functionName: "REPUTATION_ISSUER_ROLE" }),
+  ]);
+  const [credentialIssuerActive, claimIssuerActive] = await Promise.all([
+    ctx.client.readContract({ address: contracts.credentialRegistry, abi: credentialAbi, functionName: "hasRole", args: [credentialIssuerRole, credential.issuer] }),
+    ctx.client.readContract({ address: ctx.reputation, abi: repAbi, functionName: "hasRole", args: [claimIssuerRole, claim.issuer] }),
+  ]);
+  assert.equal(credentialIssuerActive, true, "Policy 5 credential issuer is no longer authorized by the registry.");
+  assert.equal(claimIssuerActive, true, "Reputation claim issuer is no longer authorized.");
+  const proofContext = mainnetPolicy5ProofContext({ witness, wallet, credential, claim, activeClaim, threshold, now: block.timestamp, governance: ctx.governance, chainId: CHAIN_ID });
+  const expectedCommitment = await computeEligibilityCommitment({
+    subject: wallet, privateValue: witness.privateValue, salt: witness.salt,
+    policyId: POLICY_ID, policyVersion: POLICY_VERSION, threshold,
+    credentialVersion: credential.version, expiresAt: credential.expiresAt,
+    chainId: BigInt(CHAIN_ID), vault: ctx.governance,
+  });
+  assert.equal(expectedCommitment.toLowerCase(), witness.commitment.toLowerCase(), "Policy 5 witness does not open the commitment stored on-chain.");
+  assert.ok(fs.existsSync(CIRCUIT_ARTIFACT), "Missing checked-in Noir eligibility circuit artifact.");
+  const circuit = JSON.parse(fs.readFileSync(CIRCUIT_ARTIFACT, "utf8"));
+  const generated = await generateEligibilityProofFromArtifact(witness, proofContext, circuit, (stage) => console.log("Proof: " + stage));
+  assert.equal(generated.localVerification, "verified", "Local Barretenberg verification failed.");
+  const accepted = await ctx.client.readContract({ address: contracts.verifierAdapter, abi: verifierAbi, functionName: "verifyProof", args: [generated.proof, [...generated.publicInputs]] });
+  assert.equal(accepted, true, "The deployed Mainnet verifier adapter rejected this participant's Policy 5 proof.");
+  return { ctx, wallet, proof: generated };
 }
 
 async function main() {
@@ -313,10 +367,12 @@ async function main() {
     else if (arg.startsWith("--account-alias=")) options.accountAlias = arg.split("=")[1];
     else if (arg === "--voter-address") options.voterAddress = process.argv[++i];
     else if (arg.startsWith("--voter-address=")) options.voterAddress = arg.split("=")[1];
+    else if (arg === "--proposer-address") options.proposerAddress = process.argv[++i];
+    else if (arg.startsWith("--proposer-address=")) options.proposerAddress = arg.split("=")[1];
     else positional.push(arg);
   }
   if (command === "help" || command === "--help") {
-    console.log("Read-only: bun run robinhood:mainnet:dao2:operator status [wallet] | evidence <wallet> [output.json] | prepare-membership <wallet> <days> <witness.json>\nSimulated by default: issue-reputation <witness> <evidence> | issue-credential <witness> | unpause reputation|governance | commit-vote <id> <against|for|abstain> <ballot.json> --voter-address <address> | reveal-vote <ballot.json>. Writes require --execute, exact authorization, encrypted alias, and interactive typed confirmation. Commit/reveal secrets stay in mode-0600 files. Votes are hidden only until reveal, not anonymous.");
+    console.log("Read-only: status [wallet] | evidence <wallet> [output.json] | prepare-membership <wallet> <days> <witness.json> | proof <policy5-witness.json> | proposal <id>\nSimulated by default: register-membership <witness> | create-proposal <reference> <min-reputation> --proposer-address <address> | commit-vote <id> <against|for|abstain> <ballot.json> --voter-address <address> | reveal-vote <ballot.json> --voter-address <address> | finalize-proposal <id> | execute-proposal <id> | issue-reputation <witness> <evidence> | issue-credential <witness> | unpause reputation|governance. Writes require --execute, operation-specific authorization, an encrypted alias matching the signer, and typed confirmation. Commit/reveal secrets stay in mode-0600 files. Votes are hidden only until reveal, not anonymous. `proof` uses the selected real witness, on-chain credential/claim readbacks, local Barretenberg verification, and the deployed Mainnet adapter; it never broadcasts.");
     return;
   }
   if (command === "status") return showStatus(positional[0]);
@@ -352,6 +408,107 @@ async function main() {
     const witnessPath = writePrivate(positional[2], witness);
     const evidencePath = writePrivate(positional[2] + ".evidence.json", { ...result.body, evidenceHash: result.evidenceHash });
     console.log("Prepared Mainnet Policy 5 witness for " + wallet + " · version " + version + ".\nWitness: " + witnessPath + "\nEvidence: " + evidencePath + "\nPrivate score and salt were not printed.");
+    return;
+  }
+  if (command === "proof") {
+    assert.ok(positional[0], "Use proof <private-policy5-witness.json>.");
+    const { ctx, wallet } = await buildMainnetPolicy5Proof(positional[0]);
+    console.log(`Policy 5 proof VERIFIED · wallet ${wallet} · chain 4663 · governance ${ctx.governance} · local verifier and deployed adapter accepted (read-only). Proof bytes and private witness values were not printed.`);
+    return;
+  }
+  if (command === "register-membership") {
+    assert.ok(positional[0], "Use register-membership <private-policy5-witness.json>.");
+    const { ctx, wallet, proof } = await buildMainnetPolicy5Proof(positional[0]);
+    assert.equal(await ctx.client.readContract({ address: ctx.governance, abi: govAbi, functionName: "isActiveMember", args: [wallet] }), false, "Wallet is already an active member; refusing duplicate registration.");
+    await writeGuarded(ctx, command, wallet, ctx.governance, govAbi, "registerMembership", [proof.proof, [...proof.publicInputs]], options,
+      async () => ctx.client.readContract({ address: ctx.governance, abi: govAbi, functionName: "isActiveMember", args: [wallet] }));
+    return;
+  }
+  if (command === "proposal") {
+    const proposalId = BigInt(positional[0] ?? "0");
+    assert.ok(proposalId > 0n, "Use proposal <positive-id>.");
+    const ctx = await getContext(true);
+    const [proposal, state, votes] = await Promise.all([
+      ctx.client.readContract({ address: ctx.governance, abi: govAbi, functionName: "getProposal", args: [proposalId] }),
+      ctx.client.readContract({ address: ctx.governance, abi: govAbi, functionName: "proposalState", args: [proposalId] }),
+      ctx.client.readContract({ address: ctx.governance, abi: govAbi, functionName: "proposalVoteCounts", args: [proposalId] }),
+    ]);
+    const states = ["None", "Pending", "Commit", "Reveal", "Succeeded", "Rejected", "Expired", "Executed"];
+    console.log(JSON.stringify({ chainId: CHAIN_ID, governance: ctx.governance, proposalId: proposalId.toString(), proposer: proposal.proposer,
+      contentReference: proposal.contentReference, state: states[Number(state)] ?? `Unknown(${state})`, createdAt: proposal.createdAt.toString(),
+      startAt: proposal.startAt.toString(), commitDeadline: proposal.commitDeadline.toString(), revealDeadline: proposal.revealDeadline.toString(),
+      executionDeadline: proposal.executionDeadline.toString(), minimumReputation: proposal.proposedMinimumReputation.toString(),
+      votes: { for: votes[0].toString(), against: votes[1].toString(), abstain: votes[2].toString(), committed: votes[3].toString() },
+      finalized: proposal.finalized, approved: proposal.approved, executed: proposal.executed }, null, 2));
+    return;
+  }
+  if (command === "create-proposal") {
+    assert.ok(positional[0] && positional[0].length <= 512, "Use create-proposal <content-reference<=512 chars> <minimum-reputation> --proposer-address <address>.");
+    const proposedMinimumReputation = BigInt(positional[1] ?? "0");
+    const proposerValue = options.proposerAddress ?? process.env.RH_MAINNET_DEMO_PARTICIPANT_A_ADDRESS;
+    assert.ok(proposerValue && isAddress(proposerValue), "Supply --proposer-address for the member that will propose.");
+    const proposer = getAddress(proposerValue), ctx = await getContext(true);
+    const [paused, member, maxThreshold] = await Promise.all([
+      ctx.client.readContract({ address: ctx.governance, abi: govAbi, functionName: "paused" }),
+      ctx.client.readContract({ address: ctx.governance, abi: govAbi, functionName: "isActiveMember", args: [proposer] }),
+      ctx.client.readContract({ address: ctx.governance, abi: govAbi, functionName: "MAX_REPUTATION_THRESHOLD" }),
+    ]);
+    assertMainnetProposalCreationReady({ paused, activeMember: member, maximumReputation: maxThreshold, proposedMinimumReputation });
+    let created;
+    await writeGuarded(ctx, command, proposer, ctx.governance, govAbi, "createProposal", [positional[0], proposedMinimumReputation], options,
+      async (receipt) => {
+        if (!receipt) return true;
+        let args;
+        for (const log of receipt.logs) {
+          if (log.address.toLowerCase() !== ctx.governance.toLowerCase()) continue;
+          try {
+            const decoded = decodeEventLog({ abi: govAbi, topics: log.topics, data: log.data, strict: true });
+            if (decoded.eventName === "ProposalCreated") { args = decoded.args; break; }
+          } catch { /* other Governance event */ }
+        }
+        assert.ok(args, "Confirmed creation receipt has no ProposalCreated event from the configured Governance contract.");
+        const proposalId = BigInt(args.proposalId);
+        const proposal = await ctx.client.readContract({ address: ctx.governance, abi: govAbi, functionName: "getProposal", args: [proposalId] });
+        assert.equal(proposal.proposer.toLowerCase(), proposer.toLowerCase(), "Created proposal proposer differs from signer.");
+        assert.equal(proposal.contentReference, positional[0], "Created proposal reference differs from the simulated request.");
+        assert.equal(proposal.proposedMinimumReputation, proposedMinimumReputation, "Created proposal parameter differs from the simulated request.");
+        created = { proposalId, proposal };
+        return true;
+      });
+    if (created) console.log(`Confirmed Proposal #${created.proposalId} · createdAt ${created.proposal.createdAt} · startAt ${created.proposal.startAt} · commit deadline ${created.proposal.commitDeadline} · reveal deadline ${created.proposal.revealDeadline}`);
+    return;
+  }
+  if (command === "finalize-proposal") {
+    const proposalId = BigInt(positional[0] ?? "0");
+    assert.ok(proposalId > 0n, "Use finalize-proposal <positive-id>.");
+    const ctx = await getContext(true), proposal = await ctx.client.readContract({ address: ctx.governance, abi: govAbi, functionName: "getProposal", args: [proposalId] });
+    assertMainnetProposalFinalizationReady({ finalized: proposal.finalized, now: (await ctx.client.getBlock({ blockTag: "latest" })).timestamp, revealDeadline: proposal.revealDeadline });
+    const actor = requiredAddress("RH_MAINNET_ADMIN_ADDRESS");
+    await writeGuarded(ctx, command, actor, ctx.governance, govAbi, "finalizeProposal", [proposalId], options,
+      async () => (await ctx.client.readContract({ address: ctx.governance, abi: govAbi, functionName: "getProposal", args: [proposalId] })).finalized);
+    if (options.execute) {
+      const final = await ctx.client.readContract({ address: ctx.governance, abi: govAbi, functionName: "getProposal", args: [proposalId] });
+      console.log(`Finalized Proposal #${proposalId} · approved ${final.approved} · for ${final.forVotes} · against ${final.againstVotes} · abstain ${final.abstainVotes}`);
+    }
+    return;
+  }
+  if (command === "execute-proposal") {
+    const proposalId = BigInt(positional[0] ?? "0");
+    assert.ok(proposalId > 0n, "Use execute-proposal <positive-id>.");
+    const ctx = await getContext(true), [proposal, paused, state] = await Promise.all([
+      ctx.client.readContract({ address: ctx.governance, abi: govAbi, functionName: "getProposal", args: [proposalId] }),
+      ctx.client.readContract({ address: ctx.governance, abi: govAbi, functionName: "paused" }),
+      ctx.client.readContract({ address: ctx.governance, abi: govAbi, functionName: "proposalState", args: [proposalId] }),
+    ]);
+    assertMainnetProposalExecutionReady({ paused, finalized: proposal.finalized, approved: proposal.approved, proposalState: state });
+    const actor = requiredAddress("RH_MAINNET_ADMIN_ADDRESS");
+    await writeGuarded(ctx, command, actor, ctx.governance, govAbi, "executeProposal", [proposalId], options,
+      async () => {
+        const after = await ctx.client.readContract({ address: ctx.governance, abi: govAbi, functionName: "getProposal", args: [proposalId] });
+        const nextMinimum = await ctx.client.readContract({ address: ctx.governance, abi: govAbi, functionName: "minimumReputation" });
+        return after.executed && nextMinimum === proposal.proposedMinimumReputation;
+      });
+    if (options.execute) console.log(`Executed Proposal #${proposalId} · minimum reputation is now ${proposal.proposedMinimumReputation}`);
     return;
   }
   if (command === "issue-reputation") {

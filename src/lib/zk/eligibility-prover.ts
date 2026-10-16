@@ -153,6 +153,18 @@ export async function generateEligibilityProofFromArtifact(
   }
 }
 
+/** Warm and verify the same Barretenberg 5.2.1 WASM CRS/SRS cache used by the local operator prover. */
+export async function initializeEligibilityProverSrs(onProgress?: ProverProgress): Promise<void> {
+  const bbModule = await import("@aztec/bb.js");
+  const api = await bbModule.Barretenberg.new({
+    backend: bbModule.BackendType.Wasm,
+    threads: 1,
+    srsSize: 2 ** 17,
+    logger: onProgress ? (message: string) => onProgress(`Barretenberg: ${message}`) : undefined,
+  });
+  await api.destroy();
+}
+
 async function createEligibilityProof(
   witness: DemoCredentialWitness,
   context: PublicProofInputs,
