@@ -3,13 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useAccount } from "wagmi";
 import { appEnv } from "@/lib/config/env";
 import { BrandLogo } from "@/components/brand-logo";
+import { useProtocolNetworkSelection } from "@/components/protocol-network-selection";
 import { WalletControl } from "@/components/wallet-control";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
-import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
-import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo";
+import { supportedProtocolChains } from "@/lib/config/network-registry";
 
 /* The application bar: its own sections, a way back to the website, the network and the wallet. The public
    website (the landing) has its own bar with the introductions and "Launch App". */
@@ -20,10 +19,8 @@ const APP_LINKS = [
 
 export function SiteHeader() {
   const pathname = usePathname();
-  const activeAccount = useAccount();
-  const headerChainId = pathname === "/dao" && activeAccount.chainId === ROBINHOOD_MAINNET_CHAIN_ID
-    ? ROBINHOOD_MAINNET_CHAIN_ID
-    : ROBINHOOD_TESTNET_CHAIN_ID;
+  const { selectedChainId, selectChain } = useProtocolNetworkSelection();
+  const headerChainId = selectedChainId;
   const wallet = useWalletNetwork(headerChainId);
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -34,7 +31,7 @@ export function SiteHeader() {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setMenuOpen(false);
     };
-    const onResize = () => { if (window.innerWidth >= 960) setMenuOpen(false); };
+    const onResize = () => { if (window.innerWidth >= 1380) setMenuOpen(false); };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("keydown", onKeyDown);
@@ -48,9 +45,28 @@ export function SiteHeader() {
 
   if (pathname === "/") return null;
   const walletState = wallet.state;
-  const networkName = headerChainId === ROBINHOOD_MAINNET_CHAIN_ID ? "Robinhood Mainnet" : "Robinhood Testnet";
-  const networkLabel = headerChainId === ROBINHOOD_MAINNET_CHAIN_ID ? "Mainnet" : "Testnet";
-  const networkText = walletState === "wrong-network" ? `Switch to ${networkName}` : networkName;
+  const selectedNetwork = supportedProtocolChains.find((chain) => chain.id === headerChainId);
+  const activeNetwork = supportedProtocolChains.find((chain) => chain.id === wallet.chainId);
+  const networkName = selectedNetwork?.name ?? "Robinhood network";
+  const connectedNetwork = wallet.isConnected
+    ? `${activeNetwork?.name ?? "Unsupported network"}${wallet.chainId === undefined ? "" : ` · chain ${wallet.chainId}`}`
+    : "Wallet not connected";
+
+  function networkPicker(className: string) {
+    return (
+      <label className={className}>
+        <span className="visually-hidden">Select transaction network</span>
+        <select
+          aria-label="Select transaction network"
+          value={headerChainId}
+          onChange={(event) => selectChain(Number(event.currentTarget.value) as typeof headerChainId)}
+        >
+          <option value={4663}>Mainnet — Deployed · 4663</option>
+          <option value={46630}>Testnet — Interactive · 46630</option>
+        </select>
+      </label>
+    );
+  }
 
   return (
     <header className="site-header site-header--app" data-scrolled={scrolled}>
@@ -69,6 +85,10 @@ export function SiteHeader() {
           </ul>
         </nav>
         <div className="site-header__actions">
+          {networkPicker("site-header__network-picker site-header__network-picker--desktop")}
+          <span className="site-header__current-chain" title={`Wallet network: ${connectedNetwork}`} aria-live="polite">
+            {wallet.isConnected ? `Wallet · ${wallet.chainId ?? "?"}` : "Wallet disconnected"}
+          </span>
           <button
             className="site-header__social"
             type="button"
@@ -80,11 +100,6 @@ export function SiteHeader() {
               <path fill="currentColor" d="M18.9 2H22l-6.8 7.8L23.2 22h-6.3L12 14.6 5.6 22H2.4l7.3-8.4L1.9 2h6.5l4.5 6.9L18.9 2Zm-1.1 18h1.7L7.4 3.9H5.6L17.8 20Z" />
             </svg>
           </button>
-          <span className="site-header__net">
-            <span className="net-pill" title={`${networkText}, expected chain ID ${headerChainId}`}>
-              <i className="net-pill__dot" aria-hidden="true" /><b>{networkText}</b><i>{networkLabel}</i>
-            </span>
-          </span>
           <WalletControl expectedChainId={headerChainId} showRecoveryAction />
           <button
             className="menu-toggle"
@@ -97,6 +112,12 @@ export function SiteHeader() {
         </div>
       </div>
       <div className="mobile-nav" id="mobile-nav" hidden={!menuOpen}>
+        <div className="mobile-nav__network">
+          <p className="small muted">Transaction network · {networkName} · chain {headerChainId}</p>
+          {networkPicker("site-header__network-picker site-header__network-picker--mobile")}
+          <p className="small muted" aria-live="polite">Wallet network: {connectedNetwork}</p>
+          <WalletControl expectedChainId={headerChainId} showRecoveryAction />
+        </div>
         <nav aria-label="Primary mobile">
           <ul>
             {APP_LINKS.map(([key, label, href]) => (
@@ -105,7 +126,6 @@ export function SiteHeader() {
             <li><Link href="/" onClick={() => setMenuOpen(false)}><span>← Website</span></Link></li>
           </ul>
         </nav>
-        <div className="mobile-nav__net"><span className="net-pill"><i className="net-pill__dot" aria-hidden="true" /><b>{networkText}</b><i>{networkLabel}</i></span></div>
       </div>
     </header>
   );

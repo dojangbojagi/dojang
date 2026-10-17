@@ -58,7 +58,7 @@ function waitForWagmiChain(config: ReturnType<typeof useConfig>, connectorUid: s
       stopWatching?.();
       resolve(value);
     };
-    const timeout = setTimeout(() => finish(), 1_500);
+    const timeout = setTimeout(() => finish(), 8_000);
     stopWatching = watchAccount(config, {
       onChange(current) {
         if (current.isConnected && current.connector?.uid === connectorUid && current.chainId === chainId) {
@@ -103,10 +103,12 @@ function describeSwitchError(error: unknown, chainId: number, connectorName?: st
     || detail.includes("unknown chain") || detail.includes("chain not added") || detail.includes("not supported")
     || detail.includes("switch chain not supported") || detail.includes("method not found");
   if (connectorName?.toLowerCase().includes("phantom") && unsupportedChain) {
-    return "Phantom reported that Robinhood Testnet (chain 46630) is unsupported. Choose MetaMask or Rabby from the wallet selector, then switch to Robinhood Testnet.";
+    const target = supportedProtocolChains.find((chain) => chain.id === chainId);
+    return `${connectorName} reported that ${target?.name ?? `chain ${chainId}`} is unsupported. Choose a compatible EVM wallet such as MetaMask or Rabby from the wallet selector, then retry.`;
   }
   if (codes.includes(4902) || detail.includes("unknown chain") || detail.includes("chain not added")) {
-    return `The selected wallet could not add chain ${chainId}. Add Robinhood Testnet in that wallet, then retry.`;
+    const target = supportedProtocolChains.find((chain) => chain.id === chainId);
+    return `The selected wallet could not add ${target?.name ?? `chain ${chainId}`}. Add that network in the wallet, then retry.`;
   }
   if (codes.includes(4901)) {
     return `${connectorName ?? "The selected wallet"} could not connect to chain ${chainId}. Select the chain manually in the wallet or choose another EVM wallet.`;
@@ -206,7 +208,7 @@ export function useWalletNetwork(expectedChainId: ProtocolChainId = ROBINHOOD_TE
         throw new Error("Selected wallet connector changed during switch.");
       }
       const activeChainId = await connector.getChainId();
-      if (activeChainId !== undefined && activeChainId !== chainId) {
+      if (activeChainId !== chainId) {
         throw new Error(`Wallet stayed on chain ${activeChainId} after the switch request.`);
       }
       const accountReadback = await waitForWagmiChain(config, connector.uid, chainId);

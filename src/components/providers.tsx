@@ -12,6 +12,7 @@ import { robinhoodMainnetDemoChain } from "@/lib/config/robinhood-mainnet-demo";
 import { giwaSepolia } from "@/lib/config/chain";
 import { robinhoodTestnet } from "@/lib/config/robinhood-testnet";
 import { DemoWitnessProvider } from "@/components/witness-context";
+import { ProtocolNetworkSelectionProvider } from "@/components/protocol-network-selection";
 import { hasExplicitEvmWalletProvider, type ExplicitEvmWallet } from "@/lib/wallet/provider-detection";
 
 type InjectedTarget = ExplicitEvmWallet;
@@ -87,7 +88,9 @@ export function Providers({ children }: { children: ReactNode }) {
     <WagmiProvider config={wagmiConfig} reconnectOnMount={false}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider theme={darkTheme()}>
-          <DemoWitnessProvider>{children}</DemoWitnessProvider>
+          <ProtocolNetworkSelectionProvider>
+            <DemoWitnessProvider>{children}</DemoWitnessProvider>
+          </ProtocolNetworkSelectionProvider>
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>

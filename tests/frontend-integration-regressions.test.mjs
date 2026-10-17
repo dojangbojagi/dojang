@@ -20,8 +20,30 @@ test("wallet choices detect installed identities and explain Phantom's unsupport
   expect(providers).toContain("installed: typeof window !== \"undefined\" && hasExplicitEvmWalletProvider");
   expect(providers).toContain("injected({ shimDisconnect: true, target })");
   expect(providers).not.toMatch(/window\.ethereum\s*=/);
-  expect(network).toContain("Phantom reported that Robinhood Testnet (chain 46630) is unsupported");
-  expect(network).toContain("Choose MetaMask or Rabby");
+  expect(network).toContain("const target = supportedProtocolChains.find((chain) => chain.id === chainId)");
+  expect(network).toContain("${connectorName} reported that ${target?.name ?? `chain ${chainId}`} is unsupported");
+  expect(network).toContain("Choose a compatible EVM wallet such as MetaMask or Rabby");
+});
+
+test("the selected Robinhood network is shared by the header and Mainnet-capable product flows", async () => {
+  const [header, provider, selection, lending, dao, bojagi, credentials] = await Promise.all([
+    readFile(new URL("../src/components/site-header.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/providers.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/protocol-network-selection.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/lending-v2/lending-v2-workspace.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/dao/dao-phase2-workspace.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/robinhood-bojagi-proof.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/robinhood-project-credential-status.tsx", import.meta.url), "utf8"),
+  ]);
+  expect(provider).toContain("<ProtocolNetworkSelectionProvider>");
+  expect(selection).toContain("localStorage.setItem(STORAGE_KEY, String(chainId))");
+  expect(header).toContain("Select transaction network");
+  expect(header).toContain("Mainnet — Deployed · 4663");
+  expect(header).toContain("Testnet — Interactive · 46630");
+  expect(lending).toContain("useProtocolNetworkSelection()");
+  expect(dao).toContain("useProtocolNetworkSelection()");
+  expect(bojagi).toContain("useLendingMarketV2(selectedChainId)");
+  expect(credentials).toContain("Policy {isMainnet ? \"5\" : \"4\"}");
 });
 
 test("primary Lending route only mounts Robinhood V2 and isolates legacy GIWA V1", async () => {

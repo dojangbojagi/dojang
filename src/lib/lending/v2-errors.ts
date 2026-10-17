@@ -63,7 +63,7 @@ const exactFailures: Array<[string[], LendingV2ErrorCategory, string]> = [
   [["wrongthreshold"], "eligibility", "The proof threshold does not match the V2 policy."],
   [["wrongcredentialversion"], "eligibility", "The credential changed after the proof was generated."],
   [["wrongexpiry"], "eligibility", "The proof expiry does not match the credential record."],
-  [["wrongchain"], "eligibility", "This proof is bound to a different chain than the connected demo testnet."],
+  [["wrongchain"], "eligibility", "This proof is bound to a different Robinhood network."],
   [["wronglendingpool"], "eligibility", "The proof is bound to a different Lending V2 pool."],
   [["invalidproof"], "eligibility", "The on-chain verifier rejected this proof."],
   [["liquidationclosefactorexceeded"], "liquidation", "The requested liquidation exceeds the reserve close-factor limit."],
@@ -75,7 +75,7 @@ const exactFailures: Array<[string[], LendingV2ErrorCategory, string]> = [
   [["insufficientallowance"], "allowance", "Approve the V2 pool to spend the required token amount first."],
   [["insufficientfunds"], "balance", "The wallet does not have enough token balance or network gas for this action."],
   [["enforcedpause"], "paused", "Risk-increasing Lending V2 operations are paused."],
-  [["unsupportedchain"], "configuration", "The V2 pool supports only GIWA Sepolia (91342) and Robinhood Chain Testnet (46630)."],
+  [["unsupportedchain"], "configuration", "The V2 pool supports only GIWA Sepolia (91342), Robinhood Testnet (46630), and the separately configured Robinhood Mainnet deployment (4663)."],
   [["accesscontrolunauthorizedaccount"], "configuration", "This wallet is not authorized for the requested administrative operation."],
   [["user rejected", "user denied"], "wallet", "The wallet request was rejected; no transaction was submitted."],
 ];
@@ -84,7 +84,7 @@ export function mapLendingV2Error(error: unknown): LendingV2Failure {
   const text = errorText(error);
   const normalized = text.toLowerCase().replaceAll("_", "");
   if (normalized.includes("estimated transaction fee") || normalized.includes("native balance covering")) {
-    return { category: "balance", code: "insufficient-native-gas", message: "The wallet does not have enough Robinhood Testnet ETH for the estimated fee plus transaction headroom." };
+    return { category: "balance", code: "insufficient-native-gas", message: "The wallet does not have enough Robinhood Chain ETH for the estimated fee plus transaction headroom." };
   }
   if (normalized.includes("approve the lending v2 pool")) {
     return { category: "allowance", code: "insufficient-allowance", message: "Approve the V2 pool to spend the required token amount first." };
@@ -101,7 +101,7 @@ export function mapLendingV2Error(error: unknown): LendingV2Failure {
     return { category: "unknown", code: "simulation-revert", message: "The contract simulation reverted. No transaction was submitted." };
   }
   if (normalized.includes("network") || normalized.includes("timeout") || normalized.includes("rpc")) {
-    return { category: "rpc", code: "rpc-error", message: "The configured testnet RPC request failed. No successful state change was confirmed." };
+    return { category: "rpc", code: "rpc-error", message: "The selected network RPC request failed. No successful state change was confirmed." };
   }
   return { category: "unknown", code: "unknown", message: text || "The Lending V2 action failed." };
 }

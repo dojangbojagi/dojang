@@ -6,22 +6,25 @@ import { WalletNetworkCard } from "@/components/wallet-network-card";
 import { useLendingMarketV2 } from "@/hooks/use-lending-market-v2";
 import { useLendingV2EligibilityProof } from "@/hooks/use-lending-v2-eligibility-proof";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
-import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
+import { useProtocolNetworkSelection } from "@/components/protocol-network-selection";
 import type { DemoCredentialWitness } from "@/lib/credential/witness";
 
 export function RobinhoodBojagiProof() {
-  const wallet = useWalletNetwork(ROBINHOOD_TESTNET_CHAIN_ID);
-  const market = useLendingMarketV2();
+  const { selectedChainId } = useProtocolNetworkSelection();
+  const wallet = useWalletNetwork(selectedChainId);
+  const market = useLendingMarketV2(selectedChainId);
   const [witness, setWitness] = useState<DemoCredentialWitness | null>(null);
-  const proof = useLendingV2EligibilityProof(witness ?? undefined);
+  const proof = useLendingV2EligibilityProof(witness ?? undefined, selectedChainId);
 
   useEffect(() => {
     if (witness && wallet.address?.toLowerCase() !== witness.wallet.toLowerCase()) setWitness(null);
   }, [wallet.address, witness]);
 
+  useEffect(() => setWitness(null), [selectedChainId]);
+
   return (
     <div className="protocol-stack">
-      <WalletNetworkCard expectedChainId={ROBINHOOD_TESTNET_CHAIN_ID} />
+      <WalletNetworkCard expectedChainId={selectedChainId} />
       <EligibilityCard market={market} proof={proof} witness={witness} onWitness={setWitness} />
     </div>
   );

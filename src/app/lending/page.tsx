@@ -9,10 +9,10 @@ export default function LendingPage() {
       page="lending"
       tone="vault"
       accent="gold"
-      status="Testnet · Lending V2"
+      status="Robinhood · Lending V2"
       glyph={{ shape: "rings", label: "Two linked rings: supplying and borrowing, joined by a proof.", caption: "Supply and borrow, linked by a proof", legend: ["public", "private"] }}
       title="Lending & borrowing."
-      lead="The interactive Robinhood Testnet journey covers supply, collateral, BOJAGI proof, borrow, repay and withdraw. Policy 3 proofs gate supply, collateral activation and borrow; amounts, positions and actions are public. Test tokens and synthetic prices only. Mainnet Lending remains paused."
+      lead="Supply, deposit collateral, prove private eligibility, borrow, repay and withdraw on the selected Robinhood network. Policy 3 proofs gate risk-increasing actions; amounts, positions and transactions are public. Mainnet uses allowlisted synthetic assets and is not public production lending."
     >
       <div className="protocol-section">
         <LendingExperience />

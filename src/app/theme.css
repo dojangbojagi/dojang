@@ -130,7 +130,16 @@ h4 { font-weight: 600; }
   transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 .site-header[data-scrolled="true"] { background: rgba(6, 4, 5, 0.95); border-bottom-color: var(--line); }
-.site-header__inner { position: relative; }
+.site-header__inner {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: clamp(0.5rem, 1.5vw, 1.25rem);
+}
+.site-header__inner > .brand { flex: 0 0 auto; min-width: 0; }
+.site-header__inner > .nav { flex: 0 1 auto; min-width: 0; margin-inline: auto; }
+.site-header__actions { flex: 0 0 auto; min-width: 0; flex-wrap: nowrap; }
 .site-header__social {
   display: grid;
   place-items: center;
@@ -158,7 +167,7 @@ h4 { font-weight: 600; }
 }
 
 /* the links sit in one floating pill, centred, as on the landing */
-.nav { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+.nav { position: static; transform: none; }
 .nav__list,
 .site-header[data-scrolled="true"] .nav__list {
   gap: 0.15rem;
@@ -170,7 +179,7 @@ h4 { font-weight: 600; }
   backdrop-filter: blur(16px) saturate(1.5);
 }
 .nav__link {
-  padding: 0.72rem 1.05rem;
+  padding: 0.66rem 0.78rem;
   color: var(--text);
   font-family: var(--font-display);
   font-size: 0.74rem;
@@ -194,20 +203,49 @@ h4 { font-weight: 600; }
 }
 .net-pill i { letter-spacing: 0.14em; }
 
+.site-header__network-picker { display: inline-flex; min-width: 0; }
+.site-header__network-picker select {
+  width: 13.5rem;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 2.7rem;
+  padding: 0.55rem 0.7rem;
+  color: var(--text);
+  background: rgba(21, 15, 18, 0.72);
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  font: 600 0.62rem/1.2 var(--font-mono);
+  letter-spacing: 0.025em;
+  text-overflow: ellipsis;
+}
+.site-header__network-picker select:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.site-header__current-chain { flex: 0 0 auto; color: var(--text-muted); font: 500 0.58rem/1.3 var(--font-mono); white-space: nowrap; }
+
 .menu-toggle { border-radius: 50%; background: rgba(21, 15, 18, 0.5); transition: border-color 0.3s ease; }
 .menu-toggle:hover { border-color: var(--line-strong); }
 .mobile-nav { background: rgba(6, 4, 5, 0.94); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); }
+.mobile-nav__network { display: grid; gap: 0.55rem; padding-bottom: 1rem; border-bottom: 1px solid var(--line-faint); }
+.mobile-nav__network p { margin: 0; }
+.site-header__network-picker--mobile { width: 100%; }
+.site-header__network-picker--mobile select { width: 100%; border-radius: var(--radius-sm); font-size: 0.7rem; }
+.site-header__network-picker--mobile + p { overflow-wrap: anywhere; }
 .mobile-nav a { font-family: var(--font-display); font-size: 1.15rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
 
-/* the network pill only has room beside six links on wide screens */
-@media (min-width: 1240px) { .site-header__net { display: none; } }
-@media (min-width: 1520px) { .site-header__net { display: inline-flex; } }
+/* Keep the centered desktop navigation between dedicated brand and action columns. */
+@media (min-width: 1380px) {
+  .nav { display: block; }
+  .menu-toggle, .mobile-nav { display: none; }
+}
 
-/* six links need more room than the prototype's 960px: use the menu until 1180px */
-@media (min-width: 960px) and (max-width: 1179px) {
+/* Six links and two wallet/network controls do not fit safely below this breakpoint. */
+@media (max-width: 1379px) {
   .nav { display: none; }
   .menu-toggle { display: inline-grid; }
   .mobile-nav:not([hidden]) { display: block; }
+}
+
+@media (max-width: 760px) {
+  .site-header__network-picker--desktop, .site-header__current-chain { display: none; }
 }
 
 /* phones: a two-line wordmark leaves room for the wallet button and the menu */
@@ -218,6 +256,13 @@ h4 { font-weight: 600; }
   .site-header__actions { gap: 0.45rem; }
   .site-header__social { width: 2.6rem; height: 2.6rem; }
   .menu-toggle { width: 2.6rem; height: 2.6rem; }
+  .site-header__network-picker--mobile select { max-width: 100%; }
+}
+
+@media (max-width: 390px) {
+  .site-header__social { display: none; }
+  .site-header__inner { gap: 0.4rem; }
+  .site-header__actions { gap: 0.4rem; }
 }
 
 /* ---- Buttons ------------------------------------------------------------ */

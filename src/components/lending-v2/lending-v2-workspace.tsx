@@ -19,9 +19,9 @@ import { WalletNetworkCard } from "@/components/wallet-network-card";
 import { useLendingMarketV2 } from "@/hooks/use-lending-market-v2";
 import { useLendingV2EligibilityProof } from "@/hooks/use-lending-v2-eligibility-proof";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
+import { useProtocolNetworkSelection } from "@/components/protocol-network-selection";
 import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
 import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo";
-import type { LendingV2ChainId } from "@/lib/lending/v2-network";
 import type { DemoCredentialWitness } from "@/lib/credential/witness";
 import { mapLendingV2Error } from "@/lib/lending/v2-errors";
 import { ProtocolError } from "@/lib/protocol/types";
@@ -64,7 +64,7 @@ function explain(error: unknown): string {
  * lending rules and never reports a transaction as done before the hook has confirmed it.
  */
 export function LendingV2Workspace() {
-  const [chainId, setChainId] = useState<LendingV2ChainId>(ROBINHOOD_TESTNET_CHAIN_ID);
+  const { selectedChainId: chainId, selectChain } = useProtocolNetworkSelection();
   const wallet = useWalletNetwork(chainId);
   const market = useLendingMarketV2(chainId);
   const [witness, setWitness] = useState<DemoCredentialWitness | null>(null);
@@ -175,11 +175,11 @@ export function LendingV2Workspace() {
     <div className="lend lendv2">
       <V2LimitationsNotice configured={market.state !== "unconfigured"} chainId={chainId} riskPaused={market.snapshot?.riskPaused} />
       <section className="protocol-actions" aria-label="Lending network">
-        <button className={`btn btn--${chainId === ROBINHOOD_TESTNET_CHAIN_ID ? "primary" : "secondary"} btn--sm`} type="button" aria-pressed={chainId === ROBINHOOD_TESTNET_CHAIN_ID} onClick={() => setChainId(ROBINHOOD_TESTNET_CHAIN_ID)}>
+        <button className={`btn btn--${chainId === ROBINHOOD_TESTNET_CHAIN_ID ? "primary" : "secondary"} btn--sm`} type="button" aria-pressed={chainId === ROBINHOOD_TESTNET_CHAIN_ID} onClick={() => selectChain(ROBINHOOD_TESTNET_CHAIN_ID)}>
           Robinhood Testnet · Interactive
         </button>
-        <button className={`btn btn--${chainId === ROBINHOOD_MAINNET_CHAIN_ID ? "primary" : "secondary"} btn--sm`} type="button" aria-pressed={chainId === ROBINHOOD_MAINNET_CHAIN_ID} onClick={() => setChainId(ROBINHOOD_MAINNET_CHAIN_ID)}>
-          Robinhood Mainnet · Controlled
+        <button className={`btn btn--${chainId === ROBINHOOD_MAINNET_CHAIN_ID ? "primary" : "secondary"} btn--sm`} type="button" aria-pressed={chainId === ROBINHOOD_MAINNET_CHAIN_ID} onClick={() => selectChain(ROBINHOOD_MAINNET_CHAIN_ID)}>
+          Robinhood Mainnet · Deployed
         </button>
       </section>
       <WalletNetworkCard expectedChainId={chainId} />

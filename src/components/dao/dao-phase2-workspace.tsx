@@ -5,6 +5,7 @@ import { WitnessUpload, type WitnessUploadStatus } from "@/components/lending-v2
 import { WalletControl } from "@/components/wallet-control";
 import { useRobinhoodDaoPhase2, type Phase2Vote } from "@/hooks/use-robinhood-dao-phase2";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
+import { useProtocolNetworkSelection } from "@/components/protocol-network-selection";
 import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
 import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo";
 import { getDaoPhase2ContractSet } from "@/lib/config/network-registry";
@@ -12,11 +13,6 @@ import { parseDemoCredentialWitness, type DemoCredentialWitness } from "@/lib/cr
 import { computeEligibilityCommitment } from "@/lib/zk/commitment";
 import { parsePhase2Ballot } from "@/lib/governance/phase2-ballot";
 import type { Phase2BallotSecret } from "@/lib/governance/phase2-types";
-import type { ProtocolChainId } from "@/hooks/use-wallet-network";
-
-const DEFAULT_DAO_PHASE2_CHAIN_ID = process.env.NODE_ENV === "production"
-  ? ROBINHOOD_MAINNET_CHAIN_ID
-  : ROBINHOOD_TESTNET_CHAIN_ID;
 
 function downloadBallot(ballot: Phase2BallotSecret) {
   const blob = new Blob([`${JSON.stringify(ballot, null, 2)}\n`], { type: "application/json" });
@@ -33,7 +29,7 @@ function formatTime(value?: bigint) {
 }
 
 export function DaoPhase2Workspace() {
-  const [selectedChainId, setSelectedChainId] = useState<ProtocolChainId>(DEFAULT_DAO_PHASE2_CHAIN_ID);
+  const { selectedChainId, selectChain } = useProtocolNetworkSelection();
   const wallet = useWalletNetwork(selectedChainId);
   const [selectedIdText, setSelectedIdText] = useState("");
   const selectedId = useMemo(() => /^[1-9][0-9]*$/.test(selectedIdText) ? BigInt(selectedIdText) : undefined, [selectedIdText]);
@@ -244,11 +240,11 @@ export function DaoPhase2Workspace() {
       </p>
 
       <div className="dao-phase2-network" role="group" aria-label="DAO Phase 2 network">
-        <button className={`btn btn--${isTestnet ? "primary" : "secondary"} btn--sm`} type="button" aria-pressed={isTestnet} onClick={() => setSelectedChainId(ROBINHOOD_TESTNET_CHAIN_ID)}>
+        <button className={`btn btn--${isTestnet ? "primary" : "secondary"} btn--sm`} type="button" aria-pressed={isTestnet} onClick={() => selectChain(ROBINHOOD_TESTNET_CHAIN_ID)}>
           Robinhood Testnet · Interactive
         </button>
-        <button className={`btn btn--${!isTestnet ? "primary" : "secondary"} btn--sm`} type="button" aria-pressed={!isTestnet} onClick={() => setSelectedChainId(ROBINHOOD_MAINNET_CHAIN_ID)}>
-          Robinhood Mainnet · Controlled Demo
+        <button className={`btn btn--${!isTestnet ? "primary" : "secondary"} btn--sm`} type="button" aria-pressed={!isTestnet} onClick={() => selectChain(ROBINHOOD_MAINNET_CHAIN_ID)}>
+          Robinhood Mainnet · Deployed
         </button>
         <WalletControl expectedChainId={selectedChainId} showRecoveryAction />
       </div>

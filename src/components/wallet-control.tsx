@@ -45,7 +45,7 @@ export function WalletControl({ expectedChainId, showRecoveryAction = false }: {
         const label = state === "connecting" ? "Connecting…"
           : state === "disconnected" ? "Connect Wallet"
             : state === "wrong-network" ? wallet.isSwitching ? "Switching…" : wallet.switchError ? "Try Network Switch Again" : `Switch to ${requiredChain?.name ?? "Required Network"}`
-              : account?.displayName ?? "Connected";
+              : wallet.address ? `${wallet.address.slice(0, 6)}…${wallet.address.slice(-4)}` : account?.displayName ?? "Connected";
         const accessibleLabel = networkDescription ? `${label}. ${networkDescription}` : label;
         const openWallet = () => {
           if (state === "disconnected" || state === "connecting") openConnectModal();
@@ -73,7 +73,7 @@ export function WalletControl({ expectedChainId, showRecoveryAction = false }: {
               onClick={openWallet}
               disabled={!mounted || (state === "wrong-network" && wallet.isSwitching)}
               aria-label={accessibleLabel}
-              title={`${wallet.connector?.name ? `Wallet: ${wallet.connector.name}. ` : ""}${wallet.switchError ?? networkDescription ?? label}`}
+              title={`${wallet.connector?.name ? `Wallet: ${wallet.connector.name}. ` : ""}${wallet.address ? `Connected address: ${wallet.address}. ` : ""}${wallet.switchError ?? networkDescription ?? label}`}
             >
               <span className="btn__dot" aria-hidden="true" />
               <span className="wl-full">{label}</span>
