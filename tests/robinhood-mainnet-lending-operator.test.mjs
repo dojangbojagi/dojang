@@ -15,6 +15,7 @@ import {
   isSplittableRangeError,
   normalizePriceBounds,
   normalizeReserveConfig,
+  shouldSkipOraclePriceWrite,
 } from "../scripts/robinhood-mainnet-lending-operator.mjs";
 
 const A = "0x1111111111111111111111111111111111111111";
@@ -130,6 +131,14 @@ describe("Robinhood Mainnet controlled Lending operator guards", () => {
     expect(() => assertFreshSyntheticPrice({ price: 0n, updatedAt: 990n, now: 1_000n, maxAge: 10n })).toThrow("not seeded");
     expect(() => assertFreshSyntheticPrice({ price: 1n, updatedAt: 989n, now: 1_000n, maxAge: 10n })).toThrow("stale");
     expect(() => assertFreshSyntheticPrice({ price: 1n, updatedAt: 1_001n, now: 1_000n, maxAge: 10n })).toThrow("future");
+  });
+
+  test("skips an unchanged synthetic oracle value only while its on-chain timestamp is fresh", () => {
+    const fresh = { currentPrice: 1_000n, updatedAt: 990n, requestedPrice: 1_000n, now: 1_000n, maxAge: 10n };
+    expect(shouldSkipOraclePriceWrite(fresh)).toBe(true);
+    expect(shouldSkipOraclePriceWrite({ ...fresh, updatedAt: 989n })).toBe(false);
+    expect(shouldSkipOraclePriceWrite({ ...fresh, updatedAt: 1_001n })).toBe(false);
+    expect(shouldSkipOraclePriceWrite({ ...fresh, requestedPrice: 1_001n })).toBe(false);
   });
 
   test("only permits activation after both wallets have active credentials, fresh prices, and allocations", () => {

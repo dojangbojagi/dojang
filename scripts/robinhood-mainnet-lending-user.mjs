@@ -15,6 +15,7 @@ import {
 } from "../src/lib/contracts/abis.ts";
 import { generateEligibilityProofFromArtifact, initializeEligibilityProverSrs } from "../src/lib/zk/eligibility-prover.ts";
 import { parseDemoCredentialWitness } from "../src/lib/credential/witness.ts";
+import { appendConfirmedMainnetCheckpoint } from "./mainnet-checkpoint.mjs";
 import { ROBINHOOD_MAINNET_CHAIN_ID, robinhoodMainnetDemoContracts as contracts } from "../src/lib/config/robinhood-mainnet-demo.ts";
 import {
   assertActiveCredential, assertParticipantAddress, assertPositiveBaseUnits,
@@ -338,6 +339,8 @@ async function writeParticipant(ctx, action, wallet, alias, target, abi, functio
     catch (error) { lastReadError = error; }
   }
   assert.ok(confirmed, `Receipt ${hash} succeeded, but post-state readback was not confirmed${lastReadError ? ` (${lastReadError.name})` : ""}.`);
+  appendConfirmedMainnetCheckpoint({ chainId: CHAIN_ID, workflow: `lending-wallet-${action}`.slice(0, 48), operation: action,
+    actor: wallet, target, transactionHash: hash, blockNumber: receipt.blockNumber, postStateConfirmed: true });
   console.log(`CONFIRMED ${hash}\n${EXPLORER}/tx/${hash}`);
 }
 

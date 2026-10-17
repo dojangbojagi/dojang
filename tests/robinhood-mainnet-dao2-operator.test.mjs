@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   assertCanonicalMainnetRange,
+  assertCanonicalMainnetWrite,
   assertMainnetCommitReady,
   assertMainnetRevealReady,
   isSplittableLogRangeError,
@@ -32,6 +33,24 @@ describe("Robinhood Mainnet DAO Phase 2 operator", () => {
     expect(() => assertCanonicalMainnetRange(100, 121, 120, 122)).toThrow("finalized block");
     expect(() => assertCanonicalMainnetRange(100, 121, 130, 121)).toThrow("ArbSys L2 head");
     expect(() => assertCanonicalMainnetRange(122, 121, 130, 131)).toThrow("start block");
+  });
+
+  test("validates DAO write receipts against canonical chain, signer, target, and calldata", () => {
+    const hash = `0x${"ab".repeat(32)}`;
+    const actor = "0x1111111111111111111111111111111111111111";
+    const target = "0x2222222222222222222222222222222222222222";
+    const data = "0x1234";
+    const evidence = {
+      hash, actor, target, data,
+      receipt: { status: "success", transactionHash: hash },
+      transaction: { hash, chainId: 4663, from: actor, to: target, input: data },
+    };
+    expect(() => assertCanonicalMainnetWrite(evidence)).not.toThrow();
+    expect(() => assertCanonicalMainnetWrite({ ...evidence, transaction: { ...evidence.transaction, chainId: 91342 } })).toThrow("not on Robinhood Mainnet");
+    expect(() => assertCanonicalMainnetWrite({ ...evidence, transaction: { ...evidence.transaction, from: target } })).toThrow("sender differs");
+    expect(() => assertCanonicalMainnetWrite({ ...evidence, transaction: { ...evidence.transaction, to: actor } })).toThrow("target differs");
+    expect(() => assertCanonicalMainnetWrite({ ...evidence, transaction: { ...evidence.transaction, input: "0xabcd" } })).toThrow("calldata differs");
+    expect(() => assertCanonicalMainnetWrite({ ...evidence, receipt: { ...evidence.receipt, status: "reverted" } })).toThrow("receipt failed");
   });
 
   test("splits only provider log-range limitations and propagates transport failures", () => {

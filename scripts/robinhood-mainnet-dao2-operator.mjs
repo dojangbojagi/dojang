@@ -12,6 +12,7 @@ import {
 import { computeEligibilityCommitment, generateFieldSalt } from "../src/lib/zk/commitment.ts";
 import { generateEligibilityProofFromArtifact } from "../src/lib/zk/eligibility-prover.ts";
 import { parseDemoCredentialWitness } from "../src/lib/credential/witness.ts";
+import { appendConfirmedMainnetCheckpoint } from "./mainnet-checkpoint.mjs";
 import { parsePhase2Ballot } from "../src/lib/governance/phase2-ballot.ts";
 import { robinhoodMainnetDemoContracts as contracts, ROBINHOOD_MAINNET_CHAIN_ID } from "../src/lib/config/robinhood-mainnet-demo.ts";
 import {
@@ -94,6 +95,17 @@ export function assertCanonicalMainnetRange(from, to, finalized, arbL2Head) {
   assert.ok(start <= end, "Evidence start block is after its end block.");
   assert.ok(end <= BigInt(finalized), "Evidence is newer than the RPC finalized block.");
   assert.ok(end < BigInt(arbL2Head), "Evidence end must be strictly below the deployed ArbSys L2 head.");
+}
+
+export function assertCanonicalMainnetWrite({ hash, actor, target, data, receipt, transaction }) {
+  const expectedHash = String(hash).toLowerCase();
+  assert.equal(receipt.status, "success", "Mainnet transaction receipt failed: " + hash);
+  assert.equal(String(receipt.transactionHash).toLowerCase(), expectedHash, "Canonical receipt hash differs from submitted transaction.");
+  assert.equal(String(transaction.hash).toLowerCase(), expectedHash, "Canonical transaction hash differs from submitted transaction.");
+  assert.equal(Number(transaction.chainId), CHAIN_ID, "DAO transaction is not on Robinhood Mainnet chain 4663.");
+  assert.equal(getAddress(transaction.from).toLowerCase(), getAddress(actor).toLowerCase(), "Canonical transaction sender differs from the authorized actor.");
+  assert.equal(getAddress(transaction.to).toLowerCase(), getAddress(target).toLowerCase(), "Canonical transaction target differs from the simulated contract.");
+  assert.equal(String(transaction.input).toLowerCase(), String(data).toLowerCase(), "Canonical transaction calldata differs from the simulated operation.");
 }
 
 export function isSplittableLogRangeError(error) {
@@ -291,9 +303,14 @@ async function writeGuarded(ctx, command, actor, target, abi, functionName, args
   assert.equal(exit, 0, "cast send failed before returning a transaction hash.");
   const hash = output.match(/0x[a-fA-F0-9]{64}/)?.[0];
   assert.ok(hash, "No transaction hash returned.");
-  const receipt = await ctx.client.waitForTransactionReceipt({ hash });
-  assert.equal(receipt.status, "success", "Transaction receipt failed: " + hash);
+  const [receipt, transaction] = await Promise.all([
+    ctx.client.waitForTransactionReceipt({ hash }),
+    ctx.client.getTransaction({ hash }),
+  ]);
+  assertCanonicalMainnetWrite({ hash, actor, target, data, receipt, transaction });
   assert.equal(await confirm(receipt), true, "Transaction receipt succeeded but post-state check failed.");
+  appendConfirmedMainnetCheckpoint({ chainId: CHAIN_ID, workflow: "dao-phase2", operation: command,
+    actor, target, transactionHash: hash, blockNumber: receipt.blockNumber, postStateConfirmed: true });
   console.log("CONFIRMED " + hash + "\n" + EXPLORER + "/tx/" + hash);
 }
 

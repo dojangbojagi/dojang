@@ -11,6 +11,7 @@ import {
 import { computeEligibilityCommitment, generateFieldSalt } from "../src/lib/zk/commitment.ts";
 import { parseDemoCredentialWitness } from "../src/lib/credential/witness.ts";
 import { robinhoodMainnetDemoContracts as contracts, ROBINHOOD_MAINNET_CHAIN_ID as CHAIN_ID } from "../src/lib/config/robinhood-mainnet-demo.ts";
+import { appendConfirmedMainnetCheckpoint } from "./mainnet-checkpoint.mjs";
 
 const ROOT = process.cwd();
 const ARTIFACT = path.join(ROOT, "contracts/broadcast/DeployRobinhoodMainnetDemoStack.s.sol/4663/run-latest.json");
@@ -166,6 +167,16 @@ export function assertFreshSyntheticPrice({ price, updatedAt, now, maxAge }) {
   assert.ok(value > 0n && updated > 0n, "Synthetic oracle price is not seeded.");
   assert.ok(updated <= timestamp, "Synthetic oracle update timestamp is in the future.");
   assert.ok(ageLimit > 0n && timestamp - updated <= ageLimit, "Synthetic oracle price is stale for this reserve.");
+}
+
+export function syntheticPriceIsFresh({ price, updatedAt, now, maxAge }) {
+  const value = BigInt(price), updated = BigInt(updatedAt), timestamp = BigInt(now), ageLimit = BigInt(maxAge);
+  return value > 0n && updated > 0n && updated <= timestamp && ageLimit > 0n && timestamp - updated <= ageLimit;
+}
+
+export function shouldSkipOraclePriceWrite({ currentPrice, updatedAt, requestedPrice, now, maxAge }) {
+  return BigInt(currentPrice) === BigInt(requestedPrice) &&
+    syntheticPriceIsFresh({ price: currentPrice, updatedAt, now, maxAge });
 }
 
 export function assertMainnetActivationPrerequisites({ paused, credentialA, credentialB, now, loanPrice, collateralPrice, loanMaxAge, collateralMaxAge, loanBalanceA, loanBalanceB, collateralBalanceA, collateralBalanceB }) {
@@ -618,6 +629,8 @@ async function writeGuarded(ctx, command, actor, target, abi, functionName, args
     catch (error) { lastReadError = error; }
   }
   assert.ok(confirmed, `Receipt ${hash} succeeded, but post-state was not confirmed${lastReadError ? ` (${lastReadError.name})` : ""}.`);
+  appendConfirmedMainnetCheckpoint({ chainId: CHAIN_ID, workflow: "lending-operator", operation: command,
+    actor, target, transactionHash: hash, blockNumber: receipt.blockNumber, postStateConfirmed: true });
   console.log(`CONFIRMED ${hash}\n${EXPLORER}/tx/${hash}`);
 }
 
@@ -685,9 +698,25 @@ async function main() {
     const updater = ctx.roles.oracleUpdater;
     assert.equal(await ctx.client.readContract({ address: contracts.oracle, abi: oracleAbi, functionName: "hasRole", args: [role, updater] }), true, "Configured oracle updater lacks its on-chain role.");
     const before = bounds.priceWad;
-    if (before === price) return console.log("SKIPPED — requested synthetic price already matches on-chain state.");
+    const [latestBlock, reserveRaw] = await Promise.all([
+      ctx.client.getBlock({ blockTag: "latest" }),
+      ctx.client.readContract({ address: contracts.lendingPool, abi: poolAbi, functionName: "getReserveConfig", args: [asset] }),
+    ]);
+    const maxAge = normalizeReserveConfig(reserveRaw).maxOracleAge;
+    if (shouldSkipOraclePriceWrite({ currentPrice: before, updatedAt: bounds.updatedAt, requestedPrice: price, now: latestBlock.timestamp, maxAge })) {
+      return console.log("SKIPPED — PRICE STILL FRESH · requested synthetic price matches the live oracle value.");
+    }
+    if (before === price) {
+      const age = bounds.updatedAt > 0n && bounds.updatedAt <= latestBlock.timestamp ? latestBlock.timestamp - bounds.updatedAt : undefined;
+      console.log(`Refresh required · unchanged price is ${age === undefined ? "invalidly timestamped" : `${age}s old`} · reserve maximum ${maxAge}s.`);
+    }
     return writeGuarded(ctx, command, updater, contracts.oracle, oracleAbi, "setPrice", [asset, price], options,
-      async () => normalizePriceBounds(await ctx.client.readContract({ address: contracts.oracle, abi: oracleAbi, functionName: "getPriceBounds", args: [asset] })).priceWad === price);
+      async () => {
+        const after = normalizePriceBounds(await ctx.client.readContract({ address: contracts.oracle, abi: oracleAbi, functionName: "getPriceBounds", args: [asset] }));
+        const confirmedBlock = await ctx.client.getBlock({ blockTag: "latest" });
+        return after.priceWad === price && after.updatedAt > bounds.updatedAt &&
+          syntheticPriceIsFresh({ price: after.priceWad, updatedAt: after.updatedAt, now: confirmedBlock.timestamp, maxAge });
+      });
   }
   if (command === "mint") {
     assert.ok(["loan", "collateral"].includes(positional[0]) && /^\d+$/.test(positional[2] ?? ""), "Use mint loan|collateral <participant> <amount-in-base-units>.");
