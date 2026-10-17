@@ -1,5 +1,18 @@
 export type ExplicitEvmWallet = "metaMask" | "rabby";
 
+export function isWalletChainVerified(input: {
+  connected: boolean;
+  accountChainId?: number;
+  providerChainId?: number;
+  expectedChainId: number;
+}): boolean {
+  return input.connected &&
+    input.accountChainId !== undefined &&
+    input.providerChainId !== undefined &&
+    input.accountChainId === input.providerChainId &&
+    input.providerChainId === input.expectedChainId;
+}
+
 type WalletProvider = Record<string, unknown>;
 type EthereumNamespace = WalletProvider & { providers?: readonly WalletProvider[] };
 

@@ -46,6 +46,14 @@ interface ReviewedActionProps {
   checkAmount?: (amount: bigint) => string | null;
   /** A reason the action cannot start at all yet. */
   precondition?: string | null;
+  /** A reason an exact-token approval cannot start. When set, it replaces submit-only restrictions for approval. */
+  approvalPrecondition?: string | null;
+  /** Additional amount check for an approval, separate from the final action's limits. */
+  approvalCheckAmount?: (amount: bigint) => string | null;
+  /** A condition required for the final action but not for a separate exact-token approval. */
+  submitPrecondition?: string | null;
+  /** A clear next step shown when the final action is gated by `submitPrecondition`. */
+  submitAction?: ReactNode;
   /** The review shown once the amount is valid, before anything is sent to the wallet. */
   review?: (amount: bigint, flags: ActionFlags) => ReactNode;
   runner: ActionRunner;
@@ -61,7 +69,8 @@ interface ReviewedActionProps {
 export function ReviewedAction(props: ReviewedActionProps) {
   const {
     title, fieldLabel, asset, verb, submitLabel, successMessage, onSubmit, max, hint, balance, allowance, onApprove,
-    requiredAllowance, approveAmount, maxMeansFull, approveSuccessMessage, checkAmount, precondition, review, runner, tone = "primary", fullVerb,
+    requiredAllowance, approveAmount, maxMeansFull, approveSuccessMessage, checkAmount, precondition, submitPrecondition, review, runner, tone = "primary", fullVerb,
+    approvalPrecondition, approvalCheckAmount, submitAction,
   } = props;
   const [text, setText] = useState("");
   const [usedMax, setUsedMax] = useState(false);
@@ -73,16 +82,26 @@ export function ReviewedAction(props: ReviewedActionProps) {
   const allowanceNeeded = amount === null ? null : requiredAllowance ? requiredAllowance(amount, flags) : amount;
   const needsApproval = allowance !== undefined && allowanceNeeded !== null && allowanceNeeded > allowance;
   const toApprove = amount === null ? null : approveAmount ? approveAmount(amount, flags) : allowanceNeeded;
-  const reason =
+  const sharedReason =
     runner.block ??
-    precondition ??
     (parsed.error ? null : amount === null ? "Enter an amount." : null) ??
     (amount !== null && balance !== undefined && amount > balance
       ? `This is more than the ${asset.symbol} in your wallet (${formatAmount(balance, asset.decimals)}).`
-      : null) ??
-    (amount !== null && checkAmount ? checkAmount(amount) : null);
+      : null);
+  const submitReason =
+    precondition ??
+    (amount !== null && checkAmount ? checkAmount(amount) : null) ??
+    submitPrecondition ??
+    null;
+  const approvalReason = approvalPrecondition === undefined
+    ? submitReason
+    : approvalPrecondition ?? (amount !== null && approvalCheckAmount ? approvalCheckAmount(amount) : null);
+  const approvalStage = needsApproval && Boolean(onApprove);
+  const reason = sharedReason ?? (approvalStage ? approvalReason : needsApproval ? "Token approval is unavailable for this action." : submitReason);
   const disabled = Boolean(reason) || Boolean(parsed.error) || amount === null || runner.busy;
-  const stage = amount === null || reason ? "idle" : needsApproval ? "approve" : "confirm";
+  const stage = amount === null || reason ? "idle" : approvalStage ? "approve" : "confirm";
+  const canShowSubmitAction = !needsApproval && !sharedReason && !runner.busy && !precondition &&
+    !(amount !== null && checkAmount?.(amount)) && Boolean(submitPrecondition);
 
   async function click() {
     if (amount === null) return;
@@ -142,6 +161,11 @@ export function ReviewedAction(props: ReviewedActionProps) {
         </button>
       </div>
       {reason && !parsed.error && <p className="lend-reason" role="status">{reason}</p>}
+      {canShowSubmitAction && submitAction && amount !== null && !parsed.error && (
+        <div className="lend-reason" role="group" aria-label="Next eligibility step">
+          {submitAction}
+        </div>
+      )}
     </div>
   );
 }

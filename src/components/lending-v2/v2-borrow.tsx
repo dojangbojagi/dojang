@@ -70,8 +70,8 @@ export function BorrowView({ market, proof, runner, borrowAsset, onBorrowAsset, 
   const borrowPrecondition =
     borrowBlocked ??
     (!debtPos || !walletPosition ? `Connect a wallet on ${market.networkName} to borrow.` : null) ??
-    (debtReserve.oracle.state !== "fresh" ? `The ${debtSymbol} oracle price is ${oracleLabel(debtReserve.oracle.state).toLowerCase()}. Borrowing is blocked until it is fresh.` : null) ??
-    (walletPosition?.riskMetricsState === "blocked-by-oracle" ? "A price your position depends on is not fresh, so the pool cannot compute your risk. Borrowing is blocked." : null) ??
+    (debtReserve.oracle.state !== "fresh" ? `The ${debtSymbol} oracle price is ${oracleLabel(debtReserve.oracle.state).toLowerCase()}. Borrowing is blocked until the authorized project oracle updater refreshes the bounded synthetic price. This page does not change oracle values.` : null) ??
+    (walletPosition?.riskMetricsState === "blocked-by-oracle" ? "A price your position depends on is not fresh, so the pool cannot compute your risk. Borrowing is blocked until the authorized project oracle updater refreshes the bounded synthetic price. Token approval, supply and repayment remain available if their other checks pass." : null) ??
     (account && account.ltvCapacityWad === 0n ? "No collateral is enabled yet. Deposit collateral, then enable it with a proof." : null) ??
     (maxBorrowable === 0n ? "There is no borrowing capacity or free liquidity for this asset right now." : null) ??
     (!proofValue ? "Borrowing needs a locally verified policy-3 proof. Generate one in the Eligibility card first." : null);

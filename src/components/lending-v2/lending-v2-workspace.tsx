@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import type { Address } from "viem";
 import { useBalance } from "wagmi";
 import { TransactionPanel, type EvidenceEntry } from "@/components/lending/lending-panels";
@@ -20,8 +21,6 @@ import { useLendingMarketV2 } from "@/hooks/use-lending-market-v2";
 import { useLendingV2EligibilityProof } from "@/hooks/use-lending-v2-eligibility-proof";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import { useProtocolNetworkSelection } from "@/components/protocol-network-selection";
-import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
-import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo";
 import type { DemoCredentialWitness } from "@/lib/credential/witness";
 import { mapLendingV2Error } from "@/lib/lending/v2-errors";
 import { ProtocolError } from "@/lib/protocol/types";
@@ -64,11 +63,12 @@ function explain(error: unknown): string {
  * lending rules and never reports a transaction as done before the hook has confirmed it.
  */
 export function LendingV2Workspace() {
-  const { selectedChainId: chainId, selectChain } = useProtocolNetworkSelection();
+  const { selectedChainId: chainId } = useProtocolNetworkSelection();
   const wallet = useWalletNetwork(chainId);
   const market = useLendingMarketV2(chainId);
   const [witness, setWitness] = useState<DemoCredentialWitness | null>(null);
   const proof = useLendingV2EligibilityProof(witness ?? undefined, chainId);
+  const queryClient = useQueryClient();
   const gas = useBalance({
     address: wallet.address,
     chainId,
@@ -85,6 +85,7 @@ export function LendingV2Workspace() {
   const [evidence, setEvidence] = useState<EvidenceEntry[]>([]);
   const seen = useRef(new Set<string>());
   const lastAction = useRef("");
+  const walletNetworkKey = useRef("");
 
   /* a witness belongs to one wallet: drop it when the connected account changes */
   useEffect(() => {
@@ -99,6 +100,19 @@ export function LendingV2Workspace() {
     setManageAsset(undefined);
     setBanner(null);
   }, [chainId]);
+
+  useEffect(() => {
+    const key = `${chainId}:${wallet.address?.toLowerCase() ?? "no-wallet"}:${wallet.chainId ?? "unknown"}`;
+    if (walletNetworkKey.current !== key) {
+      walletNetworkKey.current = key;
+      if (wallet.address) {
+        void queryClient.invalidateQueries({ queryKey: ["lending-v2-market", String(chainId)] });
+        void queryClient.invalidateQueries({ queryKey: ["lending-v2-deployment", String(chainId)] });
+        void queryClient.invalidateQueries({ queryKey: ["lending-v2-credential", String(chainId)] });
+      }
+    }
+    if (wallet.address && wallet.isOnExpectedNetwork) void gas.refetch();
+  }, [chainId, gas.refetch, queryClient, wallet.address, wallet.chainId, wallet.isOnExpectedNetwork]);
 
   /* the session list of confirmed transactions, built only from the hook's own confirmed lifecycle */
   const tx = market.transaction;
@@ -174,14 +188,6 @@ export function LendingV2Workspace() {
   return (
     <div className="lend lendv2">
       <V2LimitationsNotice configured={market.state !== "unconfigured"} chainId={chainId} riskPaused={market.snapshot?.riskPaused} />
-      <section className="protocol-actions" aria-label="Lending network">
-        <button className={`btn btn--${chainId === ROBINHOOD_TESTNET_CHAIN_ID ? "primary" : "secondary"} btn--sm`} type="button" aria-pressed={chainId === ROBINHOOD_TESTNET_CHAIN_ID} onClick={() => selectChain(ROBINHOOD_TESTNET_CHAIN_ID)}>
-          Robinhood Testnet · Interactive
-        </button>
-        <button className={`btn btn--${chainId === ROBINHOOD_MAINNET_CHAIN_ID ? "primary" : "secondary"} btn--sm`} type="button" aria-pressed={chainId === ROBINHOOD_MAINNET_CHAIN_ID} onClick={() => selectChain(ROBINHOOD_MAINNET_CHAIN_ID)}>
-          Robinhood Mainnet · Deployed
-        </button>
-      </section>
       <WalletNetworkCard expectedChainId={chainId} />
       <ContextBar market={market} walletAddress={wallet.address} eligibility={eligibility} />
 

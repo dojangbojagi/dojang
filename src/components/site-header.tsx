@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { appEnv } from "@/lib/config/env";
 import { BrandLogo } from "@/components/brand-logo";
 import { useProtocolNetworkSelection } from "@/components/protocol-network-selection";
+import { ProtocolNetworkPicker } from "@/components/protocol-network-picker";
 import { WalletControl } from "@/components/wallet-control";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import { supportedProtocolChains } from "@/lib/config/network-registry";
@@ -31,7 +32,7 @@ export function SiteHeader() {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setMenuOpen(false);
     };
-    const onResize = () => { if (window.innerWidth >= 1380) setMenuOpen(false); };
+    const onResize = () => { if (window.innerWidth >= 1440) setMenuOpen(false); };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("keydown", onKeyDown);
@@ -44,29 +45,20 @@ export function SiteHeader() {
   }, [pathname]);
 
   if (pathname === "/") return null;
-  const walletState = wallet.state;
   const selectedNetwork = supportedProtocolChains.find((chain) => chain.id === headerChainId);
-  const activeNetwork = supportedProtocolChains.find((chain) => chain.id === wallet.chainId);
+  const activeNetwork = supportedProtocolChains.find((chain) => chain.id === wallet.providerChainId);
   const networkName = selectedNetwork?.name ?? "Robinhood network";
   const connectedNetwork = wallet.isConnected
-    ? `${activeNetwork?.name ?? "Unsupported network"}${wallet.chainId === undefined ? "" : ` · chain ${wallet.chainId}`}`
-    : "Wallet not connected";
-
-  function networkPicker(className: string) {
-    return (
-      <label className={className}>
-        <span className="visually-hidden">Select transaction network</span>
-        <select
-          aria-label="Select transaction network"
-          value={headerChainId}
-          onChange={(event) => selectChain(Number(event.currentTarget.value) as typeof headerChainId)}
-        >
-          <option value={4663}>Mainnet — Deployed · 4663</option>
-          <option value={46630}>Testnet — Interactive · 46630</option>
-        </select>
-      </label>
-    );
-  }
+    ? wallet.providerChainPending
+      ? "Verifying wallet network…"
+      : wallet.providerChainReadError
+        ? "Wallet network could not be verified"
+        : wallet.providerChainId === undefined
+          ? "Wallet network not verified"
+          : `${activeNetwork?.name ?? "Unsupported network"} · chain ${wallet.providerChainId}`
+    : wallet.status === "connecting" || wallet.status === "reconnecting"
+      ? "Checking wallet connection…"
+      : "Wallet disconnected";
 
   return (
     <header className="site-header site-header--app" data-scrolled={scrolled}>
@@ -85,9 +77,9 @@ export function SiteHeader() {
           </ul>
         </nav>
         <div className="site-header__actions">
-          {networkPicker("site-header__network-picker site-header__network-picker--desktop")}
-          <span className="site-header__current-chain" title={`Wallet network: ${connectedNetwork}`} aria-live="polite">
-            {wallet.isConnected ? `Wallet · ${wallet.chainId ?? "?"}` : "Wallet disconnected"}
+          <ProtocolNetworkPicker selectedChainId={headerChainId} onSelect={selectChain} />
+          <span className="site-header__current-chain" title={`Actual wallet network: ${connectedNetwork}`} aria-live="polite">
+            {connectedNetwork}
           </span>
           <button
             className="site-header__social"
@@ -113,10 +105,11 @@ export function SiteHeader() {
       </div>
       <div className="mobile-nav" id="mobile-nav" hidden={!menuOpen}>
         <div className="mobile-nav__network">
-          <p className="small muted">Transaction network · {networkName} · chain {headerChainId}</p>
-          {networkPicker("site-header__network-picker site-header__network-picker--mobile")}
-          <p className="small muted" aria-live="polite">Wallet network: {connectedNetwork}</p>
-          <WalletControl expectedChainId={headerChainId} showRecoveryAction />
+          <p className="small muted">App network: {networkName} · chain {headerChainId}</p>
+          <p className="small muted" aria-live="polite">Actual wallet network: {connectedNetwork}</p>
+          {wallet.isConnected && wallet.providerChainId !== undefined && wallet.providerChainId !== headerChainId && (
+            <p className="small muted">Use the wallet control in the header to switch networks. Transactions stay disabled until the wallet is verified on the selected chain.</p>
+          )}
         </div>
         <nav aria-label="Primary mobile">
           <ul>

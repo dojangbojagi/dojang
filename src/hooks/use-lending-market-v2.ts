@@ -148,12 +148,29 @@ export function useLendingMarketV2(chainId: LendingV2ChainId = ROBINHOOD_TESTNET
 
   const assertBase = useCallback(async () => {
     if (!account.address) throw new ProtocolError("WALLET_REQUIRED", "Connect a wallet before using Lending V2.");
-    if (!account.isOnExpectedNetwork) throw new ProtocolError("WRONG_NETWORK", `Switch to ${chainId === ROBINHOOD_MAINNET_CHAIN_ID ? "Robinhood Chain Mainnet" : "Robinhood Chain Testnet"} before submitting a Lending V2 transaction.`);
+    const networkName = chainId === ROBINHOOD_MAINNET_CHAIN_ID ? "Robinhood Chain Mainnet" : "Robinhood Chain Testnet";
+    const connector = account.connector;
+    if (!connector || !account.isOnExpectedNetwork) {
+      throw new ProtocolError("WRONG_NETWORK", `Switch to ${networkName} (chain ${chainId}) and wait for the wallet network check before submitting.`);
+    }
+    let providerChainId: number;
+    let providerAccounts: readonly Address[];
+    try {
+      [providerChainId, providerAccounts] = await Promise.all([connector.getChainId(), connector.getAccounts()]);
+    } catch {
+      throw new ProtocolError("WRONG_NETWORK", `The connected wallet network could not be verified. Reconnect to ${networkName} (chain ${chainId}) before submitting.`);
+    }
+    if (providerChainId !== chainId || account.chainId !== providerChainId) {
+      throw new ProtocolError("WRONG_NETWORK", `The connected wallet reports chain ${providerChainId}, but this action requires ${networkName} (chain ${chainId}). No transaction was submitted.`);
+    }
+    if (!providerAccounts.some((address) => address.toLowerCase() === account.address!.toLowerCase())) {
+      throw new ProtocolError("WALLET_REQUIRED", "The wallet account changed during this action. Reconnect the intended account, then review the action again.");
+    }
     if (!pool || !client || !poolValue || invalidPoolConfig || missingRequiredConfig) {
       throw new ProtocolError("LENDING_NOT_CONFIGURED", "Configure the Robinhood V2 pool, registry, verifier, oracle, and both reserve token addresses.");
     }
     await readLendingV2Deployment(client, pool, registry, undefined, chainId, verifier, oracle, honkVerifier, robinhood?.configuredAssets);
-  }, [account.address, account.isOnExpectedNetwork, chainId, client, honkVerifier, invalidPoolConfig, missingRequiredConfig, oracle, pool, poolValue, registry, verifier, robinhood?.configuredAssets]);
+  }, [account.address, account.chainId, account.connector, account.isOnExpectedNetwork, chainId, client, honkVerifier, invalidPoolConfig, missingRequiredConfig, oracle, pool, poolValue, registry, verifier, robinhood?.configuredAssets]);
 
   const assertDemoParticipant = useCallback(async () => {
     if (chainId !== ROBINHOOD_MAINNET_CHAIN_ID) return;
@@ -257,6 +274,8 @@ export function useLendingMarketV2(chainId: LendingV2ChainId = ROBINHOOD_TESTNET
           `The wallet needs a native balance covering the estimated transaction fee plus 20% headroom (at least ${requiredGasBalance} wei).`,
         );
       }
+      // Re-read the active provider chain and account after simulation/estimation, immediately before asking the wallet to sign.
+      await assertBase();
       phase = "signature";
       setTransaction({ state: "awaiting-signature" });
       hash = await writer.writeContractAsync({ ...simulation.request, chainId });
@@ -319,6 +338,16 @@ export function useLendingMarketV2(chainId: LendingV2ChainId = ROBINHOOD_TESTNET
       simulate: async () => {
         await assertSupportedAsset(asset);
         if (!client || !pool || !account.address) throw new ProtocolError("LENDING_NOT_CONFIGURED", "The V2 token approval context is unavailable.");
+        await assertBalance(asset, amount);
+        const currentAllowance = await client.readContract({
+          address: asset,
+          abi: controlledTokenAbi,
+          functionName: "allowance",
+          args: [account.address, pool],
+        });
+        if (currentAllowance >= amount) {
+          throw new ProtocolError("ALREADY_GRANTED", "The current pool allowance already covers this amount. Refresh the market before retrying; no approval was submitted.");
+        }
         const result = await client.simulateContract({
           account: account.address,
           address: asset,
@@ -334,7 +363,7 @@ export function useLendingMarketV2(chainId: LendingV2ChainId = ROBINHOOD_TESTNET
         return allowance >= amount;
       },
     });
-  }, [account.address, assertSupportedAsset, client, pool, run]);
+  }, [account.address, assertBalance, assertSupportedAsset, client, pool, run]);
 
   const supply = useCallback(async (asset: Address, requestedAmount: bigint, proof: EligibilityProof) => {
     const amount = positiveAmount(requestedAmount);

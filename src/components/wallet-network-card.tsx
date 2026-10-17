@@ -1,6 +1,5 @@
 "use client";
 
-import { WalletControl } from "@/components/wallet-control";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import type { ProtocolChainId } from "@/hooks/use-wallet-network";
 import { GIWA_CHAIN_ID } from "@/lib/config/chain";
@@ -22,15 +21,23 @@ export function WalletNetworkCard({ expectedChainId = ROBINHOOD_TESTNET_CHAIN_ID
     : expectedChainId === ROBINHOOD_MAINNET_CHAIN_ID
       ? "Robinhood Chain Mainnet"
       : "Robinhood Chain Testnet";
-  const activeName = wallet.chainId === GIWA_CHAIN_ID
+  const activeChainId = wallet.providerChainId;
+  const activeName = activeChainId === GIWA_CHAIN_ID
     ? "GIWA Sepolia"
-    : wallet.chainId === ROBINHOOD_TESTNET_CHAIN_ID
+    : activeChainId === ROBINHOOD_TESTNET_CHAIN_ID
       ? "Robinhood Chain Testnet"
-      : wallet.chainId === ROBINHOOD_MAINNET_CHAIN_ID
+      : activeChainId === ROBINHOOD_MAINNET_CHAIN_ID
         ? "Robinhood Chain Mainnet"
-      : wallet.chainId === undefined
+      : !wallet.isConnected
         ? "No active wallet network"
         : "Unsupported network";
+  const actualNetwork = !wallet.isConnected
+    ? activeName
+    : wallet.providerChainPending
+      ? "Verifying the wallet's network…"
+      : wallet.providerChainReadError
+        ? "Could not verify the wallet's actual network"
+        : `${activeName}${activeChainId === undefined ? "" : ` · chain ${activeChainId}`}`;
   return (
     <section className="panel panel--ticks protocol-panel" aria-labelledby="wallet-status-heading">
       <div className="protocol-panel__head">
@@ -40,19 +47,15 @@ export function WalletNetworkCard({ expectedChainId = ROBINHOOD_TESTNET_CHAIN_ID
       <dl className="kv protocol-kv">
         <div className="kv__row"><dt>Wallet</dt><dd className="addr">{wallet.address ?? "Not connected"}</dd></div>
         <div className="kv__row"><dt>Wallet provider</dt><dd>{wallet.connector?.name ?? "Not connected"}</dd></div>
-        <div className="kv__row"><dt>Connected network</dt><dd>{activeName}{wallet.chainId !== undefined ? ` · chain ${wallet.chainId}` : ""}</dd></div>
+        <div className="kv__row"><dt>Connected network</dt><dd>{actualNetwork}</dd></div>
         <div className="kv__row"><dt>Expected network</dt><dd>{expectedName} · chain {expectedChainId}</dd></div>
       </dl>
-      <div className="protocol-actions">
-        <WalletControl expectedChainId={expectedChainId} showRecoveryAction />
-        {wallet.state === "wrong-network" && (
-          <button className="btn btn--primary" type="button" onClick={() => void wallet.switchToExpectedNetwork()} disabled={wallet.isSwitching}>
-            {wallet.isSwitching ? "Switching…" : `Switch to ${expectedName}`}
-          </button>
-        )}
-      </div>
+      {wallet.state === "wrong-network" && (
+        <p className="callout callout--caution protocol-notice" role="status">
+          This action requires {expectedName} (chain {expectedChainId}). Use the single wallet control in the application header to switch; actions stay disabled until the wallet is confirmed on this chain.
+        </p>
+      )}
       {wallet.switchError && <p className="callout callout--caution protocol-notice" role="alert">{wallet.switchError}</p>}
-      {wallet.state === "wrong-network" && <p className="callout callout--caution protocol-notice" role="status">This action requires {expectedName} (chain {expectedChainId}). Switch networks to continue.</p>}
       {wallet.state === "wrong-network" && expectedChain && (
         <details className="protocol-notice">
           <summary>Manual network setup</summary>

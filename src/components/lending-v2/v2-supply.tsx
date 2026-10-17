@@ -49,8 +49,7 @@ export function SupplyView({ market, proof, runner, asset, onAsset }: {
     blocked ??
     (!position ? `Connect a wallet on ${market.networkName} to see your balance.` : null) ??
     participantBlocked ??
-    (headroom === 0n ? `The ${symbol} supply cap has been reached.` : null) ??
-    (!proofValue ? "Supplying needs a locally verified policy-3 proof. Generate one in the Eligibility card first." : null);
+    (headroom === 0n ? `The ${symbol} supply cap has been reached.` : null);
 
   return (
     <section className="panel panel--ticks protocol-panel" aria-labelledby="lendv2-supply-heading">
@@ -72,7 +71,7 @@ export function SupplyView({ market, proof, runner, asset, onAsset }: {
 
       <dl className="lendv2-metrics">
         <Metric label={`Your ${symbol} balance`}>{position ? formatAmount(position.walletBalance, decimals) : "Connect a wallet"}</Metric>
-        <Metric label="Approved for the pool">{position ? formatAmount(position.allowance, decimals) : "Connect a wallet"}</Metric>
+        <Metric label="Current pool allowance" note={market.poolAddress ? `Spender: ${market.poolAddress}` : "Pool address unavailable"}>{position ? `${formatAmount(position.allowance, decimals)} ${symbol}` : "Connect a wallet"}</Metric>
         <Metric label="Your supplied position" note="Includes interest accrued up to the block read.">{position ? `${formatAmount(position.supplied, decimals)} ${symbol}` : "Connect a wallet"}</Metric>
         <Metric label="Supply rate (APR)" note="Variable. Not compounded.">{formatBps(data.currentSupplyRateBps)}</Metric>
         <Metric label="Available liquidity">{formatAmount(data.availableLiquidity, decimals)} {symbol}</Metric>
@@ -99,8 +98,20 @@ export function SupplyView({ market, proof, runner, asset, onAsset }: {
           balance={position?.walletBalance}
           allowance={position?.allowance}
           max={position ? minBigint(position.walletBalance, headroom) : undefined}
-          hint="The pool needs your approval for this exact amount before it can take the tokens."
+          hint={market.poolAddress
+            ? `Approval is limited to the amount entered. Spender: ${market.poolAddress}. The wallet, chain, token balance, allowance and estimated network fee are checked before signing.`
+            : "The pool needs your approval for this exact amount before it can take the tokens."}
           precondition={supplyPrecondition}
+          approvalPrecondition={!position
+            ? `Connect a wallet on ${market.networkName} to approve this token.`
+            : !market.poolAddress ? "The verified Lending V2 spender is unavailable." : null}
+          approvalCheckAmount={(amount) => amount > headroom ? `The supply cap leaves room for ${formatAmount(headroom, decimals)} ${symbol}.` : null}
+          submitPrecondition={!proofValue ? "Generate a locally verified Policy 3 proof before supplying. Approval can be completed first; the proof is checked again by the pool." : null}
+          submitAction={!proofValue ? (
+            <a className="btn btn--secondary" href="#lendv2-eligibility" aria-label="Go to the Eligibility card to generate a Policy 3 proof">
+              Generate Policy 3 Proof
+            </a>
+          ) : undefined}
           checkAmount={(amount) => amount > headroom ? `The supply cap leaves room for ${formatAmount(headroom, decimals)} ${symbol}.` : null}
           onApprove={(amount) => market.approveToken(reserve.asset, amount)}
           onSubmit={(amount) => {
@@ -114,6 +125,9 @@ export function SupplyView({ market, proof, runner, asset, onAsset }: {
               <div className="kv__row"><dt>Wallet balance after</dt><dd>{position ? `${formatAmount(position.walletBalance - amount, decimals)} ${symbol}` : "—"}</dd></div>
               <div className="kv__row"><dt>Supply rate</dt><dd>{formatBps(data.currentSupplyRateBps)} APR, variable <span className="muted">(changes with utilization)</span></dd></div>
               <div className="kv__row"><dt>Authorization</dt><dd>Policy-3 Project Test Credential proof, verified again by the pool</dd></div>
+              <div className="kv__row"><dt>Current allowance</dt><dd>{position ? `${formatAmount(position.allowance, decimals)} ${symbol}` : "Unavailable"}</dd></div>
+              <div className="kv__row"><dt>Spender</dt><dd className="addr">{market.poolAddress ?? "Unavailable"}</dd></div>
+              <div className="kv__row"><dt>Approval amount</dt><dd>{position && amount > position.allowance ? `${formatAmount(amount, decimals)} ${symbol} exactly` : "No additional approval needed"}</dd></div>
             </dl>
           )}
           runner={runner}

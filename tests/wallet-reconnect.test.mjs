@@ -3,12 +3,20 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { createConfig, createConnector, http } from "wagmi";
 import { connect, disconnect, hydrate, switchChain } from "@wagmi/core";
+import { isWalletChainVerified } from "../src/lib/wallet/provider-detection.ts";
 
 const robinhood = {
   id: 46630,
   name: "Robinhood Testnet",
   nativeCurrency: { name: "Test ETH", symbol: "ETH", decimals: 18 },
   rpcUrls: { default: { http: ["https://rpc.testnet.chain.robinhood.com"] } },
+};
+const robinhoodMainnet = {
+  id: 4663,
+  name: "Robinhood Chain Mainnet",
+  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+  rpcUrls: { default: { http: ["https://rpc.mainnet.chain.robinhood.com"] } },
+  blockExplorers: { default: { name: "Robinhood Chain Explorer", url: "https://robinhoodchain.blockscout.com" } },
 };
 const sepolia = {
   id: 11155111,
@@ -17,6 +25,15 @@ const sepolia = {
   rpcUrls: { default: { http: ["https://rpc.sepolia.org"] } },
 };
 const account = "0x0000000000000000000000000000000000000001";
+
+test("a connected wallet is ready only when provider, wagmi, and selected app chain agree", () => {
+  assert.equal(isWalletChainVerified({ connected: true, accountChainId: 46630, providerChainId: 46630, expectedChainId: 4663 }), false);
+  assert.equal(isWalletChainVerified({ connected: true, accountChainId: 46630, providerChainId: 4663, expectedChainId: 4663 }), false);
+  assert.equal(isWalletChainVerified({ connected: true, accountChainId: 4663, providerChainId: undefined, expectedChainId: 4663 }), false);
+  assert.equal(isWalletChainVerified({ connected: true, accountChainId: 4663, providerChainId: 4663, expectedChainId: 4663 }), true);
+  assert.equal(isWalletChainVerified({ connected: true, accountChainId: 46630, providerChainId: 46630, expectedChainId: 46630 }), true);
+  assert.equal(isWalletChainVerified({ connected: false, accountChainId: 4663, providerChainId: 4663, expectedChainId: 4663 }), false);
+});
 
 function walletConnector({ id, name, chainId = sepolia.id, switchHandler, onAuthorized } = {}) {
   let providerChainId = chainId;
@@ -49,9 +66,9 @@ function walletConnector({ id, name, chainId = sepolia.id, switchHandler, onAuth
 
 function walletConfig(...connectors) {
   return createConfig({
-    chains: [robinhood, sepolia],
+    chains: [robinhoodMainnet, robinhood, sepolia],
     connectors: connectors.map((entry) => entry.connector),
-    transports: { [robinhood.id]: http(), [sepolia.id]: http() },
+    transports: { [robinhoodMainnet.id]: http(), [robinhood.id]: http(), [sepolia.id]: http() },
     multiInjectedProviderDiscovery: false,
     ssr: true,
   });
@@ -153,6 +170,45 @@ test("a successful mocked MetaMask switch requires the provider and wagmi accoun
 
   assert.equal(metaMask.getProviderChainId(), robinhood.id);
   assert.equal(config.state.connections.get(connector.uid).chainId, robinhood.id);
+});
+
+test("a MetaMask connected to Testnet receives the exact Mainnet add-chain metadata before it is ready", async () => {
+  let requestedChain;
+  const metaMask = walletConnector({
+    id: "metaMask",
+    name: "MetaMask",
+    chainId: robinhood.id,
+    switchHandler: async ({ targetChainId, addEthereumChainParameter, setProviderChainId, emitChainChange }) => {
+      requestedChain = { targetChainId, addEthereumChainParameter };
+      setProviderChainId(targetChainId);
+      emitChainChange(targetChainId);
+      return robinhoodMainnet;
+    },
+  });
+  const config = walletConfig(metaMask);
+  const connector = config.connectors[0];
+
+  await connect(config, { connector });
+  assert.equal(metaMask.getProviderChainId(), robinhood.id);
+  await switchChain(config, {
+    chainId: robinhoodMainnet.id,
+    addEthereumChainParameter: {
+      chainName: robinhoodMainnet.name,
+      nativeCurrency: robinhoodMainnet.nativeCurrency,
+      rpcUrls: robinhoodMainnet.rpcUrls.default.http,
+      blockExplorerUrls: [robinhoodMainnet.blockExplorers.default.url],
+    },
+  });
+
+  assert.equal(requestedChain.targetChainId, 4663);
+  assert.deepEqual(requestedChain.addEthereumChainParameter, {
+    chainName: "Robinhood Chain Mainnet",
+    nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+    rpcUrls: ["https://rpc.mainnet.chain.robinhood.com"],
+    blockExplorerUrls: ["https://robinhoodchain.blockscout.com"],
+  });
+  assert.equal(metaMask.getProviderChainId(), 4663);
+  assert.equal(config.state.connections.get(connector.uid).chainId, 4663);
 });
 
 test("wallet rejection is surfaced and provider/wagmi disagreement remains wrong-network", async () => {

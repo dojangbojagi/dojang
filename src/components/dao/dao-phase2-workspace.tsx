@@ -2,12 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { WitnessUpload, type WitnessUploadStatus } from "@/components/lending-v2/v2-witness-upload";
-import { WalletControl } from "@/components/wallet-control";
 import { useRobinhoodDaoPhase2, type Phase2Vote } from "@/hooks/use-robinhood-dao-phase2";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import { useProtocolNetworkSelection } from "@/components/protocol-network-selection";
 import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
-import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo";
 import { getDaoPhase2ContractSet } from "@/lib/config/network-registry";
 import { parseDemoCredentialWitness, type DemoCredentialWitness } from "@/lib/credential/witness";
 import { computeEligibilityCommitment } from "@/lib/zk/commitment";
@@ -29,7 +27,7 @@ function formatTime(value?: bigint) {
 }
 
 export function DaoPhase2Workspace() {
-  const { selectedChainId, selectChain } = useProtocolNetworkSelection();
+  const { selectedChainId } = useProtocolNetworkSelection();
   const wallet = useWalletNetwork(selectedChainId);
   const [selectedIdText, setSelectedIdText] = useState("");
   const selectedId = useMemo(() => /^[1-9][0-9]*$/.test(selectedIdText) ? BigInt(selectedIdText) : undefined, [selectedIdText]);
@@ -239,17 +237,9 @@ export function DaoPhase2Workspace() {
         Ballot privacy is temporary: the commitment hides your choice during the commit window. The reveal transaction later makes the choice public and linkable to your wallet. This is not anonymous voting.
       </p>
 
-      <div className="dao-phase2-network" role="group" aria-label="DAO Phase 2 network">
-        <button className={`btn btn--${isTestnet ? "primary" : "secondary"} btn--sm`} type="button" aria-pressed={isTestnet} onClick={() => selectChain(ROBINHOOD_TESTNET_CHAIN_ID)}>
-          Robinhood Testnet · Interactive
-        </button>
-        <button className={`btn btn--${!isTestnet ? "primary" : "secondary"} btn--sm`} type="button" aria-pressed={!isTestnet} onClick={() => selectChain(ROBINHOOD_MAINNET_CHAIN_ID)}>
-          Robinhood Mainnet · Deployed
-        </button>
-        <WalletControl expectedChainId={selectedChainId} showRecoveryAction />
-      </div>
       <div className="dao-phase2-network__meta">
-        <span>{networkName} · chain {selectedChainId}</span>
+        <span>App network: {networkName} · chain {selectedChainId}</span>
+        <span>Wallet network: {wallet.chainId === undefined ? "Not connected or unverified" : `${wallet.chainId} · ${wallet.chainId === selectedChainId ? "matches app network" : "different from app network"}`}</span>
         {wallet.address && <span className="addr">{wallet.address}</span>}
         <button className="btn btn--secondary btn--sm" type="button" onClick={() => void dao.refresh()} disabled={dao.state === "checking" || dao.state === "deployment-pending" || dao.state === "unconfigured"}>
           Check on-chain status again

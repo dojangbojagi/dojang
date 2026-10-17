@@ -13,9 +13,12 @@ export function WalletControl({ expectedChainId, showRecoveryAction = false }: {
   const [selectionError, setSelectionError] = useState<string>();
   const [connectionSlow, setConnectionSlow] = useState(false);
   const requiredChain = supportedProtocolChains.find((chain) => chain.id === wallet.expectedChainId);
-  const activeChain = supportedProtocolChains.find((chain) => chain.id === wallet.chainId);
+  const activeChainId = wallet.providerChainId ?? wallet.chainId;
+  const activeChain = supportedProtocolChains.find((chain) => chain.id === activeChainId);
   const networkDescription = wallet.state === "wrong-network"
-    ? `Connected to ${activeChain?.name ?? "unsupported network"}${wallet.chainId === undefined ? "" : ` (chain ${wallet.chainId})`}; required ${requiredChain?.name ?? "configured network"} (chain ${wallet.expectedChainId}).`
+    ? wallet.providerChainReadError
+      ? `The wallet's current network could not be verified. Required: ${requiredChain?.name ?? "configured network"} (chain ${wallet.expectedChainId}).`
+      : `The wallet is on ${activeChain?.name ?? "unsupported network"}${activeChainId === undefined ? "" : ` (chain ${activeChainId})`}; required ${requiredChain?.name ?? "configured network"} (chain ${wallet.expectedChainId}).`
     : undefined;
 
   useEffect(() => {
@@ -42,13 +45,13 @@ export function WalletControl({ expectedChainId, showRecoveryAction = false }: {
             : wallet.state === "wrong-network"
               ? "wrong-network"
               : "connected";
-        const label = state === "connecting" ? "Connecting…"
+        const label = state === "connecting" ? wallet.isConnected ? "Checking network…" : "Connecting…"
           : state === "disconnected" ? "Connect Wallet"
             : state === "wrong-network" ? wallet.isSwitching ? "Switching…" : wallet.switchError ? "Try Network Switch Again" : `Switch to ${requiredChain?.name ?? "Required Network"}`
               : wallet.address ? `${wallet.address.slice(0, 6)}…${wallet.address.slice(-4)}` : account?.displayName ?? "Connected";
         const accessibleLabel = networkDescription ? `${label}. ${networkDescription}` : label;
         const openWallet = () => {
-          if (state === "disconnected" || state === "connecting") openConnectModal();
+          if (!wallet.isConnected) openConnectModal();
           else if (state === "wrong-network") void wallet.switchToExpectedNetwork();
           else openAccountModal();
         };

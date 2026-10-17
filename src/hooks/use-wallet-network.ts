@@ -7,6 +7,7 @@ import { GIWA_CHAIN_ID } from "@/lib/config/chain";
 import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
 import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo";
 import { supportedProtocolChains } from "@/lib/config/network-registry";
+import { isWalletChainVerified } from "@/lib/wallet/provider-detection";
 import type { WalletState } from "@/lib/protocol/types";
 
 export type ProtocolChainId = typeof GIWA_CHAIN_ID | typeof ROBINHOOD_TESTNET_CHAIN_ID | typeof ROBINHOOD_MAINNET_CHAIN_ID;
@@ -136,13 +137,46 @@ export function useWalletNetwork(expectedChainId: ProtocolChainId = ROBINHOOD_TE
   const switchChain = useSwitchChain();
   const [switchError, setSwitchError] = useState<string>();
   const [switchDiagnostics, setSwitchDiagnostics] = useState<WalletNetworkDiagnostics>();
+  const [providerChainRead, setProviderChainRead] = useState<{
+    connectorUid?: string;
+    chainId?: number;
+    pending: boolean;
+    errorName?: string;
+  }>({ pending: false });
+
+  useEffect(() => {
+    const connector = account.connector;
+    if (!account.isConnected || !connector) {
+      setProviderChainRead({ pending: false });
+      return;
+    }
+
+    let current = true;
+    setProviderChainRead({ connectorUid: connector.uid, pending: true });
+    void connector.getChainId().then((chainId) => {
+      if (current) setProviderChainRead({ connectorUid: connector.uid, chainId, pending: false });
+    }).catch((error: unknown) => {
+      if (current) setProviderChainRead({
+        connectorUid: connector.uid,
+        pending: false,
+        errorName: getErrorMetadata(error).errorName ?? "ProviderReadError",
+      });
+    });
+    return () => { current = false; };
+  }, [account.chainId, account.connector, account.isConnected]);
+
+  const providerReadMatchesConnector = providerChainRead.connectorUid === account.connector?.uid;
+  const providerChainId = providerReadMatchesConnector ? providerChainRead.chainId : undefined;
+  const providerChainPending = account.isConnected && (!providerReadMatchesConnector || providerChainRead.pending);
   const state: WalletState = !account.isConnected
     ? account.status === "connecting" || account.status === "reconnecting"
       ? "connecting"
       : "disconnected"
-    : account.chainId === expectedChainId
-      ? "connected"
-      : "wrong-network";
+    : providerChainPending
+      ? "connecting"
+      : isWalletChainVerified({ connected: account.isConnected, accountChainId: account.chainId, providerChainId, expectedChainId })
+        ? "connected"
+        : "wrong-network";
 
   useEffect(() => {
     if (!account.isConnected || account.chainId === expectedChainId) {
@@ -163,9 +197,12 @@ export function useWalletNetwork(expectedChainId: ProtocolChainId = ROBINHOOD_TE
       return;
     }
     try {
-      setSwitchDiagnostics({ ...base, providerChainId: await connector.getChainId() });
+      const providerChainId = await connector.getChainId();
+      setProviderChainRead({ connectorUid: connector.uid, chainId: providerChainId, pending: false });
+      setSwitchDiagnostics({ ...base, providerChainId });
     } catch (error) {
       const metadata = getErrorMetadata(error);
+      setProviderChainRead({ connectorUid: connector.uid, pending: false, errorName: metadata.errorName ?? "ProviderReadError" });
       setSwitchDiagnostics({ ...base, providerReadErrorName: metadata.errorName });
     }
   }, [account.chainId, account.connector, account.isConnected, expectedChainId]);
@@ -221,6 +258,7 @@ export function useWalletNetwork(expectedChainId: ProtocolChainId = ROBINHOOD_TE
         providerChainId: activeChainId,
         requiredChainId: chainId,
       });
+      setProviderChainRead({ connectorUid: connector.uid, chainId: activeChainId, pending: false });
       return true;
     } catch (error) {
       setSwitchError(describeSwitchError(error, chainId, connector.name));
@@ -228,8 +266,10 @@ export function useWalletNetwork(expectedChainId: ProtocolChainId = ROBINHOOD_TE
       let providerReadErrorName: string | undefined;
       try {
         providerChainId = await connector.getChainId();
+        setProviderChainRead({ connectorUid: connector.uid, chainId: providerChainId, pending: false });
       } catch (readError) {
         providerReadErrorName = getErrorMetadata(readError).errorName;
+        setProviderChainRead({ connectorUid: connector.uid, pending: false, errorName: providerReadErrorName ?? "ProviderReadError" });
       }
       const activeWagmiAccount = getAccount(config);
       const diagnostics = {
@@ -261,7 +301,15 @@ export function useWalletNetwork(expectedChainId: ProtocolChainId = ROBINHOOD_TE
     ...account,
     state,
     expectedChainId,
-    isOnExpectedNetwork: account.isConnected && account.chainId === expectedChainId,
+    providerChainId,
+    providerChainPending,
+    providerChainReadError: providerReadMatchesConnector ? providerChainRead.errorName : undefined,
+    isOnExpectedNetwork: !providerChainPending && isWalletChainVerified({
+      connected: account.isConnected,
+      accountChainId: account.chainId,
+      providerChainId,
+      expectedChainId,
+    }),
     isGiwaSepolia: account.isConnected && account.chainId === GIWA_CHAIN_ID,
     isRobinhoodTestnet: account.isConnected && account.chainId === ROBINHOOD_TESTNET_CHAIN_ID,
     isRobinhoodMainnet: account.isConnected && account.chainId === ROBINHOOD_MAINNET_CHAIN_ID,

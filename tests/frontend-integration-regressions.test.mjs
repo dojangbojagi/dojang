@@ -2,6 +2,8 @@ import { expect, test } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { isExplicitEvmWalletProvider, hasExplicitEvmWalletProvider } from "../src/lib/wallet/provider-detection.ts";
 import { parseValidity } from "../src/components/dao/format.ts";
+import { parseAmount } from "../src/components/lending/format.ts";
+import { robinhoodMainnetDemoContracts } from "../src/lib/config/robinhood-mainnet-demo.ts";
 
 test("explicit wallet detection does not mistake Phantom or Rabby for MetaMask", () => {
   expect(isExplicitEvmWalletProvider("metaMask", { isMetaMask: true })).toBe(true);
@@ -26,8 +28,9 @@ test("wallet choices detect installed identities and explain Phantom's unsupport
 });
 
 test("the selected Robinhood network is shared by the header and Mainnet-capable product flows", async () => {
-  const [header, provider, selection, lending, dao, bojagi, credentials] = await Promise.all([
+  const [header, picker, provider, selection, lending, dao, bojagi, credentials] = await Promise.all([
     readFile(new URL("../src/components/site-header.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/protocol-network-picker.tsx", import.meta.url), "utf8"),
     readFile(new URL("../src/components/providers.tsx", import.meta.url), "utf8"),
     readFile(new URL("../src/components/protocol-network-selection.tsx", import.meta.url), "utf8"),
     readFile(new URL("../src/components/lending-v2/lending-v2-workspace.tsx", import.meta.url), "utf8"),
@@ -37,13 +40,39 @@ test("the selected Robinhood network is shared by the header and Mainnet-capable
   ]);
   expect(provider).toContain("<ProtocolNetworkSelectionProvider>");
   expect(selection).toContain("localStorage.setItem(STORAGE_KEY, String(chainId))");
-  expect(header).toContain("Select transaction network");
-  expect(header).toContain("Mainnet — Deployed · 4663");
-  expect(header).toContain("Testnet — Interactive · 46630");
+  expect(header).toContain("<ProtocolNetworkPicker");
+  expect(header).not.toMatch(/<select\b/i);
+  expect(picker).toContain('full: "Robinhood Mainnet — 4663"');
+  expect(picker).toContain('full: "Robinhood Testnet — 46630"');
   expect(lending).toContain("useProtocolNetworkSelection()");
   expect(dao).toContain("useProtocolNetworkSelection()");
   expect(bojagi).toContain("useLendingMarketV2(selectedChainId)");
   expect(credentials).toContain("Policy {isMainnet ? \"5\" : \"4\"}");
+});
+
+test("2 dUSD is parsed as exactly 2,000,000 base units and supply approval stays exact", async () => {
+  expect(parseAmount("2", 6)).toEqual({ value: 2_000_000n, error: null });
+  expect(parseAmount("2.000000", 6)).toEqual({ value: 2_000_000n, error: null });
+  expect(parseAmount("2.0000001", 6).error).toContain("6 decimals");
+  expect(robinhoodMainnetDemoContracts.loanToken).toBe("0xFBaFDF28bB402EcDaFB90E3852f1494352444Bc1");
+  expect(robinhoodMainnetDemoContracts.lendingPool).toBe("0x8706B2fe815fB3C5986acE47b59bE0853567B48D");
+  const [supply, action, lending] = await Promise.all([
+    readFile(new URL("../src/components/lending-v2/v2-supply.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/lending-v2/reviewed-action.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/hooks/use-lending-market-v2.ts", import.meta.url), "utf8"),
+  ]);
+  expect(supply).toContain("submitPrecondition={!proofValue ?");
+  expect(supply).toContain("Approval is limited to the amount entered");
+  expect(supply).toContain("approvalPrecondition=");
+  expect(supply).toContain("Generate Policy 3 Proof");
+  expect(supply).toContain("Current pool allowance");
+  expect(action).toContain("approvalStage = needsApproval && Boolean(onApprove)");
+  expect(action).toContain("approvalPrecondition === undefined");
+  expect(lending).toContain('functionName: "approve"');
+  expect(lending).toContain("args: [pool, amount]");
+  expect(lending).toContain("await assertBalance(asset, amount)");
+  expect(lending).toContain("currentAllowance >= amount");
+  expect(lending).toContain("return allowance >= amount");
 });
 
 test("primary Lending route only mounts Robinhood V2 and isolates legacy GIWA V1", async () => {
@@ -57,7 +86,7 @@ test("primary Lending route only mounts Robinhood V2 and isolates legacy GIWA V1
   expect(experience).toContain("/lending/legacy");
   expect(legacyRoute).toContain("<LendingWorkspace />");
   expect(v2Workspace).toContain("useWalletNetwork(chainId)");
-  expect(v2Workspace).toContain("ROBINHOOD_MAINNET_CHAIN_ID");
+  expect(v2Workspace).toContain("const { selectedChainId: chainId } = useProtocolNetworkSelection()");
 });
 
 test("DAO unit choices preserve their exact seconds conversion", () => {
