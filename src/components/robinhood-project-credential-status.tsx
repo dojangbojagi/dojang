@@ -9,6 +9,7 @@ import { useRobinhoodDaoGovernance } from "@/hooks/use-robinhood-dao-governance"
 import { useRobinhoodDaoPhase2 } from "@/hooks/use-robinhood-dao-phase2";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo";
+import { appEnv } from "@/lib/config/env";
 import { useProtocolNetworkSelection } from "@/components/protocol-network-selection";
 
 function lendingCredentialState(state: ReturnType<typeof useLendingV2EligibilityProof>["state"], networkName: string) {
@@ -37,6 +38,7 @@ function lendingCredentialState(state: ReturnType<typeof useLendingV2Eligibility
 export function RobinhoodProjectCredentialStatus() {
   const { selectedChainId } = useProtocolNetworkSelection();
   const isMainnet = selectedChainId === ROBINHOOD_MAINNET_CHAIN_ID;
+  const showPhase2Membership = isMainnet && appEnv.daoPhase2Visible;
   const networkName = isMainnet ? "Robinhood Mainnet" : "Robinhood Testnet";
   const wallet = useWalletNetwork(selectedChainId);
   const lending = useLendingV2EligibilityProof(undefined, selectedChainId);
@@ -57,7 +59,7 @@ export function RobinhoodProjectCredentialStatus() {
             : phase1Dao.isVerifiedMember === false
               ? "missing"
               : "checking";
-  const daoText = isMainnet
+  const daoText = showPhase2Membership
     ? phase2Dao.state === "read-error"
       ? "The Mainnet Policy 5 membership read failed; no absence is inferred."
       : phase2Dao.state !== "ready"
@@ -82,7 +84,7 @@ export function RobinhoodProjectCredentialStatus() {
       <header className="protocol-section__head">
         <p className="stub__num">{networkName.toUpperCase()} · PROJECT CREDENTIALS</p>
         <h2 id="project-credential-heading">Your project credentials</h2>
-        <p>For Lending, an active Policy 3 credential and its matching private witness are required. {isMainnet ? "For DAO, Policy 5 and a genuine reputation proof are required before membership registration." : "For DAO, Policy 4 is required."} These are GYEVO-issued credentials, separate from official GIWA Dojang and Upbit credentials.</p>
+        <p>For Lending, an active Policy 3 credential and its matching private witness are required. {showPhase2Membership ? "For DAO, Policy 5 and a genuine reputation proof are required before membership registration." : isMainnet ? "DAO proposals and voting are available through the Phase 1 workspace on Robinhood Testnet." : "For DAO, Policy 4 is required."} These are GYEVO-issued credentials, separate from official GIWA Dojang and Upbit credentials.</p>
       </header>
       <WalletNetworkCard expectedChainId={selectedChainId} />
       {!isMainnet && <RobinhoodPolicy4Issuer />}
@@ -93,11 +95,25 @@ export function RobinhoodProjectCredentialStatus() {
           {lending.credential && <p className="small muted">Credential version {lending.credential.version.toString()} · expires {new Date(Number(lending.credential.expiresAt) * 1000).toLocaleString()}</p>}
           <Link className="btn btn--secondary" href="/bojagi">Open private proof ↗</Link>
         </section>
-        <section className="panel panel--ticks protocol-panel" aria-labelledby="project-policy-4-heading">
-          <div className="protocol-panel__head"><h3 id="project-policy-4-heading">DAO Governance <span className="protocol-policy">Policy {isMainnet ? "5" : "4"}</span></h3><StateChip state={daoState}>{daoState === "active" ? isMainnet ? "Membership active" : "Credential active" : daoState === "missing" ? isMainnet ? "Membership required" : "Credential missing" : daoState.replaceAll("-", " ")}</StateChip></div>
-          <p className="protocol-copy">{daoText}</p>
-          <Link className="btn btn--secondary" href="/dao">Open Robinhood governance ↗</Link>
-        </section>
+        {showPhase2Membership ? (
+          <section className="panel panel--ticks protocol-panel" aria-labelledby="project-policy-4-heading">
+            <div className="protocol-panel__head"><h3 id="project-policy-4-heading">DAO Governance <span className="protocol-policy">Policy 5</span></h3><StateChip state={daoState}>{daoState === "active" ? "Membership active" : daoState === "missing" ? "Membership required" : daoState.replaceAll("-", " ")}</StateChip></div>
+            <p className="protocol-copy">{daoText}</p>
+            <Link className="btn btn--secondary" href="/dao">Open Robinhood governance ↗</Link>
+          </section>
+        ) : isMainnet ? (
+          <section className="panel panel--ticks protocol-panel" aria-labelledby="project-phase1-dao-heading">
+            <div className="protocol-panel__head"><h3 id="project-phase1-dao-heading">DAO Governance · Phase 1</h3></div>
+            <p className="protocol-copy">The public DAO workspace currently uses Robinhood Testnet. Switch to Testnet to check a Policy 4 credential and participate in proposals and voting.</p>
+            <Link className="btn btn--secondary" href="/dao">Open Robinhood governance ↗</Link>
+          </section>
+        ) : (
+          <section className="panel panel--ticks protocol-panel" aria-labelledby="project-policy-4-heading">
+            <div className="protocol-panel__head"><h3 id="project-policy-4-heading">DAO Governance <span className="protocol-policy">Policy 4</span></h3><StateChip state={daoState}>{daoState === "active" ? "Credential active" : daoState === "missing" ? "Credential missing" : daoState.replaceAll("-", " ")}</StateChip></div>
+            <p className="protocol-copy">{daoText}</p>
+            <Link className="btn btn--secondary" href="/dao">Open Robinhood governance ↗</Link>
+          </section>
+        )}
       </div>
     </section>
   );

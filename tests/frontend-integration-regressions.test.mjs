@@ -47,7 +47,9 @@ test("the selected Robinhood network is shared by the header and Mainnet-capable
   expect(lending).toContain("useProtocolNetworkSelection()");
   expect(dao).toContain("useProtocolNetworkSelection()");
   expect(bojagi).toContain("useLendingMarketV2(selectedChainId)");
-  expect(credentials).toContain("Policy {isMainnet ? \"5\" : \"4\"}");
+  expect(credentials).toContain("const showPhase2Membership = isMainnet && appEnv.daoPhase2Visible;");
+  expect(credentials).toContain("{showPhase2Membership ? (");
+  expect(credentials).toContain("Policy 5");
 });
 
 test("2 dUSD is parsed as exactly 2,000,000 base units and supply approval stays exact", async () => {
