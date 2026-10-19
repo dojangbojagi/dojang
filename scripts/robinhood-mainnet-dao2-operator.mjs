@@ -6,13 +6,13 @@ import path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 import { createInterface } from "node:readline/promises";
 import {
-  createPublicClient, decodeEventLog, defineChain, encodeFunctionData, getAddress, http,
-  isAddress, keccak256, parseAbi, toBytes,
+  decodeEventLog, encodeFunctionData, getAddress, isAddress, keccak256, parseAbi, toBytes,
 } from "viem";
 import { computeEligibilityCommitment, generateFieldSalt } from "../src/lib/zk/commitment.ts";
 import { generateEligibilityProofFromArtifact } from "../src/lib/zk/eligibility-prover.ts";
 import { parseDemoCredentialWitness } from "../src/lib/credential/witness.ts";
 import { appendConfirmedMainnetCheckpoint } from "./mainnet-checkpoint.mjs";
+import { createVerifiedMainnetClient, getMainnetRpcCandidates, redactMainnetRpcUrls } from "./robinhood-mainnet-rpc.mjs";
 import { parsePhase2Ballot } from "../src/lib/governance/phase2-ballot.ts";
 import { robinhoodMainnetDemoContracts as contracts, ROBINHOOD_MAINNET_CHAIN_ID } from "../src/lib/config/robinhood-mainnet-demo.ts";
 import {
@@ -140,12 +140,13 @@ function requiredAddress(name) {
   return getAddress(value);
 }
 
-function rpc() {
-  const url = process.env.RH_MAINNET_RPC_URL?.trim();
-  assert.ok(url, "RH_MAINNET_RPC_URL is required; no network fallback is permitted.");
-  const chain = defineChain({ id: CHAIN_ID, name: "Robinhood Chain Mainnet",
-    nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 }, rpcUrls: { default: { http: [url] } } });
-  return { url, client: createPublicClient({ chain, transport: http(url, { timeout: 15_000, retryCount: 1 }) }) };
+async function rpc(requiredCapabilities = ["read", "simulation", "logs", "receipt"]) {
+  return createVerifiedMainnetClient({
+    primaryUrl: process.env.RH_MAINNET_RPC_URL,
+    fallbackUrl: process.env.RH_MAINNET_RPC_FALLBACK_URL,
+    fallbackApiKey: process.env.RH_MAINNET_RPC_FALLBACK_API_KEY || process.env.BLOCKVECTRA_API_KEY,
+    requiredCapabilities,
+  });
 }
 
 function readArtifact(file, names) {
@@ -173,14 +174,14 @@ async function checkReceipt(client, item) {
   assert.ok(code && code !== "0x", "Live bytecode missing at " + item.address);
 }
 
-async function getContext(requirePhase2 = true) {
-  const { url, client } = rpc();
+async function getContext(requirePhase2 = true, requiredCapabilities) {
+  const { selected, client } = await rpc(requiredCapabilities);
   assert.equal(await client.getChainId(), CHAIN_ID, "Configured RPC is not Robinhood Mainnet chain 4663.");
   const base = readArtifact(BASE_ARTIFACT, ["RobinhoodMainnetDemoCredentialRegistry", "RobinhoodMainnetDemoLendingPool"]);
   const pool = base.RobinhoodMainnetDemoLendingPool;
   assert.ok(pool.address.toLowerCase() === contracts.lendingPool?.toLowerCase(), "Mainnet Lending receipt differs from typed Mainnet registry.");
   await checkReceipt(client, pool);
-  const ctx = { client, url, pool: pool.address, poolBlock: pool.block };
+  const ctx = { client, url: selected.url, rpcLabel: selected.label, rpcCapabilities: selected.capabilities, pool: pool.address, poolBlock: pool.block };
   if (!requirePhase2) return ctx;
   const p2 = readArtifact(PHASE2_ARTIFACT, ["RobinhoodMainnetDemoLendingReputation", "RobinhoodMainnetDemoGovernancePhase2"]);
   ctx.reputation = p2.RobinhoodMainnetDemoLendingReputation.address;
@@ -314,16 +315,16 @@ async function writeGuarded(ctx, command, actor, target, abi, functionName, args
   console.log("CONFIRMED " + hash + "\n" + EXPLORER + "/tx/" + hash);
 }
 
-async function showStatus(wallet) {
+async function showStatus(wallet, requiredCapabilities) {
   if (!fs.existsSync(PHASE2_ARTIFACT)) return console.log("Robinhood Mainnet DAO Phase 2: NOT DEPLOYED (no Mainnet Phase 2 receipt artifact).");
-  const ctx = await getContext(true);
+  const ctx = await getContext(true, requiredCapabilities);
   const [paused, reputationPaused, quorum, threshold] = await Promise.all([
     ctx.client.readContract({ address: ctx.governance, abi: govAbi, functionName: "paused" }),
     ctx.client.readContract({ address: ctx.reputation, abi: repAbi, functionName: "paused" }),
     ctx.client.readContract({ address: ctx.governance, abi: govAbi, functionName: "quorum" }),
     ctx.client.readContract({ address: ctx.governance, abi: govAbi, functionName: "minimumReputation" }),
   ]);
-  console.log("Robinhood Mainnet DAO Phase 2 · Governance " + (paused ? "PAUSED" : "ACTIVE") + " · Reputation " + (reputationPaused ? "PAUSED" : "ACTIVE") + " · quorum " + quorum + " · threshold " + threshold);
+  console.log("Robinhood Mainnet DAO Phase 2 · chain 4663 · RPC " + ctx.rpcLabel + " · capabilities " + Object.entries(ctx.rpcCapabilities).filter(([, ok]) => ok).map(([name]) => name).join("/") + " · Governance " + (paused ? "PAUSED" : "ACTIVE") + " · Reputation " + (reputationPaused ? "PAUSED" : "ACTIVE") + " · quorum " + quorum + " · threshold " + threshold);
   if (!wallet) return;
   assert.ok(isAddress(wallet), "Invalid wallet.");
   const address = getAddress(wallet);
@@ -392,7 +393,7 @@ async function main() {
     console.log("Read-only: status [wallet] | evidence <wallet> [output.json] | prepare-membership <wallet> <days> <witness.json> | proof <policy5-witness.json> | proposal <id>\nSimulated by default: register-membership <witness> | create-proposal <reference> <min-reputation> --proposer-address <address> | commit-vote <id> <against|for|abstain> <ballot.json> --voter-address <address> | reveal-vote <ballot.json> --voter-address <address> | finalize-proposal <id> | execute-proposal <id> | issue-reputation <witness> <evidence> | issue-credential <witness> | unpause reputation|governance. Writes require --execute, operation-specific authorization, an encrypted alias matching the signer, and typed confirmation. Commit/reveal secrets stay in mode-0600 files. Votes are hidden only until reveal, not anonymous. `proof` uses the selected real witness, on-chain credential/claim readbacks, local Barretenberg verification, and the deployed Mainnet adapter; it never broadcasts.");
     return;
   }
-  if (command === "status") return showStatus(positional[0]);
+  if (command === "status") return showStatus(positional[0], ["read", "simulation", "receipt"]);
   if (command === "evidence") {
     assert.ok(isAddress(positional[0]), "Provide an EVM wallet address.");
     const ctx = await getContext(false);
@@ -660,7 +661,6 @@ async function main() {
 
 if (import.meta.main) main().catch((error) => {
   const message = String(error?.message ?? error);
-  const rpcUrl = process.env.RH_MAINNET_RPC_URL?.trim();
-  console.error("Mainnet DAO Phase 2 operator stopped: " + (rpcUrl ? message.replaceAll(rpcUrl, "<configured Mainnet RPC>") : message));
+  console.error("Mainnet DAO Phase 2 operator stopped: " + redactMainnetRpcUrls(message, getMainnetRpcCandidates()));
   process.exitCode = 1;
 });

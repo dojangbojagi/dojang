@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { usePublicClient } from "wagmi";
-import { createPublicClient, http, parseAbi, type Address } from "viem";
+import { createPublicClient, parseAbi, type Address } from "viem";
 import { inspectRobinhoodContracts, type RobinhoodCodeEvidence } from "@/lib/protocol/robinhood-chain-evidence";
 import { ROBINHOOD_TESTNET_CHAIN_ID, ROBINHOOD_TESTNET_EXPLORER_URL } from "@/lib/config/robinhood-testnet";
-import { robinhoodMainnetDemoChain, robinhoodMainnetDemoContracts, ROBINHOOD_MAINNET_CHAIN_ID, ROBINHOOD_MAINNET_DEMO_EXPLORER_URL } from "@/lib/config/robinhood-mainnet-demo";
+import { robinhoodMainnetDemoChain, robinhoodMainnetDemoContracts, robinhoodMainnetReadTransport, ROBINHOOD_MAINNET_CHAIN_ID, ROBINHOOD_MAINNET_DEMO_EXPLORER_URL } from "@/lib/config/robinhood-mainnet-demo";
 import { robinhoodMainnetPhase2Contracts } from "@/lib/config/contracts";
 
 export type DirectoryRow = {
@@ -40,7 +40,7 @@ type MainnetProtocolReadout =
       phase2GovernancePaused?: boolean;
     };
 
-const mainnetClient = createPublicClient({ chain: robinhoodMainnetDemoChain, transport: http(undefined, { retryCount: 1, timeout: 15_000 }) });
+const mainnetClient = createPublicClient({ chain: robinhoodMainnetDemoChain, transport: robinhoodMainnetReadTransport });
 const mainnetPoolReadAbi = parseAbi([
   "function paused() view returns (bool)",
   "function credentialRegistry() view returns (address)",

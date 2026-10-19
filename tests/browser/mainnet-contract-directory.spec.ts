@@ -33,7 +33,7 @@ test("contracts selector preserves Testnet and shows independently checked Mainn
     [signature(signatures[6]), encodeAbiParameters([{ type: "uint128" }, { type: "uint128" }, { type: "uint128" }, { type: "uint64" }], [0n, 0n, 0n, 0n])],
     [signature(signatures[7]), encodeAbiParameters([{ type: "bool" }], [true])],
   ]);
-  await page.route("https://rpc.mainnet.chain.robinhood.com/**", async (route) => {
+  await page.route("**/api/robinhood-mainnet-rpc", async (route) => {
     const request = route.request().postDataJSON() as { id: number; method: string; params?: [{ data?: string }] };
     const selector = request.method === "eth_call" ? request.params?.[0]?.data?.slice(0, 10) : undefined;
     await route.fulfill({ json: { jsonrpc: "2.0", id: request.id, result: request.method === "eth_chainId" ? "0x1237" : request.method === "eth_blockNumber" ? "0x6000" : selector ? liveReads.get(selector) : "0x6000" } });
@@ -44,12 +44,13 @@ test("contracts selector preserves Testnet and shows independently checked Mainn
 
   await page.goto(`${site}/contracts`);
   await expect(page.getByRole("button", { name: /Robinhood Mainnet — Deployed/ })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator(".cdir__addr")).toHaveCount(10);
+  await expect(page.locator(".cdir__addr")).toHaveCount(12);
   await expect(page.locator(".cdir__stats").last()).toContainText("Bytecode confirmed");
-  await expect(page.locator(".cdir__stats").last()).toContainText("1/10");
-  await expect(page.locator(".cdir__status").filter({ hasText: "Bytecode confirmed" })).toHaveCount(10);
+  await expect(page.locator(".cdir__stats").last()).toContainText("1/12");
+  await expect(page.locator(".cdir__status").filter({ hasText: "Bytecode confirmed" })).toHaveCount(12);
   await expect(page.locator(".cdir__status").filter({ hasText: "Source verified" })).toHaveCount(1);
   await expect(page.locator("#mainnet-protocol-state-heading").locator("..")).toContainText("Paused");
+  await expect(page.locator("#mainnet-protocol-state-heading").locator("..")).toContainText("Phase 2 governance");
   await expect(page.locator("#mainnet-protocol-state-heading").locator("..")).toContainText("Zero");
   await expect(page.locator("#mainnet-protocol-state-heading").locator("..")).toContainText("Unseeded");
   await expect(page.locator("#mainnet-protocol-state-heading").locator("..")).toContainText("Match");
@@ -66,7 +67,7 @@ test("contracts selector preserves Testnet and shows independently checked Mainn
 
   await page.evaluate(() => (document.querySelectorAll(".cdir__net-opt")[0] as HTMLButtonElement).click());
   await expect(page.getByRole("button", { name: /Robinhood Testnet — Interactive/ })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator(".cdir__addr")).toHaveCount(10);
+  await expect(page.locator(".cdir__addr")).toHaveCount(12);
   const testnetAddresses = await page.locator(".cdir__addr").allTextContents();
   expect(testnetAddresses).not.toEqual(mainnetAddresses);
   for (const href of await page.locator(".cdir__actions a").evaluateAll((links) => links.map((link) => (link as HTMLAnchorElement).href))) {
@@ -76,13 +77,14 @@ test("contracts selector preserves Testnet and shows independently checked Mainn
 });
 
 test("Mainnet RPC and Blockscout 403 failures leave receipt status intact", async ({ page }) => {
+  await page.route("**/api/robinhood-mainnet-rpc", (route) => route.abort());
   await page.route("https://rpc.mainnet.chain.robinhood.com/**", (route) => route.abort());
   await page.route("https://robinhoodchain.blockscout.com/api/v2/addresses/**", (route) => route.fulfill({ status: 403, contentType: "text/html", body: "Cloudflare challenge" }));
   await page.goto(`${site}/contracts`, { waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: /Robinhood Mainnet/ }).click({ force: true });
-  await expect(page.locator(".cdir__status").filter({ hasText: "Deployment receipt recorded" })).toHaveCount(10);
-  await expect(page.locator(".cdir__status").filter({ hasText: "Bytecode status unavailable" })).toHaveCount(10);
-  await expect(page.locator(".cdir__status").filter({ hasText: "Source Status Unavailable" })).toHaveCount(10);
+  await expect(page.locator(".cdir__status").filter({ hasText: "Deployment address recorded" })).toHaveCount(12);
+  await expect(page.locator(".cdir__status").filter({ hasText: "Bytecode status unavailable" })).toHaveCount(12);
+  await expect(page.locator(".cdir__status").filter({ hasText: "Source Status Unavailable" })).toHaveCount(12);
   await expect(page.locator(".cdir__stats dd").last()).toHaveText("Unavailable");
 });
 

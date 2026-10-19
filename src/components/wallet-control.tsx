@@ -47,7 +47,7 @@ export function WalletControl({ expectedChainId, showRecoveryAction = false }: {
               : "connected";
         const label = state === "connecting" ? wallet.isConnected ? "Checking network…" : "Connecting…"
           : state === "disconnected" ? "Connect Wallet"
-            : state === "wrong-network" ? wallet.isSwitching ? "Switching…" : wallet.switchError ? "Try Network Switch Again" : `Switch to ${requiredChain?.name ?? "Required Network"}`
+            : state === "wrong-network" ? wallet.isSwitching ? "Switching…" : wallet.switchError ? "Try Again" : "Switch Network"
               : wallet.address ? `${wallet.address.slice(0, 6)}…${wallet.address.slice(-4)}` : account?.displayName ?? "Connected";
         const accessibleLabel = networkDescription ? `${label}. ${networkDescription}` : label;
         const openWallet = () => {
@@ -92,12 +92,12 @@ export function WalletControl({ expectedChainId, showRecoveryAction = false }: {
                 aria-label={wallet.connector ? `Disconnect ${wallet.connector.name} and choose another wallet` : "Choose another wallet"}
                 title={wallet.connector ? `Currently connected with ${wallet.connector.name}` : "The wallet request is taking longer than expected"}
               >
-                {disconnect.isPending ? "Disconnecting…" : connectionSlow && state === "connecting" ? "Retry wallet selection" : "Choose another wallet"}
+                {disconnect.isPending ? "Disconnecting…" : connectionSlow && state === "connecting" ? "Retry Wallet" : "Choose Wallet"}
               </button>
             )}
             {showRecoveryAction && connectionSlow && state === "connecting" && (
               <span className="callout callout--caution protocol-notice" role="alert">
-                The wallet request is still pending. Close or approve the extension prompt, then retry or choose MetaMask/Rabby explicitly.
+                Wallet connection is still pending. Check the extension prompt, then retry or choose MetaMask or Rabby.
               </span>
             )}
             {selectionError && <span className="callout callout--caution protocol-notice" role="alert">{selectionError}</span>}

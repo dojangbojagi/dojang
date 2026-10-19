@@ -1,16 +1,34 @@
-import { defineChain, isAddress, type Address } from "viem";
+import { defineChain, fallback, http, isAddress, type Address } from "viem";
 import { appEnv } from "@/lib/config/env";
 
 export const ROBINHOOD_MAINNET_CHAIN_ID = 4_663;
 export const ROBINHOOD_MAINNET_PUBLIC_RPC_URL = "https://rpc.mainnet.chain.robinhood.com";
+export const ROBINHOOD_MAINNET_FALLBACK_RPC_URL = "https://api.blockvectra.com/v1/robinhood_mainnet/public";
 export const ROBINHOOD_MAINNET_DEMO_EXPLORER_URL = "https://robinhoodchain.blockscout.com";
+// Wallet network metadata intentionally contains only the public Robinhood RPC.
+// The authenticated fallback is server-only and is never exposed to wallet extensions.
+export const robinhoodMainnetRpcUrls = [appEnv.robinhoodMainnetRpcUrl || ROBINHOOD_MAINNET_PUBLIC_RPC_URL];
+
+/**
+ * Mainnet reads use a same-origin read-only proxy so the BlockVectra credential stays server-side.
+ * The public Robinhood RPC remains a direct read fallback. Wallet writes continue through the
+ * explicitly selected wallet connector and never use the API route.
+ */
+const mainnetReadEndpoints = typeof window === "undefined"
+  ? [robinhoodMainnetRpcUrls[0]!]
+  : ["/api/robinhood-mainnet-rpc", robinhoodMainnetRpcUrls[0]!];
+
+export const robinhoodMainnetReadTransport = fallback(
+  mainnetReadEndpoints.map((url) => http(url, { timeout: 8_000, retryCount: 0 })),
+  { rank: false, retryCount: 0, retryDelay: 0 },
+);
 
 /** Mainnet network configuration used by the production DAO selector and read-only integrations. */
 export const robinhoodMainnetDemoChain = defineChain({
   id: ROBINHOOD_MAINNET_CHAIN_ID,
   name: "Robinhood Chain Mainnet",
   nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-  rpcUrls: { default: { http: [appEnv.robinhoodMainnetRpcUrl] } },
+  rpcUrls: { default: { http: robinhoodMainnetRpcUrls } },
   blockExplorers: {
     default: { name: "Robinhood Chain Explorer", url: ROBINHOOD_MAINNET_DEMO_EXPLORER_URL },
   },

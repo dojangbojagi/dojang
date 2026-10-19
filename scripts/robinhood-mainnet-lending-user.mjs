@@ -6,8 +6,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { createInterface } from "node:readline/promises";
 import {
-  createPublicClient, decodeEventLog, defineChain, encodeFunctionData, getAddress,
-  http, isAddress, keccak256, maxUint256, parseAbi, toBytes, zeroAddress,
+  decodeEventLog, encodeFunctionData, getAddress, isAddress, keccak256, maxUint256, parseAbi, toBytes, zeroAddress,
 } from "viem";
 import {
   controlledTestOracleAbi, controlledTokenAbi, eligibilityVerifierAdapterAbi,
@@ -16,6 +15,7 @@ import {
 import { generateEligibilityProofFromArtifact, initializeEligibilityProverSrs } from "../src/lib/zk/eligibility-prover.ts";
 import { parseDemoCredentialWitness } from "../src/lib/credential/witness.ts";
 import { appendConfirmedMainnetCheckpoint } from "./mainnet-checkpoint.mjs";
+import { createVerifiedMainnetClient, getMainnetRpcCandidates, redactMainnetRpcUrls } from "./robinhood-mainnet-rpc.mjs";
 import { ROBINHOOD_MAINNET_CHAIN_ID, robinhoodMainnetDemoContracts as contracts } from "../src/lib/config/robinhood-mainnet-demo.ts";
 import {
   assertActiveCredential, assertParticipantAddress, assertPositiveBaseUnits,
@@ -91,16 +91,13 @@ function srsCacheStatus() {
   return { directory, present, ready };
 }
 
-function rpc() {
-  const url = process.env.RH_MAINNET_RPC_URL?.trim();
-  assert.ok(url, "RH_MAINNET_RPC_URL is required; no RPC fallback is permitted.");
-  const chain = defineChain({
-    id: CHAIN_ID,
-    name: "Robinhood Chain Mainnet",
-    nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-    rpcUrls: { default: { http: [url] } },
+async function rpc(requiredCapabilities = ["read", "simulation", "receipt"]) {
+  return createVerifiedMainnetClient({
+    primaryUrl: process.env.RH_MAINNET_RPC_URL,
+    fallbackUrl: process.env.RH_MAINNET_RPC_FALLBACK_URL,
+    fallbackApiKey: process.env.RH_MAINNET_RPC_FALLBACK_API_KEY || process.env.BLOCKVECTRA_API_KEY,
+    requiredCapabilities,
   });
-  return { url, client: createPublicClient({ chain, transport: http(url, { timeout: 15_000, retryCount: 2 }) }) };
 }
 
 function tuple(value, name, index) {
@@ -121,8 +118,8 @@ function formatUnits(value, decimals) {
   return `${n / base}.${(n % base).toString().padStart(Number(decimals), "0")}`.replace(/\.?0+$/, "");
 }
 
-async function context() {
-  const { url, client } = rpc();
+async function context(requiredCapabilities) {
+  const { selected, client } = await rpc(requiredCapabilities);
   assert.equal(await client.getChainId(), CHAIN_ID, "RH_MAINNET_RPC_URL is not chain 4663.");
   const participants = roles();
   const bytecodeTargets = [
@@ -160,7 +157,7 @@ async function context() {
   assert.equal(loanDemo && collateralDemo, true, "Both Mainnet tokens must be marked demo-only.");
   assert.equal(String(loanMarker).toLowerCase(), expectedMarker, "dUSD controlled-demo asset marker mismatch.");
   assert.equal(String(collateralMarker).toLowerCase(), expectedMarker, "dCOL controlled-demo asset marker mismatch.");
-  return { url, client, participants, paused, loanDecimals, collateralDecimals };
+  return { url: selected.url, rpcLabel: selected.label, rpcCapabilities: selected.capabilities, client, participants, paused, loanDecimals, collateralDecimals };
 }
 
 async function positionState(ctx, wallet) {
@@ -200,6 +197,7 @@ async function printStatus(ctx, label, wallet) {
   const accountData = loanFresh && collateralFresh
     ? await ctx.client.readContract({ address: contracts.lendingPool, abi: lendingPoolV2Abi, functionName: "getAccountData", args: [wallet] })
     : undefined;
+  console.log(`Robinhood Mainnet ${CHAIN_ID} · RPC ${ctx.rpcLabel} · capabilities ${Object.entries(ctx.rpcCapabilities).filter(([, ok]) => ok).map(([name]) => name).join("/")}`);
   console.log(`Wallet ${label}: ${wallet}`);
   console.log(`  allowlisted=${state.participant} · Policy 3=${active && trustedIssuer ? `ACTIVE v${credential.version}` : active ? "issuer no longer authorized" : "not active"} · pool=${ctx.paused ? "PAUSED" : "ACTIVE"}`);
   console.log(`  ${state.loanSymbol}: wallet=${formatUnits(state.loanBalance, ctx.loanDecimals)} · supply=${formatUnits(state.loanPosition[0], ctx.loanDecimals)} · debt=${formatUnits(state.debt, ctx.loanDecimals)} · allowance=${state.loanAllowance}`);
@@ -269,7 +267,7 @@ async function prompt(question) {
 }
 
 function redactRpc(text, url) {
-  return String(text).replaceAll(url, "<configured Mainnet RPC>");
+  return redactMainnetRpcUrls(text, getMainnetRpcCandidates());
 }
 
 function hasPoolEvent(ctx, receipt, eventName, predicate) {
@@ -400,7 +398,7 @@ async function executeCommand() {
     console.log(`PASS: ${alias} resolves to Wallet ${label} ${expected}. No transaction was signed or submitted.`);
     return;
   }
-  const ctx = await context();
+  const ctx = await context(options.execute ? undefined : ["read", "simulation", "receipt"]);
   const label = parseParticipantLabel(positional[0]);
   const wallet = ctx.participants[label];
   if (command === "status") return printStatus(ctx, label, wallet);
@@ -570,9 +568,8 @@ async function executeCommand() {
 }
 
 if (import.meta.main) executeCommand().catch((error) => {
-  const rpcUrl = process.env.RH_MAINNET_RPC_URL?.trim();
   const message = error instanceof Error ? error.message : "Operation failed.";
-  const secretSafe = rpcUrl ? message.replaceAll(rpcUrl, "<configured Mainnet RPC>") : message;
+  const secretSafe = redactMainnetRpcUrls(message, getMainnetRpcCandidates());
   // Errors from Noir/Barretenberg can include circuit input details; never echo proof-time exception data.
   const safeMessage = /proof|barretenberg|noir|witness/i.test(secretSafe) ? "Proof operation failed; private witness values and proof material were suppressed." : secretSafe;
   console.error(`Mainnet Lending participant operation stopped: ${safeMessage}`);

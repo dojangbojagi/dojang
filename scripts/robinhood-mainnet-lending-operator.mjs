@@ -5,13 +5,15 @@ import path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 import { createInterface } from "node:readline/promises";
 import {
-  createPublicClient, decodeEventLog, defineChain, encodeFunctionData, getAddress, http,
+  decodeEventLog, encodeFunctionData, getAddress,
   isAddress, keccak256, parseAbi, zeroAddress,
 } from "viem";
 import { computeEligibilityCommitment, generateFieldSalt } from "../src/lib/zk/commitment.ts";
 import { parseDemoCredentialWitness } from "../src/lib/credential/witness.ts";
 import { robinhoodMainnetDemoContracts as contracts, ROBINHOOD_MAINNET_CHAIN_ID as CHAIN_ID } from "../src/lib/config/robinhood-mainnet-demo.ts";
 import { appendConfirmedMainnetCheckpoint } from "./mainnet-checkpoint.mjs";
+import { createVerifiedMainnetClient, formatMainnetRpcError, getMainnetRpcCandidates, requestMainnetRpcReadBatch } from "./robinhood-mainnet-rpc.mjs";
+import { spawnMainnetCast } from "./robinhood-mainnet-cast.mjs";
 
 const ROOT = process.cwd();
 const ARTIFACT = path.join(ROOT, "contracts/broadcast/DeployRobinhoodMainnetDemoStack.s.sol/4663/run-latest.json");
@@ -19,6 +21,10 @@ const EXPLORER = "https://robinhoodchain.blockscout.com";
 const POLICY_ID = 3n;
 const POLICY_VERSION = 1n;
 const THRESHOLD = 1_000n;
+const MAX_LOG_BLOCKS_PER_QUERY = 1_000n;
+const ROBINHOOD_PRIMARY_LOG_BLOCKS_PER_QUERY = 20_000n;
+const ROLE_LOG_BATCH_SIZE = 2;
+const ROLE_LOG_BATCH_INTERVAL_MS = 350;
 const EXPECTED_MARKER = keccak256(new TextEncoder().encode("ROBINHOOD_MAINNET_CONTROLLED_DEMO_ASSET_V1")).slice(0, 10);
 const AUTH = {
   price: "oracle-price",
@@ -70,10 +76,73 @@ const accessControlEventsAbi = parseAbi([
   "event RoleGranted(bytes32 indexed role,address indexed account,address indexed sender)",
   "event RoleRevoked(bytes32 indexed role,address indexed account,address indexed sender)",
 ]);
+const accessControlRoleEventTopics = [
+  keccak256(new TextEncoder().encode("RoleGranted(bytes32,address,address)")),
+  keccak256(new TextEncoder().encode("RoleRevoked(bytes32,address,address)")),
+];
 const eventsAbi = parseAbi(["event Transfer(address indexed from,address indexed to,uint256 value)"]);
 
+export function buildDemoParticipantRoleLogFilter(role, fromBlock, toBlock) {
+  const start = BigInt(fromBlock), end = BigInt(toBlock);
+  assert.ok(start >= 0n && end >= start, "Demo participant log range must be non-negative and ordered.");
+  assert.match(role, /^0x[0-9a-fA-F]{64}$/, "Demo participant role must be a bytes32 value.");
+  return {
+    address: contracts.lendingPool,
+    fromBlock: `0x${start.toString(16)}`,
+    toBlock: `0x${end.toString(16)}`,
+    topics: [accessControlRoleEventTopics, role],
+  };
+}
+
+export function decodeDemoParticipantRoleLog(log) {
+  const decoded = decodeEventLog({ abi: accessControlEventsAbi, data: log.data, topics: log.topics });
+  assert.ok(decoded.eventName === "RoleGranted" || decoded.eventName === "RoleRevoked", "Unexpected participant role history event.");
+  return {
+    eventName: decoded.eventName,
+    args: { account: getAddress(decoded.args.account).toLowerCase() },
+    blockNumber: BigInt(log.blockNumber),
+    logIndex: BigInt(log.logIndex ?? 0),
+  };
+}
+
 export function isSplittableRangeError(error) {
-  return /block range|too many results|result limit|response size|query returned|exceeds.*limit|maximum.*blocks/i.test(String(error?.shortMessage ?? error?.message ?? error));
+  const seen = new Set();
+  const messages = [];
+  let current = error;
+  while (current && typeof current === "object" && !seen.has(current) && messages.length < 12) {
+    seen.add(current);
+    messages.push(current.shortMessage, current.message, current.details);
+    current = current.cause ?? current.error;
+  }
+  return /block range|too many results|result limit|response size|query returned|exceeds.*limit|maximum.*blocks/i.test(messages.filter(Boolean).join(" | "));
+}
+
+export function getMainnetLogBlockLimit(rpcUrl) {
+  const host = new URL(rpcUrl).hostname;
+  return host === "rpc.mainnet.chain.robinhood.com" ? ROBINHOOD_PRIMARY_LOG_BLOCKS_PER_QUERY : MAX_LOG_BLOCKS_PER_QUERY;
+}
+
+export function* getBoundedLogRanges(fromBlock, toBlock, maxBlocks = MAX_LOG_BLOCKS_PER_QUERY) {
+  const start = BigInt(fromBlock);
+  const end = BigInt(toBlock);
+  const limit = BigInt(maxBlocks);
+  assert.ok(start >= 0n && end >= start, "Historical log range must be non-negative and ordered.");
+  assert.ok(limit > 0n && limit <= ROBINHOOD_PRIMARY_LOG_BLOCKS_PER_QUERY, "Historical log query size must remain within the reviewed 20000-block bound.");
+  for (let from = start; from <= end; from += limit) {
+    const to = from + limit - 1n > end ? end : from + limit - 1n;
+    yield [from, to];
+  }
+}
+
+export function buildParticipantRoleLogBatch(role, ranges, firstQueryIndex = 0) {
+  assert.ok(Array.isArray(ranges) && ranges.length > 0 && ranges.length <= ROLE_LOG_BATCH_SIZE,
+    `Participant role log batches must contain 1–${ROLE_LOG_BATCH_SIZE} ranges.`);
+  return ranges.map(([fromBlock, toBlock], index) => ({
+    jsonrpc: "2.0",
+    id: `participant-role-${firstQueryIndex + index}`,
+    method: "eth_getLogs",
+    params: [buildDemoParticipantRoleLogFilter(role, fromBlock, toBlock)],
+  }));
 }
 
 export function assertPriceWithinBounds(price, minimum, maximum) {
@@ -193,6 +262,12 @@ export function assertWriteAuthorization(options, expected) {
   assert.equal(options.authorization, expected, `Execution requires --authorize-mainnet-lending-write=${expected}.`);
 }
 
+export function assertNoPendingSignerTransaction(latestNonce, pendingNonce) {
+  const latest = BigInt(latestNonce), pending = BigInt(pendingNonce);
+  assert.equal(pending, latest,
+    `Signer has an unresolved pending Mainnet transaction (latest nonce ${latest}, pending nonce ${pending}); inspect its hash and on-chain state before another submission.`);
+}
+
 export function assertCanonicalOperatorWrite({ hash, actor, target, data, receipt, transaction }) {
   assert.equal(receipt.status, "success", `Mainnet transaction receipt failed: ${hash}`);
   assert.equal(normalizedHash(receipt.transactionHash), hash.toLowerCase(), "Canonical receipt hash differs from the submitted transaction.");
@@ -209,11 +284,13 @@ function envAddress(name) {
   return getAddress(value);
 }
 
-function rpc() {
-  const url = process.env.RH_MAINNET_RPC_URL?.trim();
-  assert.ok(url, "RH_MAINNET_RPC_URL is required; no network fallback is permitted.");
-  const chain = defineChain({ id: CHAIN_ID, name: "Robinhood Chain Mainnet", nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 }, rpcUrls: { default: { http: [url] } } });
-  return { url, client: createPublicClient({ chain, transport: http(url, { timeout: 15_000, retryCount: 1 }) }) };
+async function rpc(requiredCapabilities = ["read", "simulation", "logs", "receipt"]) {
+  return createVerifiedMainnetClient({
+    primaryUrl: process.env.RH_MAINNET_RPC_URL,
+    fallbackUrl: process.env.RH_MAINNET_RPC_FALLBACK_URL,
+    fallbackApiKey: process.env.RH_MAINNET_RPC_FALLBACK_API_KEY || process.env.BLOCKVECTRA_API_KEY,
+    requiredCapabilities,
+  });
 }
 
 function roles() {
@@ -296,6 +373,8 @@ export function assertCanonicalDeploymentEvidence({ item, receipt, transaction, 
     assert.equal(normalizedHash(transaction.input), normalizedHash(item.artifactInput), `${item.name} canonical transaction input differs from deployment artifact.`);
   }
   assert.ok(receipt.blockHash && normalizedHash(block.hash) === normalizedHash(receipt.blockHash), `${item.name} receipt block is not canonical at its recorded height.`);
+  assert.equal(BigInt(block.number), item.block, `${item.name} receipt block hash resolves to a different block height.`);
+  assert.equal(normalizedHash(transaction.blockHash), normalizedHash(receipt.blockHash), `${item.name} transaction and receipt blocks differ.`);
 }
 
 async function confirmedCode(client, item, deployer) {
@@ -303,14 +382,16 @@ async function confirmedCode(client, item, deployer) {
     client.getTransactionReceipt({ hash: item.hash }),
     client.getTransaction({ hash: item.hash }),
   ]);
-  const block = await client.getBlock({ blockNumber: receipt.blockNumber });
+  // Mainnet RPC providers may prune old block-number lookups while retaining receipts
+  // and block-by-hash evidence. Resolve the receipt's own hash and verify its height.
+  const block = await client.getBlock({ blockHash: receipt.blockHash });
   assertCanonicalDeploymentEvidence({ item, receipt, transaction, block, deployer });
   const code = await client.getBytecode({ address: item.address });
   assert.ok(code && code !== "0x", `Runtime bytecode is absent at ${item.address}.`);
 }
 
-async function getContext() {
-  const { url, client } = rpc();
+async function getContext(requiredCapabilities) {
+  const { selected, client } = await rpc(requiredCapabilities);
   assert.equal(await client.getChainId(), CHAIN_ID, "Configured RPC is not Robinhood Mainnet chain 4663.");
   const configuredRoles = roles();
   const entries = {
@@ -356,7 +437,7 @@ async function getContext() {
   assert.ok(governanceDemo, "Mainnet governance lacks its demoOnly marker.");
   assert.equal(loanMarker.toLowerCase(), EXPECTED_MARKER.toLowerCase(), "Loan token demo marker mismatch.");
   assert.equal(collMarker.toLowerCase(), EXPECTED_MARKER.toLowerCase(), "Collateral token demo marker mismatch.");
-  return { client, url, roles: configuredRoles, entries };
+  return { client, url: selected.url, rpcLabel: selected.label, rpcCapabilities: selected.capabilities, roles: configuredRoles, entries };
 }
 
 async function hasRole(client, target, abi, roleFunction, account) {
@@ -369,24 +450,74 @@ async function readDemoParticipantHolders(ctx) {
   const head = await ctx.client.getBlockNumber();
   const events = [];
   let queryCount = 0;
-  async function readEventRange(event, fromBlock, toBlock) {
+  async function readEventRange(fromBlock, toBlock) {
     queryCount += 1;
     assert.ok(queryCount <= 8192, "Demo participant role history exceeded its bounded 8192-query budget.");
     try {
-      return await ctx.client.getLogs({ address: contracts.lendingPool, event, args: { role }, fromBlock, toBlock });
+      const logs = await ctx.client.request({
+        method: "eth_getLogs",
+        params: [buildDemoParticipantRoleLogFilter(role, fromBlock, toBlock)],
+      });
+      assert.ok(Array.isArray(logs), "Mainnet RPC returned a malformed participant role log result.");
+      return logs.map(decodeDemoParticipantRoleLog);
     } catch (error) {
       if (!isSplittableRangeError(error) || fromBlock >= toBlock) throw error;
       const middle = fromBlock + (toBlock - fromBlock) / 2n;
-      return [...await readEventRange(event, fromBlock, middle), ...await readEventRange(event, middle + 1n, toBlock)];
+      return [...await readEventRange(fromBlock, middle), ...await readEventRange(middle + 1n, toBlock)];
     }
   }
-  for (let from = ctx.entries.pool.block; from <= head; from += 20_000n) {
-    const to = from + 19_999n > head ? head : from + 19_999n;
-    const [granted, revoked] = await Promise.all([
-      readEventRange(accessControlEventsAbi[0], from, to),
-      readEventRange(accessControlEventsAbi[1], from, to),
-    ]);
-    events.push(...granted, ...revoked);
+  const maxLogBlocks = getMainnetLogBlockLimit(ctx.url);
+  const ranges = [...getBoundedLogRanges(ctx.entries.pool.block, head, maxLogBlocks)];
+  const endpoint = ctx.rpcLabel === "fallback"
+    ? getMainnetRpcCandidates().find((candidate) => candidate.label === ctx.rpcLabel && candidate.url === ctx.url)
+    : undefined;
+  const canBatchRoleLogs = endpoint && new URL(endpoint.url).hostname.toLowerCase() === "api.blockvectra.com";
+  if (canBatchRoleLogs) {
+    let nextRequestAt = 0;
+    let offset = 0;
+    let batchSize = ROLE_LOG_BATCH_SIZE;
+    let rateLimitRetries = 0;
+    while (offset < ranges.length) {
+      const batchRanges = ranges.slice(offset, offset + batchSize);
+      const delay = Math.max(0, nextRequestAt - Date.now());
+      if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
+      const requests = buildParticipantRoleLogBatch(role, batchRanges, offset);
+      let responses;
+      try {
+        responses = await requestMainnetRpcReadBatch(endpoint, requests, { retryDelayMs: ROLE_LOG_BATCH_INTERVAL_MS });
+      } catch (error) {
+        if ((error?.httpStatus !== 429 && error?.rpcCode !== -32005) || rateLimitRetries >= 3) throw error;
+        rateLimitRetries += 1;
+        if (batchSize > 1) batchSize = 1;
+        else nextRequestAt = Date.now() + ROLE_LOG_BATCH_INTERVAL_MS * (2 ** rateLimitRetries);
+        console.log(`Mainnet RPC rate limit · reducing role-log batch to ${batchSize} and retrying within a bounded backoff.`);
+        continue;
+      }
+      queryCount += batchRanges.length;
+      assert.ok(queryCount <= 8192, "Demo participant role history exceeded its bounded 8192-query budget.");
+      nextRequestAt = Date.now() + ROLE_LOG_BATCH_INTERVAL_MS;
+      for (let index = 0; index < responses.length; index += 1) {
+        const response = responses[index];
+        const [from, to] = batchRanges[index];
+        if (response.error) {
+          const error = Object.assign(new Error(String(response.error.message ?? "Mainnet role log query failed.")), { code: response.error.code });
+          if (!isSplittableRangeError(error) || from >= to) throw error;
+          events.push(...await readEventRange(from, to));
+          continue;
+        }
+        assert.ok(Array.isArray(response.result), "Mainnet RPC returned a malformed participant role log batch result.");
+        events.push(...response.result.map(decodeDemoParticipantRoleLog));
+      }
+      if (queryCount % 1_000 < batchRanges.length || offset + batchRanges.length === ranges.length) {
+        console.log(`Participant role history · ${queryCount.toLocaleString()} / ${ranges.length.toLocaleString()} bounded RPC queries.`);
+      }
+      offset += batchRanges.length;
+      rateLimitRetries = 0;
+    }
+  } else {
+    for (const [from, to] of ranges) {
+      events.push(...await readEventRange(from, to));
+    }
   }
   events.sort((a, b) => a.blockNumber === b.blockNumber
     ? Number(a.logIndex ?? 0n) - Number(b.logIndex ?? 0n)
@@ -402,8 +533,10 @@ async function readDemoParticipantHolders(ctx) {
 
 async function showStatus(ctx) {
   const { client, roles: r } = ctx;
-  const participantHistory = await readDemoParticipantHolders(ctx);
-  const migrationState = classifyDemoParticipantMigration(participantHistory.holders, r);
+  const participantHistory = ctx.rpcCapabilities.logs ? await readDemoParticipantHolders(ctx) : undefined;
+  const migrationState = participantHistory
+    ? classifyDemoParticipantMigration(participantHistory.holders, r)
+    : "history-unavailable";
   const [paused, governancePaused, assets, loanSupply, loanCap, loanDecimals, loanSymbol, collSupply, collCap, collDecimals, collSymbol,
     loanPoolBalance, collateralPoolBalance, loanBounds, collBounds, loanConfig, collConfig, adminPool, riskAdmin, pauser, participantA, participantB,
     registryAdmin, issuer, oracleAdmin, updater, minterLoan, minterColl, governanceAdmin, governancePauser,
@@ -455,9 +588,15 @@ async function showStatus(ctx) {
   const previousParticipant = r.previousParticipantA
     ? await client.readContract({ address: contracts.lendingPool, abi: poolAbi, functionName: "isDemoParticipant", args: [r.previousParticipantA] })
     : false;
-  assert.equal(participantA, migrationState === "complete", "Replacement Wallet A live role read differs from canonical role history.");
+  if (participantHistory) {
+    assert.equal(participantA, migrationState === "complete", "Replacement Wallet A live role read differs from canonical role history.");
+  } else {
+    assert.equal(participantA, true, "Configured Wallet A is not currently allowlisted.");
+  }
   assert.equal(participantB, true, "Wallet B must retain its on-chain DEMO_PARTICIPANT_ROLE throughout migration.");
-  assert.equal(previousParticipant, migrationState === "awaiting-revocation", "Previous Wallet A live role read differs from canonical role history.");
+  if (participantHistory) {
+    assert.equal(previousParticipant, migrationState === "awaiting-revocation", "Previous Wallet A live role read differs from canonical role history.");
+  }
   for (const [label, token, supply, cap, decimals, symbol] of [
     ["Loan", contracts.loanToken, loanSupply, loanCap, loanDecimals, loanSymbol],
     ["Collateral", contracts.collateralToken, collSupply, collCap, collDecimals, collSymbol],
@@ -465,11 +604,15 @@ async function showStatus(ctx) {
     assert.ok(supply <= cap, `${label} token supply exceeds its immutable mint cap.`);
     console.log(`${label} ${symbol} · ${decimals} decimals · supply ${supply}/${cap} base units`);
   }
-  console.log(`Robinhood Mainnet ${CHAIN_ID} · live block ${now.number} · pool ${contracts.lendingPool} · ${paused ? "PAUSED" : "ACTIVE"} · Phase 1 Governance ${governancePaused ? "PAUSED" : "ACTIVE"}`);
+  console.log(`Robinhood Mainnet ${CHAIN_ID} · RPC ${ctx.rpcLabel} · capabilities ${Object.entries(ctx.rpcCapabilities).filter(([, ok]) => ok).map(([name]) => name).join("/")} · live block ${now.number} · pool ${contracts.lendingPool} · ${paused ? "PAUSED" : "ACTIVE"} · Phase 1 Governance ${governancePaused ? "PAUSED" : "ACTIVE"}`);
   console.log(`Receipts and bytecode: 10/10 live-checked · dependencies and demo markers verified · no Testnet address fallback.`);
   console.log(`Participants: A ${r.participantA} ${participantA ? "ALLOWLISTED" : "PENDING ROLE CHANGE"} · B ${r.participantB} ${participantB ? "ALLOWLISTED" : "BLOCKED"}`);
   if (r.previousParticipantA) console.log(`Wallet A migration: ${migrationState} · prior address ${r.previousParticipantA} ${previousParticipant ? "still allowlisted" : "revoked"}.`);
-  console.log(`Complete participant-role history: migration state ${migrationState} through block ${participantHistory.head} · ${participantHistory.queryCount} bounded queries.`);
+  if (participantHistory) {
+    console.log(`Complete participant-role history: migration state ${migrationState} through block ${participantHistory.head} · ${participantHistory.queryCount} bounded queries.`);
+  } else {
+    console.log("PARTIAL STATUS: current Wallet A/Wallet B role reads are live; complete participant-holder history is unavailable because this RPC does not expose eth_getLogs without an API key. No assertion is made that no third participant is allowlisted.");
+  }
   console.log(`Roles: admin/pool=${adminPool} risk-admin=${riskAdmin} pause-authority=${pauser} issuer=${issuer} oracle-updater=${updater} minter=${minterLoan && minterColl} governance-admin=${governanceAdmin} governance-pauser=${governancePauser}`);
   const freshness = (price, updatedAt, maxAge) => {
     const value = BigInt(price), updated = BigInt(updatedAt), timestamp = BigInt(now.timestamp), ageLimit = BigInt(maxAge);
@@ -513,7 +656,9 @@ async function getCompleteMintHistory(ctx, token, recipient, fromBlock) {
     }
   }
   const head = await ctx.client.getBlockNumber();
-  const logs = await scan(fromBlock, head);
+  const logs = [];
+  const maxLogBlocks = getMainnetLogBlockLimit(ctx.url);
+  for (const [from, to] of getBoundedLogRanges(fromBlock, head, maxLogBlocks)) logs.push(...await scan(from, to));
   return { count: logs.length, head, queries };
 }
 
@@ -592,6 +737,84 @@ async function prompt(question) {
   try { return await rl.question(question); } finally { rl.close(); }
 }
 
+function parseCastRpcResult(stdout, method) {
+  const text = String(stdout ?? "").trim();
+  assert.ok(text.length > 0, `cast returned an empty result for ${method}.`);
+  try { return JSON.parse(text); }
+  catch { return text; }
+}
+
+function castRpcRead(rpcUrl, method, params = [], rpcLabel = "primary") {
+  const args = ["rpc", method, ...params.map((value) => typeof value === "string" ? value : JSON.stringify(value)),
+    "--rpc-url", rpcUrl, "--rpc-timeout", "12"];
+  const result = spawnMainnetCast(args, rpcUrl, {
+    rpcLabel,
+    spawnImpl: spawnSync,
+    stdio: ["ignore", "pipe", "pipe"],
+    spawnOptions: { timeout: 15_000 },
+  });
+  if (result.error) {
+    throw new Error(`Read-only cast RPC ${method} could not start (${result.error.code ?? result.error.name ?? "spawn error"}).`);
+  }
+  if (result.status !== 0) {
+    // Do not forward raw Foundry diagnostics: they can echo provider URLs or headers.
+    throw new Error(`Read-only cast RPC ${method} failed with exit code ${result.status ?? "unknown"}; raw provider output was suppressed.`);
+  }
+  return parseCastRpcResult(result.stdout, method);
+}
+
+function validateFoundryRpcPath() {
+  const candidates = getMainnetRpcCandidates({
+    primaryUrl: process.env.RH_MAINNET_RPC_URL,
+    fallbackUrl: process.env.RH_MAINNET_RPC_FALLBACK_URL,
+    fallbackApiKey: process.env.RH_MAINNET_RPC_FALLBACK_API_KEY || process.env.BLOCKVECTRA_API_KEY,
+  });
+  const expectedReceipt = artifactReceipt("RobinhoodMainnetDemoLendingPool", contracts.lendingPool);
+  const failures = [];
+  for (const candidate of candidates) {
+    try {
+  const chainId = castRpcRead(candidate.url, "eth_chainId", [], candidate.label);
+  assert.equal(Number(BigInt(chainId)), CHAIN_ID, `Foundry cast RPC is not connected to Robinhood Mainnet chain ${CHAIN_ID}.`);
+
+  const feeHistory = castRpcRead(candidate.url, "eth_feeHistory", ["0x2", "latest", [50]], candidate.label);
+  assert.ok(feeHistory && Array.isArray(feeHistory.baseFeePerGas) && feeHistory.baseFeePerGas.length >= 2,
+    "Foundry cast eth_feeHistory did not return a valid base fee window.");
+
+  const estimateGas = castRpcRead(candidate.url, "eth_estimateGas", [{
+    from: "0x0000000000000000000000000000000000000001",
+    to: contracts.lendingPool,
+    data: encodeFunctionData({ abi: poolAbi, functionName: "paused" }),
+  }], candidate.label);
+  assert.ok(typeof estimateGas === "string" && /^0x[0-9a-f]+$/i.test(estimateGas) && BigInt(estimateGas) > 0n,
+    "Foundry cast eth_estimateGas did not return a positive estimate.");
+
+  const headValue = castRpcRead(candidate.url, "eth_blockNumber", [], candidate.label);
+  assert.ok(typeof headValue === "string" && /^0x[0-9a-f]+$/i.test(headValue), "Foundry cast eth_blockNumber returned an invalid chain head.");
+  const head = BigInt(headValue);
+  const fromBlock = head > 16n ? head - 16n : 0n;
+  const logs = castRpcRead(candidate.url, "eth_getLogs", [{
+    address: contracts.lendingPool,
+    fromBlock: `0x${fromBlock.toString(16)}`,
+    toBlock: headValue,
+    topics: [accessControlRoleEventTopics],
+  }], candidate.label);
+  assert.ok(Array.isArray(logs), "Foundry cast eth_getLogs did not return a log array.");
+
+  const receipt = castRpcRead(candidate.url, "eth_getTransactionReceipt", [expectedReceipt.hash], candidate.label);
+  assert.equal(receipt?.transactionHash?.toLowerCase(), expectedReceipt.hash.toLowerCase(),
+    "Foundry cast receipt query returned a different deployment transaction.");
+  assert.equal(receipt?.status, "0x1", "Foundry cast receipt query did not confirm the successful pool deployment receipt.");
+  assert.equal(receipt?.contractAddress?.toLowerCase(), contracts.lendingPool.toLowerCase(),
+    "Foundry cast receipt query returned a different Lending pool address.");
+  console.log(`PASS Foundry cast RPC via ${candidate.label} · chain ${CHAIN_ID} · feeHistory · estimateGas · bounded logs · canonical pool receipt ${expectedReceipt.hash.slice(0, 10)}…`);
+  return;
+    } catch (error) {
+      failures.push(`${candidate.label}: ${error instanceof Error ? error.message : "Foundry RPC capability check failed"}`);
+    }
+  }
+  throw new Error(`No configured endpoint passed Foundry cast Mainnet RPC checks (${failures.join("; ")}).`);
+}
+
 async function writeGuarded(ctx, command, actor, target, abi, functionName, args, options, confirm) {
   const request = { account: actor, address: target, abi, functionName, args };
   await ctx.client.simulateContract(request);
@@ -605,18 +828,37 @@ async function writeGuarded(ctx, command, actor, target, abi, functionName, args
   assert.equal(signer.status, 0, "Could not unlock encrypted Foundry keystore to verify its public role address.");
   const derived = signer.stdout.match(/0x[a-fA-F0-9]{40}/g) ?? [];
   assert.ok(derived.some((address) => getAddress(address).toLowerCase() === actor.toLowerCase()), "Encrypted keystore alias does not match the required on-chain role address.");
+  const readSignerNonces = async () => Promise.all([
+    ctx.client.getTransactionCount({ address: actor, blockTag: "latest" }),
+    ctx.client.getTransactionCount({ address: actor, blockTag: "pending" }),
+  ]);
+  const [latestBefore, pendingBefore] = await readSignerNonces();
+  assertNoPendingSignerTransaction(latestBefore, pendingBefore);
   const phrase = `WRITE Robinhood Mainnet ${AUTH[command]}`;
   assert.equal(await prompt(`Type exactly “${phrase}” to sign and submit: `), phrase, "Final typed authorization did not match.");
+  const [latestImmediatelyBefore, pendingImmediatelyBefore] = await readSignerNonces();
+  assertNoPendingSignerTransaction(latestImmediatelyBefore, pendingImmediatelyBefore);
+  assert.equal(pendingImmediatelyBefore, pendingBefore,
+    "Signer nonce changed during the confirmation prompt; inspect transaction state before submitting.");
   const data = encodeFunctionData({ abi, functionName, args });
-  const child = spawn("cast", ["send", "--rpc-url", ctx.url, "--chain", String(CHAIN_ID), "--account", alias, "--async", "--data", data, target], { stdio: ["inherit", "pipe", "inherit"] });
+  const child = spawnMainnetCast(["send", "--rpc-url", ctx.url, "--chain", String(CHAIN_ID), "--account", alias, "--async", "--data", data, target], ctx.url, { rpcLabel: ctx.rpcLabel });
   let output = "";
   child.stdout.on("data", (chunk) => { output += chunk.toString(); });
   const exit = await new Promise((resolve, reject) => {
     child.once("error", reject);
     child.once("close", resolve);
   });
-  assert.equal(exit, 0, "cast send failed before returning a transaction hash.");
   const hash = output.match(/0x[a-fA-F0-9]{64}/)?.[0];
+  if (exit !== 0 || !hash) {
+    let nonceState;
+    try {
+      const [latestAfter, pendingAfter] = await readSignerNonces();
+      nonceState = `latest/pending nonce ${latestBefore}/${pendingBefore} before, ${latestAfter}/${pendingAfter} after`;
+    } catch {
+      nonceState = "signer nonce readback is unavailable";
+    }
+    throw new Error(`cast send returned no confirmed transaction hash (exit ${exit}); submission outcome must be treated as uncertain (${nonceState}). No automatic retry was attempted. Inspect pending transactions, canonical receipts, and contract state before another submission.`);
+  }
   assert.ok(hash, "No transaction hash returned.");
   const receipt = await ctx.client.waitForTransactionReceipt({ hash });
   const canonicalTransaction = await ctx.client.getTransaction({ hash });
@@ -680,10 +922,18 @@ async function main() {
     else positional.push(arg);
   }
   if (["help", "--help"].includes(command)) {
-    console.log("Read-only: status | prepare-lending <participant> <expiry-days> <private-witness.json>. Simulated by default: participant-revoke | participant-grant | price loan|collateral <price-wad> | mint loan|collateral <participant> <base-units> | issue-lending <private-witness.json> | unpause-pool.\n\nParticipant replacement is ordered and fail-closed: revoke the previous Wallet A first, then grant the configured replacement only from the exact intermediate holder set {Wallet B}. This never allows a third participant. The interval between transactions has Wallet B as the sole participant. Every write simulates first; execution requires --execute, the matching --authorize-mainnet-lending-write=<label>, an encrypted Foundry keystore alias matching the required role, and an interactive typed confirmation.");
+    console.log("Read-only: status | cast-rpc-check | prepare-lending <participant> <expiry-days> <private-witness.json>. Simulated by default: participant-revoke | participant-grant | price loan|collateral <price-wad> | mint loan|collateral <participant> <base-units> | issue-lending <private-witness.json> | unpause-pool.\n\nParticipant replacement is ordered and fail-closed: revoke the previous Wallet A first, then grant the configured replacement only from the exact intermediate holder set {Wallet B}. This never allows a third participant. The interval between transactions has Wallet B as the sole participant. Every write simulates first; execution requires --execute, the matching --authorize-mainnet-lending-write=<label>, an encrypted Foundry keystore alias matching the required role, and an interactive typed confirmation.");
     return;
   }
-  const ctx = await getContext();
+  if (command === "cast-rpc-check") return validateFoundryRpcPath();
+  const requiredCapabilities = command === "status" || (command === "price" && !options.execute)
+    ? ["read", "simulation", "receipt"]
+    : undefined;
+  const ctx = await getContext(requiredCapabilities);
+  if (command === "price") {
+    const capabilities = Object.entries(ctx.rpcCapabilities).filter(([, ok]) => ok).map(([name]) => name).join("/");
+    console.log(`Robinhood Mainnet ${CHAIN_ID} · RPC ${ctx.rpcLabel} · validated capabilities ${capabilities}${ctx.rpcCapabilities.logs ? "" : " · event logs unavailable"}`);
+  }
   if (command === "status") return showStatus(ctx);
   if (command === "participant-revoke") return migrateParticipantRole(ctx, "revoke", options);
   if (command === "participant-grant") return migrateParticipantRole(ctx, "grant", options);
@@ -813,8 +1063,6 @@ async function main() {
 }
 
 if (import.meta.main) main().catch((error) => {
-  const message = String(error?.shortMessage ?? error?.message ?? error);
-  const rpcUrl = process.env.RH_MAINNET_RPC_URL?.trim();
-  console.error("Mainnet Lending operator stopped: " + (rpcUrl ? message.replaceAll(rpcUrl, "<configured Mainnet RPC>") : message));
+  console.error("Mainnet Lending operator stopped: " + formatMainnetRpcError(error, getMainnetRpcCandidates()));
   process.exitCode = 1;
 });

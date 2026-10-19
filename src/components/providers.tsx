@@ -8,7 +8,7 @@ import { createConfig, http, WagmiProvider, injected } from "wagmi";
 import type { CreateConnectorFn } from "wagmi";
 import { supportedProtocolChains } from "@/lib/config/network-registry";
 import { appEnv } from "@/lib/config/env";
-import { robinhoodMainnetDemoChain } from "@/lib/config/robinhood-mainnet-demo";
+import { robinhoodMainnetDemoChain, robinhoodMainnetReadTransport } from "@/lib/config/robinhood-mainnet-demo";
 import { giwaSepolia } from "@/lib/config/chain";
 import { robinhoodTestnet } from "@/lib/config/robinhood-testnet";
 import { DemoWitnessProvider } from "@/components/witness-context";
@@ -75,7 +75,7 @@ const wagmiConfig = createConfig({
   transports: {
     [robinhoodTestnet.id]: http(appEnv.robinhoodRpcUrl),
     [giwaSepolia.id]: http(appEnv.giwaRpcUrl),
-    [robinhoodMainnetDemoChain.id]: http(appEnv.robinhoodMainnetRpcUrl),
+    [robinhoodMainnetDemoChain.id]: robinhoodMainnetReadTransport,
   },
   ssr: true,
 });

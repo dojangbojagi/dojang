@@ -27,6 +27,17 @@ test("wallet choices detect installed identities and explain Phantom's unsupport
   expect(network).toContain("Choose a compatible EVM wallet such as MetaMask or Rabby");
 });
 
+test("application header keeps the wrong-network action compact and preserves the actual network explanation", async () => {
+  const [wallet, theme] = await Promise.all([
+    readFile(new URL("../src/components/wallet-control.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/app/theme.css", import.meta.url), "utf8"),
+  ]);
+  expect(wallet).toContain('wallet.switchError ? "Try Again" : "Switch Network"');
+  expect(wallet).toContain("const accessibleLabel = networkDescription ? `${label}. ${networkDescription}` : label;");
+  expect(theme).toContain("@media (min-width: 1440px) and (max-width: 1599px), (max-width: 900px)");
+  expect(theme).toContain(".site-header__current-chain { display: none; }");
+});
+
 test("the selected Robinhood network is shared by the header and Mainnet-capable product flows", async () => {
   const [header, picker, provider, selection, lending, dao, bojagi, credentials] = await Promise.all([
     readFile(new URL("../src/components/site-header.tsx", import.meta.url), "utf8"),

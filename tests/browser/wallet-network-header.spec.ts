@@ -20,7 +20,7 @@ test("network picker is Radix-based, selection stays distinct from the real wall
   await expect(header.getByRole("button", { name: /Connect Wallet/ })).toBeVisible();
   await expect(header.getByText("Wallet disconnected", { exact: true })).toBeVisible();
 
-  for (const width of [1920, 1440, 1280, 768, 390]) {
+  for (const width of [1920, 1600, 1440, 1280, 1024, 768, 390, 320]) {
     await page.setViewportSize({ width, height: 1000 });
     const layout = await header.locator(".site-header__inner").evaluate((inner) => {
       const box = inner.getBoundingClientRect();
@@ -43,7 +43,12 @@ test("network picker is Radix-based, selection stays distinct from the real wall
         networkRight: network.right,
         walletLeft: wallet.left,
         walletRight: wallet.right,
+        walletTop: wallet.top,
+        walletBottom: wallet.bottom,
         menuLeft: menu.left,
+        menuRight: menu.right,
+        menuTop: menu.top,
+        menuBottom: menu.bottom,
       };
     });
     expect(layout.scrollWidth, `header content overflow at ${width}px`).toBeLessThanOrEqual(layout.innerWidth + 1);
@@ -55,7 +60,9 @@ test("network picker is Radix-based, selection stays distinct from the real wall
     }
     expect(layout.networkRight, `network picker overlaps wallet control at ${width}px`).toBeLessThanOrEqual(layout.walletLeft + 1);
     if (width <= 1439) {
-      expect(layout.walletRight, `wallet control overlaps menu at ${width}px`).toBeLessThanOrEqual(layout.menuLeft + 1);
+      const overlapsX = layout.walletLeft < layout.menuRight && layout.walletRight > layout.menuLeft;
+      const overlapsY = layout.walletTop < layout.menuBottom && layout.walletBottom > layout.menuTop;
+      expect(overlapsX && overlapsY, `wallet control overlaps menu at ${width}px`).toBe(false);
     }
     await page.screenshot({ path: `/tmp/gyevo-network-header-${width}.png`, fullPage: false });
   }

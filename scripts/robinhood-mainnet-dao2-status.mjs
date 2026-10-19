@@ -2,12 +2,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import assert from "node:assert/strict";
-import { createPublicClient, defineChain, http, isAddress, isAddressEqual, parseAbi } from "viem";
+import { isAddress, isAddressEqual, parseAbi } from "viem";
 import { robinhoodMainnetDemoContracts, ROBINHOOD_MAINNET_CHAIN_ID } from "../src/lib/config/robinhood-mainnet-demo.ts";
+import { createVerifiedMainnetClient, getMainnetRpcCandidates, redactMainnetRpcUrls } from "./robinhood-mainnet-rpc.mjs";
 
 const ROOT = process.cwd();
 const ARTIFACT_PATH = path.join(ROOT, "contracts/broadcast/DeployRobinhoodMainnetDaoPhase2.s.sol/4663/run-latest.json");
-const RPC = process.env.RH_MAINNET_RPC_URL || process.env.NEXT_PUBLIC_ROBINHOOD_MAINNET_RPC_URL || "https://rpc.mainnet.chain.robinhood.com";
 const EXPLORER = "https://robinhoodchain.blockscout.com";
 const EXPECTED = ["RobinhoodMainnetDemoLendingReputation", "RobinhoodMainnetDemoGovernancePhase2"];
 const reputationAbi = parseAbi([
@@ -104,14 +104,13 @@ if (deployment) {
     console.log(`${name}: ${item.address}`);
     console.log(`  receipt: ${item.hash} · block ${item.blockNumber.toString()} · SUCCESS (local Foundry artifact)`);
   }
-  const chain = defineChain({
-    id: ROBINHOOD_MAINNET_CHAIN_ID,
-    name: "Robinhood Chain Mainnet",
-    nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-    rpcUrls: { default: { http: [RPC] } },
-  });
-  const client = createPublicClient({ chain, transport: http(RPC, { timeout: 15_000, retryCount: 1 }) });
   try {
+    const { client, selected } = await createVerifiedMainnetClient({
+      primaryUrl: process.env.RH_MAINNET_RPC_URL || process.env.NEXT_PUBLIC_ROBINHOOD_MAINNET_RPC_URL,
+      fallbackUrl: process.env.RH_MAINNET_RPC_FALLBACK_URL || process.env.NEXT_PUBLIC_ROBINHOOD_MAINNET_RPC_FALLBACK_URL,
+      fallbackApiKey: process.env.RH_MAINNET_RPC_FALLBACK_API_KEY || process.env.BLOCKVECTRA_API_KEY,
+      requiredCapabilities: ["read", "simulation", "receipt"],
+    });
     const actualChain = await client.getChainId();
     assert.equal(actualChain, ROBINHOOD_MAINNET_CHAIN_ID, `RPC returned chain ${actualChain}`);
     const repAddress = deployment.RobinhoodMainnetDemoLendingReputation.address;
@@ -197,7 +196,7 @@ if (deployment) {
       client.readContract({ address: robinhoodMainnetDemoContracts.credentialRegistry, abi: parseAbi(["function hasRole(bytes32,address) view returns (bool)"]), functionName: "hasRole", args: [credentialIssuerRole, membershipIssuer] }),
     ]);
     assert.ok(roleChecks.every(Boolean), "a configured Mainnet Phase 2 role does not match on-chain state");
-    console.log(`Live RPC: chain ${actualChain} · confirmed deployment receipts ${liveReceipts.length}/2 · runtime bytecode 5/5 · dependencies match · demo-only markers confirmed`);
+    console.log(`Live RPC (${selected.label}; ${Object.entries(selected.capabilities).filter(([, ok]) => ok).map(([name]) => name).join("/")}): chain ${actualChain} · confirmed deployment receipts ${liveReceipts.length}/2 · runtime bytecode 5/5 · dependencies match · demo-only markers confirmed`);
     console.log("Live paused state: reputation PAUSED · governance PAUSED · configured admin, issuer, and pause roles confirmed");
     console.log(`Live governance parameters: commit ${commitPeriod}s · reveal ${revealPeriod}s · execution ${executionWindow}s · quorum ${quorum} · reputation ${minimumReputation}`);
     console.log(`Explorer: ${EXPLORER}/address/${govAddress} · ${EXPLORER}/address/${repAddress}`);
@@ -217,7 +216,7 @@ if (deployment) {
     }
     console.log(`Receipt-derived environment values:\nRH_MAINNET_PHASE2_REPUTATION_REGISTRY_ADDRESS=${repAddress}\nRH_MAINNET_PHASE2_GOVERNANCE_ADDRESS=${govAddress}\nNEXT_PUBLIC_ROBINHOOD_MAINNET_PHASE2_REPUTATION_REGISTRY_CONTRACT=${repAddress}\nNEXT_PUBLIC_ROBINHOOD_MAINNET_PHASE2_GOVERNANCE_CONTRACT=${govAddress}`);
   } catch (error) {
-    const message = error instanceof Error ? error.message.replace(RPC, "<configured Mainnet RPC>") : "unknown read error";
+    const message = error instanceof Error ? redactMainnetRpcUrls(error.message, getMainnetRpcCandidates()) : "unknown read error";
     fail(`live verification unavailable or failed: ${message}`);
   }
 }
@@ -225,7 +224,7 @@ if (deployment) {
 
 if (import.meta.main) {
   runStatus().catch((error) => {
-    const message = error instanceof Error ? error.message.replace(RPC, "<configured Mainnet RPC>") : "unknown read error";
+    const message = error instanceof Error ? redactMainnetRpcUrls(error.message, getMainnetRpcCandidates()) : "unknown read error";
     fail(`live verification unavailable or failed: ${message}`);
   });
 }
