@@ -8,8 +8,6 @@ import { createCipherSculpture } from "./cipher-sculpture";
 import { createGlobeSculpture } from "./globe-sculpture";
 import { FORM_TIMELINE, GlyphField } from "./glyph-field";
 import { scrollToId } from "./smooth-scroll";
-import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
-import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo";
 
 /* Phase 1 is the claim on white. The full stop after "more" is a black dot, like the one after "less";
    scrolling cuts it into a row of slabs that turn, fly and settle as the strips of the screen (see
@@ -24,7 +22,15 @@ import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo"
    numbers written on the stage (see the header of landing.css), and every animated value
    in the stylesheet reads them. Nothing here animates by itself, so it runs in reverse. */
 
-const STACK = ["Robinhood Mainnet", "Dojang", "EAS", "Noir", "Barretenberg", "UltraHonk", "Solidity"];
+const STACK = [
+  "Robinhood Mainnet",
+  "Dojang",
+  "EAS",
+  "Noir",
+  "Barretenberg",
+  "UltraHonk",
+  "Solidity",
+];
 
 /* "Prove more. Reveal less." -> ["Prove more", "Reveal less."]; the stop after "more" becomes the dot */
 function splitTagline(tagline: string): [string, string] {
@@ -64,7 +70,11 @@ function openness(p: number) {
    when the picture does and the same numbers drive both; nothing here scrolls by itself. */
 function storyProgress(h: number, ex: number) {
   const f = FORM_TIMELINE;
-  return clamp01((h - f.hFrom) / (f.hTo - f.hFrom)) + clamp01((ex - f.bcFrom) / (f.bcTo - f.bcFrom)) + clamp01((ex - f.cdFrom) / (f.cdTo - f.cdFrom));
+  return (
+    clamp01((h - f.hFrom) / (f.hTo - f.hFrom)) +
+    clamp01((ex - f.bcFrom) / (f.bcTo - f.bcFrom)) +
+    clamp01((ex - f.cdFrom) / (f.cdTo - f.cdFrom))
+  );
 }
 
 const motionQuery = () => window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -104,7 +114,9 @@ export function CoverReveal({ tagline }: Props) {
     let last = -1;
     let heroOn: boolean | null = null;
     let storyOn = -1;
-    const storyEls = Array.from(hero.querySelectorAll<HTMLElement>("[data-story-i]"));
+    const storyEls = Array.from(
+      hero.querySelectorAll<HTMLElement>("[data-story-i]"),
+    );
 
     const setPhase = (dark: boolean) => {
       const next = dark ? "dark" : "light";
@@ -113,7 +125,8 @@ export function CoverReveal({ tagline }: Props) {
     const setHero = (on: boolean) => {
       if (heroOn === on) return;
       heroOn = on;
-      (hero as HTMLElement & { inert: boolean }).inert = !on; /* hero links stay out of the tab order until visible */
+      (hero as HTMLElement & { inert: boolean }).inert =
+        !on; /* hero links stay out of the tab order until visible */
     };
 
     /* offsetLeft/offsetTop are layout values, so the transforms on the
@@ -153,9 +166,16 @@ export function CoverReveal({ tagline }: Props) {
       const run = r.height - geo.sh;
       const scrolled = -r.top;
       const p = clamp01(scrolled / (run * OPEN));
-      const h = clamp01((scrolled - run * OPEN) / (run * HOLD)); /* how far through the hold: the picture changes form now */
-      const ex = clamp01((scrolled - run * (OPEN + HOLD)) / (run * SHOW)); /* how far through the extra forms */
-      const q = clamp01((scrolled - run * (OPEN + HOLD + SHOW)) / (run * (1 - OPEN - HOLD - SHOW)));
+      const h = clamp01(
+        (scrolled - run * OPEN) / (run * HOLD),
+      ); /* how far through the hold: the picture changes form now */
+      const ex = clamp01(
+        (scrolled - run * (OPEN + HOLD)) / (run * SHOW),
+      ); /* how far through the extra forms */
+      const q = clamp01(
+        (scrolled - run * (OPEN + HOLD + SHOW)) /
+          (run * (1 - OPEN - HOLD - SHOW)),
+      );
       const key = p + h + ex + q * 2;
       if (Math.abs(key - last) < 0.0005) return;
       last = key;
@@ -176,10 +196,18 @@ export function CoverReveal({ tagline }: Props) {
       const half = Math.min(bw, bh) / 2;
       const toSquare = smooth(0, 0.12, e);
       const dotRadius = Math.min(bw, bh) * 0.2;
-      const radius = Math.min(half, (dotRadius * (1 - toSquare) + 26 * toSquare) * (1 - smooth(0.5, 1, e)));
+      const radius = Math.min(
+        half,
+        (dotRadius * (1 - toSquare) + 26 * toSquare) * (1 - smooth(0.5, 1, e)),
+      );
 
       /* the window onto the hero is the union of the slabs' faces; at rest it is still the dot's own rectangle */
-      const windowPath = cipher.draw(e, { x: geo.x, y: geo.y, w: geo.w, h: geo.h });
+      const windowPath = cipher.draw(e, {
+        x: geo.x,
+        y: geo.y,
+        w: geo.w,
+        h: geo.h,
+      });
 
       const s = stage.style;
       s.setProperty("--e", e.toFixed(4));
@@ -194,11 +222,16 @@ export function CoverReveal({ tagline }: Props) {
         /* only the words that are showing are exposed to assistive technology */
         storyOn = storyNow;
         for (const el of storyEls) {
-          if (el.dataset.storyI === String(storyNow)) el.removeAttribute("aria-hidden");
+          if (el.dataset.storyI === String(storyNow))
+            el.removeAttribute("aria-hidden");
           else el.setAttribute("aria-hidden", "true");
         }
       }
-      s.setProperty("--clip", windowPath ?? `inset(${t.toFixed(1)}px ${ri.toFixed(1)}px ${b.toFixed(1)}px ${l.toFixed(1)}px round ${radius.toFixed(1)}px)`);
+      s.setProperty(
+        "--clip",
+        windowPath ??
+          `inset(${t.toFixed(1)}px ${ri.toFixed(1)}px ${b.toFixed(1)}px ${l.toFixed(1)}px round ${radius.toFixed(1)}px)`,
+      );
 
       /* the glyph field only works while the hero is mostly open and not yet zoomed away */
       const live = e > 0.45 && q < 0.85 ? "1" : "0";
@@ -248,13 +281,16 @@ export function CoverReveal({ tagline }: Props) {
         <div className="lp-p1">
           <canvas className="lp-globe" ref={globeRef} aria-hidden="true" />
           <h1 className="lp-words" id="lp-title">
-            <span className="lp-word lp-word--a">{wordA}<span className="lp-sr">.</span></span>
+            <span className="lp-word lp-word--a">
+              {wordA}
+              <span className="lp-sr">.</span>
+            </span>
             <span className="lp-slot" ref={slotRef} aria-hidden="true" />
             {wordB ? <span className="lp-word lp-word--b">{wordB}</span> : null}
           </h1>
           <p className="lp-sub">
-            Verify trusted state, prove eligibility privately, then unlock an <span style={{ whiteSpace: "nowrap" }}>on-chain</span> action.
-            Deployed on Robinhood Mainnet (chain {ROBINHOOD_MAINNET_CHAIN_ID}) with 10 contracts. Interactive journeys run on Robinhood Testnet (chain {ROBINHOOD_TESTNET_CHAIN_ID}).
+            Connects project credentials to on-chain governance and proves
+            lending eligibility privately.
           </p>
           <p className="lp-hint" aria-hidden="true">
             <span>Scroll to open</span>
@@ -272,43 +308,118 @@ export function CoverReveal({ tagline }: Props) {
             <div className="lp-hero__col">
               <p className="lp-badge">
                 <i aria-hidden="true" />
-                <span>Robinhood Mainnet<span className="lp-badge__more"> deployed</span></span>
+                <span>
+                  Robinhood Mainnet
+                  <span className="lp-badge__more"> deployed</span>
+                </span>
                 <span>Not audited</span>
                 <span>No funds held</span>
               </p>
               <h2 className="lp-h">
                 {/* the first words are the original headline, untouched; the other three overlay it, one at a time, as the picture changes form */}
-                <span className="lp-story__t lp-story__g" data-story-i={0} data-story-kind="head">
-                  <span className="lp-h__line lp-h__l1"><span className="lp-h__in">Verify the <b className="lp-h__public">fact</b></span></span>
-                  <span className="lp-h__line lp-h__l2"><span className="lp-h__in">Prove it <b className="lp-h__private">privately</b></span></span>
-                  <span className="lp-h__line lp-h__l3"><span className="lp-h__in">Unlock <b className="lp-h__public">on-chain</b></span></span>
+                <span
+                  className="lp-story__t lp-story__g"
+                  data-story-i={0}
+                  data-story-kind="head"
+                >
+                  <span className="lp-h__line lp-h__l1">
+                    <span className="lp-h__in">
+                      Verify the <b className="lp-h__public">fact</b>
+                    </span>
+                  </span>
+                  <span className="lp-h__line lp-h__l2">
+                    <span className="lp-h__in">
+                      Prove it <b className="lp-h__private">privately</b>
+                    </span>
+                  </span>
+                  <span className="lp-h__line lp-h__l3">
+                    <span className="lp-h__in">
+                      Unlock <b className="lp-h__public">on-chain</b>
+                    </span>
+                  </span>
                 </span>
-                <span className="lp-story__t lp-story__t--over" data-story-i={1} data-story-kind="head" aria-hidden="true">
-                  <span className="lp-h__line lp-h__l1"><span className="lp-h__in">Dojang.</span></span>
-                  <span className="lp-h__line lp-h__l2"><span className="lp-h__in">Project <b className="lp-h__private">credential.</b></span></span>
+                <span
+                  className="lp-story__t lp-story__t--over"
+                  data-story-i={1}
+                  data-story-kind="head"
+                  aria-hidden="true"
+                >
+                  <span className="lp-h__line lp-h__l1">
+                    <span className="lp-h__in">Dojang.</span>
+                  </span>
+                  <span className="lp-h__line lp-h__l2">
+                    <span className="lp-h__in">
+                      Project <b className="lp-h__private">credential.</b>
+                    </span>
+                  </span>
                 </span>
-                <span className="lp-story__t lp-story__t--over" data-story-i={2} data-story-kind="head" aria-hidden="true">
-                  <span className="lp-h__line lp-h__l1"><span className="lp-h__in">Prove the rule.</span></span>
-                  <span className="lp-h__line lp-h__l2"><span className="lp-h__in">Not the <b className="lp-h__private">value.</b></span></span>
+                <span
+                  className="lp-story__t lp-story__t--over"
+                  data-story-i={2}
+                  data-story-kind="head"
+                  aria-hidden="true"
+                >
+                  <span className="lp-h__line lp-h__l1">
+                    <span className="lp-h__in">Prove the rule.</span>
+                  </span>
+                  <span className="lp-h__line lp-h__l2">
+                    <span className="lp-h__in">
+                      Not the <b className="lp-h__private">value.</b>
+                    </span>
+                  </span>
                 </span>
-                <span className="lp-story__t lp-story__t--over" data-story-i={3} data-story-kind="head" aria-hidden="true">
-                  <span className="lp-h__line lp-h__l1"><span className="lp-h__in">One protocol.</span></span>
-                  <span className="lp-h__line lp-h__l2"><span className="lp-h__in">Two ways to <b className="lp-h__public">act.</b></span></span>
+                <span
+                  className="lp-story__t lp-story__t--over"
+                  data-story-i={3}
+                  data-story-kind="head"
+                  aria-hidden="true"
+                >
+                  <span className="lp-h__line lp-h__l1">
+                    <span className="lp-h__in">One protocol.</span>
+                  </span>
+                  <span className="lp-h__line lp-h__l2">
+                    <span className="lp-h__in">
+                      Two ways to <b className="lp-h__public">act.</b>
+                    </span>
+                  </span>
                 </span>
               </h2>
               <div className="lp-cta">
                 <p className="lp-lede">
-                  <span className="lp-story__t" data-story-i={0} data-story-kind="lede">
-                    A Policy 3 proof can show that an eligibility rule is met without revealing the private value.
+                  <span
+                    className="lp-story__t"
+                    data-story-i={0}
+                    data-story-kind="lede"
+                  >
+                    A Policy 3 proof can show that an eligibility rule is met
+                    without revealing the private value.
                   </span>
-                  <span className="lp-story__t lp-story__t--over" data-story-i={1} data-story-kind="lede" aria-hidden="true">
-                    An authorized GYEVO issuer records a project credential. Policy 4 is for DAO governance; Policy 3 is for Lending.
+                  <span
+                    className="lp-story__t lp-story__t--over"
+                    data-story-i={1}
+                    data-story-kind="lede"
+                    aria-hidden="true"
+                  >
+                    An authorized GYEVO issuer records a project credential.
+                    Policy 4 is for DAO governance; Policy 3 is for Lending.
                   </span>
-                  <span className="lp-story__t lp-story__t--over" data-story-i={2} data-story-kind="lede" aria-hidden="true">
-                    BOJAGI builds a zero-knowledge proof in your browser. Your Policy 3 witness and private value stay on your device.
+                  <span
+                    className="lp-story__t lp-story__t--over"
+                    data-story-i={2}
+                    data-story-kind="lede"
+                    aria-hidden="true"
+                  >
+                    BOJAGI builds a zero-knowledge proof in your browser. Your
+                    Policy 3 witness and private value stay on your device.
                   </span>
-                  <span className="lp-story__t lp-story__t--over" data-story-i={3} data-story-kind="lede" aria-hidden="true">
-                    Policy 4 enables public DAO governance. Policy 3 proofs unlock protected Lending actions.
+                  <span
+                    className="lp-story__t lp-story__t--over"
+                    data-story-i={3}
+                    data-story-kind="lede"
+                    aria-hidden="true"
+                  >
+                    Policy 4 enables public DAO governance. Policy 3 proofs
+                    unlock protected Lending actions.
                   </span>
                 </p>
                 <div className="lp-actions">
@@ -332,7 +443,9 @@ export function CoverReveal({ tagline }: Props) {
             </div>
           </div>
 
-          <p className="lp-pointer-hint" aria-hidden="true">Move the pointer · seal the data</p>
+          <p className="lp-pointer-hint" aria-hidden="true">
+            Move the pointer · seal the data
+          </p>
           <div className="lp-dot" aria-hidden="true" />
         </div>
         <canvas className="lp-cipher" ref={cipherRef} aria-hidden="true" />
@@ -343,10 +456,18 @@ export function CoverReveal({ tagline }: Props) {
           <div className="lp-marq__view">
             <div className="lp-marq__track" aria-hidden="true">
               <ul className="lp-marq__group">
-                {STACK.map((n) => <li className="lp-marq__item" key={n}>{n}</li>)}
+                {STACK.map((n) => (
+                  <li className="lp-marq__item" key={n}>
+                    {n}
+                  </li>
+                ))}
               </ul>
               <ul className="lp-marq__group">
-                {STACK.map((n) => <li className="lp-marq__item" key={n}>{n}</li>)}
+                {STACK.map((n) => (
+                  <li className="lp-marq__item" key={n}>
+                    {n}
+                  </li>
+                ))}
               </ul>
             </div>
           </div>
