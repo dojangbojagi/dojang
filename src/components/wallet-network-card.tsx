@@ -6,6 +6,7 @@ import { GIWA_CHAIN_ID } from "@/lib/config/chain";
 import { ROBINHOOD_TESTNET_CHAIN_ID, ROBINHOOD_TESTNET_PUBLIC_RPC_URL } from "@/lib/config/robinhood-testnet";
 import { ROBINHOOD_MAINNET_CHAIN_ID, robinhoodMainnetRpcUrls } from "@/lib/config/robinhood-mainnet-demo";
 import { supportedProtocolChains } from "@/lib/config/network-registry";
+import { appEnv } from "@/lib/config/env";
 import { StateChip } from "@/components/protocol-state";
 
 export function WalletNetworkCard({ expectedChainId = ROBINHOOD_TESTNET_CHAIN_ID }: { expectedChainId?: ProtocolChainId }) {
@@ -26,7 +27,7 @@ export function WalletNetworkCard({ expectedChainId = ROBINHOOD_TESTNET_CHAIN_ID
     ? "GIWA Sepolia"
     : activeChainId === ROBINHOOD_TESTNET_CHAIN_ID
       ? "Robinhood Chain Testnet"
-      : activeChainId === ROBINHOOD_MAINNET_CHAIN_ID
+      : appEnv.mainnetVisible && activeChainId === ROBINHOOD_MAINNET_CHAIN_ID
         ? "Robinhood Chain Mainnet"
       : !wallet.isConnected
         ? "No active wallet network"
@@ -37,7 +38,7 @@ export function WalletNetworkCard({ expectedChainId = ROBINHOOD_TESTNET_CHAIN_ID
       ? "Verifying the wallet's network…"
       : wallet.providerChainReadError
         ? "Could not verify the wallet's actual network"
-        : `${activeName}${activeChainId === undefined ? "" : ` · chain ${activeChainId}`}`;
+        : `${activeName}${activeChainId === undefined || !appEnv.mainnetVisible && activeChainId === ROBINHOOD_MAINNET_CHAIN_ID ? "" : ` · chain ${activeChainId}`}`;
   return (
     <section className="panel panel--ticks protocol-panel" aria-labelledby="wallet-status-heading">
       <div className="protocol-panel__head">

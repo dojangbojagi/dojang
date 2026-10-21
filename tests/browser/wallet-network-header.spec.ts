@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 const site = process.env.UI_BASE_URL ?? "http://127.0.0.1:3100";
+const mainnetVisible = process.env.EXPECT_MAINNET_VISIBLE === "true";
 
 test("network picker is Radix-based, selection stays distinct from the real wallet, and header fits target widths", async ({ page }) => {
   await page.goto(`${site}/docs`, { waitUntil: "domcontentloaded" });
@@ -13,10 +14,10 @@ test("network picker is Radix-based, selection stays distinct from the real wall
   await expect(header.getByRole("button", { name: /Connect Wallet/ })).toBeVisible();
 
   await trigger.click();
-  await expect(page.getByRole("option", { name: "Robinhood Mainnet — 4663" })).toBeVisible();
+  await expect(page.getByRole("option", { name: "Robinhood Mainnet — 4663" })).toHaveCount(mainnetVisible ? 1 : 0);
   await expect(page.getByRole("option", { name: "Robinhood Testnet — 46630" })).toBeVisible();
-  await page.getByRole("option", { name: "Robinhood Mainnet — 4663" }).click();
-  await expect(trigger).toContainText("Mainnet");
+  await page.getByRole("option", { name: mainnetVisible ? "Robinhood Mainnet — 4663" : "Robinhood Testnet — 46630" }).click();
+  await expect(trigger).toContainText(mainnetVisible ? "Mainnet" : "Testnet");
   await expect(header.getByRole("button", { name: /Connect Wallet/ })).toBeVisible();
   await expect(header.getByText("Wallet disconnected", { exact: true })).toBeVisible();
 
@@ -70,11 +71,12 @@ test("network picker is Radix-based, selection stays distinct from the real wall
   await page.setViewportSize({ width: 390, height: 844 });
   await page.locator(".menu-toggle").click();
   await expect(page.getByRole("navigation", { name: "Primary mobile" }).getByRole("link", { name: "Lending" })).toBeVisible();
-  await expect(page.getByText(/App network: Robinhood Chain Mainnet · chain 4663/)).toBeVisible();
+  await expect(page.getByText(mainnetVisible ? /App network: Robinhood Chain Mainnet · chain 4663/ : /App network: Robinhood Chain Testnet · chain 46630/)).toBeVisible();
   await expect(page.getByText(/Actual wallet network: Wallet disconnected/)).toBeVisible();
 });
 
 test("Mainnet Lending uses its own deployed registry and remains unsigned without a connected wallet", async ({ page }) => {
+  test.skip(!mainnetVisible, "Mainnet UI is intentionally hidden in this build.");
   await page.goto(`${site}/lending`, { waitUntil: "domcontentloaded" });
   const header = page.locator(".site-header");
   const trigger = header.getByRole("combobox", { name: "Select application network" });

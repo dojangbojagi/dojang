@@ -9,7 +9,8 @@ import { useProtocolNetworkSelection } from "@/components/protocol-network-selec
 import { ProtocolNetworkPicker } from "@/components/protocol-network-picker";
 import { WalletControl } from "@/components/wallet-control";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
-import { supportedProtocolChains } from "@/lib/config/network-registry";
+import { publicProtocolChains } from "@/lib/config/network-registry";
+import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo";
 
 /* The application bar: its own sections, a way back to the website, the network and the wallet. The public
    website (the landing) has its own bar with the introductions and "Launch App". */
@@ -45,8 +46,8 @@ export function SiteHeader() {
   }, [pathname]);
 
   if (pathname === "/") return null;
-  const selectedNetwork = supportedProtocolChains.find((chain) => chain.id === headerChainId);
-  const activeNetwork = supportedProtocolChains.find((chain) => chain.id === wallet.providerChainId);
+  const selectedNetwork = publicProtocolChains.find((chain) => chain.id === headerChainId);
+  const activeNetwork = publicProtocolChains.find((chain) => chain.id === wallet.providerChainId);
   const networkName = selectedNetwork?.name ?? "Robinhood network";
   const connectedNetwork = wallet.isConnected
     ? wallet.providerChainPending
@@ -55,7 +56,9 @@ export function SiteHeader() {
         ? "Wallet network could not be verified"
         : wallet.providerChainId === undefined
           ? "Wallet network not verified"
-          : `${activeNetwork?.name ?? "Unsupported network"} · chain ${wallet.providerChainId}`
+          : !appEnv.mainnetVisible && wallet.providerChainId === ROBINHOOD_MAINNET_CHAIN_ID
+            ? "Unsupported network"
+            : `${activeNetwork?.name ?? "Unsupported network"} · chain ${wallet.providerChainId}`
     : wallet.status === "connecting" || wallet.status === "reconnecting"
       ? "Checking wallet connection…"
       : "Wallet disconnected";
@@ -81,17 +84,17 @@ export function SiteHeader() {
           <span className="site-header__current-chain" title={`Actual wallet network: ${connectedNetwork}`} aria-live="polite">
             {connectedNetwork}
           </span>
-          <button
+          <a
             className="site-header__social"
-            type="button"
-            disabled
-            title="The official GYEVO X URL has not been configured."
-            aria-label="GYEVO X account unavailable until the official URL is configured"
+            href="https://x.com/useegyevo"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Open GYEVO on X (opens in a new tab)"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path fill="currentColor" d="M18.9 2H22l-6.8 7.8L23.2 22h-6.3L12 14.6 5.6 22H2.4l7.3-8.4L1.9 2h6.5l4.5 6.9L18.9 2Zm-1.1 18h1.7L7.4 3.9H5.6L17.8 20Z" />
             </svg>
-          </button>
+          </a>
           <WalletControl expectedChainId={headerChainId} showRecoveryAction />
           <button
             className="menu-toggle"

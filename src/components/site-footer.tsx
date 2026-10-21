@@ -31,8 +31,8 @@ export function SiteFooter() {
           </ul></nav>
         </div>
         <div className="site-footer__legal">
-          <div><span className="net-pill"><i className="net-pill__dot" aria-hidden="true" /><b>Mainnet + Testnet</b><i>{ROBINHOOD_MAINNET_CHAIN_ID} · {ROBINHOOD_TESTNET_CHAIN_ID}</i></span></div>
-          <p>Robinhood Mainnet: ten deployed contracts; DAO and Lending remain paused. Robinhood Testnet: verified interactive user journeys.</p>
+          <div><span className="net-pill"><i className="net-pill__dot" aria-hidden="true" /><b>{appEnv.mainnetVisible ? "Mainnet + Testnet" : "Testnet"}</b><i>{appEnv.mainnetVisible ? `${ROBINHOOD_MAINNET_CHAIN_ID} · ` : ""}{ROBINHOOD_TESTNET_CHAIN_ID}</i></span></div>
+          <p>{appEnv.mainnetVisible ? "Robinhood Mainnet: ten deployed contracts; DAO and Lending remain paused. Robinhood Testnet: verified interactive user journeys." : "Robinhood Testnet: verified interactive user journeys."}</p>
           <p>Synthetic assets have no redemption value. Not audited or public production-ready. Independent project, not affiliated with Robinhood, GIWA or Upbit. DOJANG and BOJAGI are project layers, separate from GIWA&apos;s.</p>
         </div>
       </div>

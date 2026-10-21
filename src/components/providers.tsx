@@ -6,7 +6,7 @@ import { connectorsForWallets, RainbowKitProvider, darkTheme, type Wallet, type 
 import { walletConnectWallet } from "@rainbow-me/rainbowkit/wallets";
 import { createConfig, http, WagmiProvider, injected } from "wagmi";
 import type { CreateConnectorFn } from "wagmi";
-import { supportedProtocolChains } from "@/lib/config/network-registry";
+import { publicProtocolChains } from "@/lib/config/network-registry";
 import { appEnv } from "@/lib/config/env";
 import { robinhoodMainnetDemoChain, robinhoodMainnetReadTransport } from "@/lib/config/robinhood-mainnet-demo";
 import { giwaSepolia } from "@/lib/config/chain";
@@ -68,7 +68,7 @@ const connectors = connectorsForWallets(walletGroups, {
 });
 
 const wagmiConfig = createConfig({
-  chains: supportedProtocolChains,
+  chains: publicProtocolChains,
   connectors,
   // Wagmi discovers EIP-6963 wallets and exposes each announced provider as its own connector.
   multiInjectedProviderDiscovery: true,

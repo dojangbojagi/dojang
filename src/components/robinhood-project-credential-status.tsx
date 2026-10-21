@@ -84,7 +84,7 @@ export function RobinhoodProjectCredentialStatus() {
       <header className="protocol-section__head">
         <p className="stub__num">{networkName.toUpperCase()} · PROJECT CREDENTIALS</p>
         <h2 id="project-credential-heading">Your project credentials</h2>
-        <p>For Lending, an active Policy 3 credential and its matching private witness are required. {showPhase2Membership ? "For DAO, Policy 5 and a genuine reputation proof are required before membership registration." : isMainnet ? "DAO proposals and voting are available through the Phase 1 workspace on Robinhood Testnet." : "For DAO, Policy 4 is required."} These are GYEVO-issued credentials, separate from official GIWA Dojang and Upbit credentials.</p>
+        <p>For Lending, an active Policy 3 credential and its matching private witness are required. {showPhase2Membership ? "For DAO, Policy 5 and a genuine reputation proof are required before membership registration." : isMainnet ? "DAO proposals and voting are available through the Phase 1 workspace on Robinhood Testnet." : appEnv.daoPhase2Visible ? "For DAO Phase 1, Policy 4 is required. Phase 2 uses a separate Policy 5 credential and reputation proof." : "For DAO, Policy 4 is required."} These are GYEVO-issued credentials, separate from official GIWA Dojang and Upbit credentials.</p>
       </header>
       <WalletNetworkCard expectedChainId={selectedChainId} />
       {!isMainnet && <RobinhoodPolicy4Issuer />}
@@ -111,6 +111,7 @@ export function RobinhoodProjectCredentialStatus() {
           <section className="panel panel--ticks protocol-panel" aria-labelledby="project-policy-4-heading">
             <div className="protocol-panel__head"><h3 id="project-policy-4-heading">DAO Governance <span className="protocol-policy">Policy 4</span></h3><StateChip state={daoState}>{daoState === "active" ? "Credential active" : daoState === "missing" ? "Credential missing" : daoState.replaceAll("-", " ")}</StateChip></div>
             <p className="protocol-copy">{daoText}</p>
+            {appEnv.daoPhase2Visible && <p className="protocol-copy">For Phase 2 membership status, open DAO Governance and select Phase 2.</p>}
             <Link className="btn btn--secondary" href="/dao">Open Robinhood governance ↗</Link>
           </section>
         )}

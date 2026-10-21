@@ -35,7 +35,7 @@ export default function ContractsPage() {
     address: robinhoodContracts[row.key] ?? undefined,
     invalid: invalidRobinhoodContractConfig.includes(row.key),
   }));
-  const mainnetRows: DirectoryRow[] = ROWS.flatMap((row): DirectoryRow[] => {
+  const mainnetRows: DirectoryRow[] = appEnv.mainnetVisible ? ROWS.flatMap((row): DirectoryRow[] => {
     const mainnet = ({
       credentialRegistry: ["RobinhoodMainnetDemoCredentialRegistry", robinhoodMainnetDemoContracts.credentialRegistry],
       honkVerifier: ["HonkVerifier", robinhoodMainnetDemoContracts.honkVerifier],
@@ -63,7 +63,7 @@ export default function ContractsPage() {
               ? "Mainnet Phase 2 commit–reveal governance. Activation state is checked live below; it is separate from Testnet."
           : row.purpose;
     return [{ ...row, tech: mainnet[0], address: mainnet[1], purpose }];
-  });
+  }) : [];
 
   return (
     <main className="page page--compact">
@@ -72,7 +72,9 @@ export default function ContractsPage() {
         <p className="eyebrow">Contract Explorer</p>
         <h1>Contracts</h1>
         <p className="page-lead">
-          {appEnv.appName} has deployed contracts on Robinhood Mainnet (chain {ROBINHOOD_MAINNET_CHAIN_ID}). Mainnet Phase 2 governance is separately deployed and its activation state is checked live; the interactive Lending journey remains on Robinhood Testnet (chain {ROBINHOOD_TESTNET_CHAIN_ID}). Select a network to inspect contract evidence.
+          {appEnv.mainnetVisible
+            ? <>{appEnv.appName} has deployed contracts on Robinhood Mainnet (chain {ROBINHOOD_MAINNET_CHAIN_ID}). Mainnet Phase 2 governance is separately deployed and its activation state is checked live; the interactive Lending journey remains on Robinhood Testnet (chain {ROBINHOOD_TESTNET_CHAIN_ID}). Select a network to inspect contract evidence.</>
+            : <>{appEnv.appName} publishes its interactive demonstration contracts on Robinhood Testnet (chain {ROBINHOOD_TESTNET_CHAIN_ID}). Inspect their addresses and independently checked contract evidence below.</>}
         </p>
       </header>
 

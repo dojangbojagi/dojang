@@ -8,11 +8,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { RobinhoodAppChainId } from "@/components/protocol-network-selection";
+import { appEnv } from "@/lib/config/env";
 
-const networks = [
+const allNetworks = [
   { id: 4_663, full: "Robinhood Mainnet — 4663", compact: "Mainnet 4663" },
   { id: 46_630, full: "Robinhood Testnet — 46630", compact: "Testnet 46630" },
 ] as const;
+const networks = appEnv.mainnetVisible ? allNetworks : allNetworks.filter((network) => network.id === 46_630);
 
 export function ProtocolNetworkPicker({
   selectedChainId,

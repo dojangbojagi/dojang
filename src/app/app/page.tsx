@@ -33,7 +33,9 @@ const SECTIONS = [
     href: "/contracts",
     name: "Contracts",
     tag: "Transparency",
-    text: "Testnet and controlled Mainnet contracts, their addresses and independent verification status.",
+    text: appEnv.mainnetVisible
+      ? "Testnet and controlled Mainnet contracts, their addresses and independent verification status."
+      : "Robinhood Testnet contracts, their addresses and source verification status.",
   },
 ] as const;
 

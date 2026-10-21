@@ -12,6 +12,16 @@ Next.js App Router foundation for a GIWA Sepolia private eligibility demonstrati
 
 The eight routes are `/`, `/dojang`, `/dao`, `/bojagi`, `/vault`, `/lending`, `/contracts`, and `/docs`.
 
+## Public Mainnet visibility on Vercel
+
+For the current public release, set this Production environment variable in Vercel Project Settings → Environment Variables:
+
+```text
+NEXT_PUBLIC_GYEVO_MAINNET_VISIBLE=false
+```
+
+Leave it unset or blank to use the same Testnet-only default. After changing it, create a new frontend deployment; `NEXT_PUBLIC_` values are embedded in the build and do not update an existing deployment at runtime. When the project authorizes public Mainnet visibility, change the value to `true` and deploy a new build. The separate `NEXT_PUBLIC_GYEVO_DAO_PHASE2_VISIBLE` setting is unchanged and can be configured independently.
+
 ## Product flow
 
 The public story connects two journeys:

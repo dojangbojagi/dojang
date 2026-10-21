@@ -20,7 +20,7 @@ const TOC = [
   ["dao", "DAO Governance"],
   ["lending", "Lending"],
   ["start", "Get started"],
-  ["network", "Robinhood Networks"],
+  ["network", appEnv.mainnetVisible ? "Robinhood Networks" : "Robinhood Testnet"],
   ["limits", "Security and limits"],
 ] as const;
 
@@ -37,10 +37,17 @@ export default function DocsPage() {
           a zero-knowledge proof lets a holder show eligibility without revealing the private value behind it.
         </p>
         <dl className="docs__glance">
-          <div><dt>Mainnet deployment</dt><dd>Robinhood Mainnet · {ROBINHOOD_MAINNET_CHAIN_ID}</dd></div>
-          <div><dt>Contracts</dt><dd>10 deployed · 10 runtime bytecodes</dd></div>
-          <div><dt>Governance and Lending</dt><dd>Paused on Mainnet</dd></div>
-          <div><dt>Interactive app</dt><dd>Robinhood Testnet · {ROBINHOOD_TESTNET_CHAIN_ID}</dd></div>
+          {appEnv.mainnetVisible ? <>
+            <div><dt>Mainnet deployment</dt><dd>Robinhood Mainnet · {ROBINHOOD_MAINNET_CHAIN_ID}</dd></div>
+            <div><dt>Contracts</dt><dd>10 deployed · 10 runtime bytecodes</dd></div>
+            <div><dt>Governance and Lending</dt><dd>Paused on Mainnet</dd></div>
+            <div><dt>Interactive app</dt><dd>Robinhood Testnet · {ROBINHOOD_TESTNET_CHAIN_ID}</dd></div>
+          </> : <>
+            <div><dt>Interactive app</dt><dd>Robinhood Testnet · {ROBINHOOD_TESTNET_CHAIN_ID}</dd></div>
+            <div><dt>Contracts</dt><dd>Testnet demonstration</dd></div>
+            <div><dt>Governance and Lending</dt><dd>Interactive Testnet journeys</dd></div>
+            <div><dt>Production readiness</dt><dd>Pending</dd></div>
+          </>}
         </dl>
       </header>
 
@@ -95,7 +102,9 @@ export default function DocsPage() {
               </figcaption>
             </figure>
             <p>
-              GYEVO is deployed on Robinhood Mainnet (chain ID {ROBINHOOD_MAINNET_CHAIN_ID}) with ten project contracts and live runtime bytecode confirmed at all ten addresses. Mainnet DAO and Lending remain paused; their assets are synthetic and have no redemption value. The interactive DAO and Lending journeys run on Robinhood Testnet (chain ID {ROBINHOOD_TESTNET_CHAIN_ID}) with test tokens.{" "}
+              {appEnv.mainnetVisible
+                ? <>GYEVO is deployed on Robinhood Mainnet (chain ID {ROBINHOOD_MAINNET_CHAIN_ID}) with ten project contracts and live runtime bytecode confirmed at all ten addresses. Mainnet DAO and Lending remain paused; their assets are synthetic and have no redemption value. The interactive DAO and Lending journeys run on Robinhood Testnet (chain ID {ROBINHOOD_TESTNET_CHAIN_ID}) with test tokens. </>
+                : <>The interactive DAO and Lending journeys run on Robinhood Testnet (chain ID {ROBINHOOD_TESTNET_CHAIN_ID}) with synthetic test tokens. </>}
               {name} is an independent project, not operated, verified or endorsed by Robinhood, GIWA, Dojang or Upbit.
             </p>
           </section>
@@ -167,15 +176,17 @@ export default function DocsPage() {
           </section>
 
           <section className="docs__sec" id="network" aria-labelledby="network-h">
-            <h2 id="network-h"><span>07</span>Robinhood Networks</h2>
+            <h2 id="network-h"><span>07</span>{appEnv.mainnetVisible ? "Robinhood Networks" : "Robinhood Testnet"}</h2>
             <dl className="docs__rows docs__rows--compact">
-              <div><dt>Mainnet deployment</dt><dd>Robinhood Chain Mainnet</dd></div>
-              <div><dt>Mainnet chain ID</dt><dd>{ROBINHOOD_MAINNET_CHAIN_ID}</dd></div>
-              <div><dt>Deployment evidence</dt><dd>Ten successful creation receipts and ten runtime bytecodes confirmed by live chain reads.</dd></div>
-              <div><dt>DAO and Lending</dt><dd>Paused. Lending assets are synthetic demo tokens with no redemption value; this is not public production Lending.</dd></div>
-              <div><dt>Mainnet RPC</dt><dd><code>{PUBLIC_MAINNET_RPC}</code> <span className="docs__muted">public endpoint</span></dd></div>
-              <div><dt>Mainnet explorer</dt><dd><a href={ROBINHOOD_MAINNET_DEMO_EXPLORER_URL} target="_blank" rel="noopener noreferrer">{ROBINHOOD_MAINNET_DEMO_EXPLORER_URL.replace("https://", "")}<span className="visually-hidden"> (opens in a new tab)</span></a></dd></div>
-              <div><dt>Source verification</dt><dd>Reported separately from deployed bytecode. Check the live Blockscout status for each contract in the Contracts directory.</dd></div>
+              {appEnv.mainnetVisible && <>
+                <div><dt>Mainnet deployment</dt><dd>Robinhood Chain Mainnet</dd></div>
+                <div><dt>Mainnet chain ID</dt><dd>{ROBINHOOD_MAINNET_CHAIN_ID}</dd></div>
+                <div><dt>Deployment evidence</dt><dd>Ten successful creation receipts and ten runtime bytecodes confirmed by live chain reads.</dd></div>
+                <div><dt>DAO and Lending</dt><dd>Paused. Lending assets are synthetic demo tokens with no redemption value; this is not public production Lending.</dd></div>
+                <div><dt>Mainnet RPC</dt><dd><code>{PUBLIC_MAINNET_RPC}</code> <span className="docs__muted">public endpoint</span></dd></div>
+                <div><dt>Mainnet explorer</dt><dd><a href={ROBINHOOD_MAINNET_DEMO_EXPLORER_URL} target="_blank" rel="noopener noreferrer">{ROBINHOOD_MAINNET_DEMO_EXPLORER_URL.replace("https://", "")}<span className="visually-hidden"> (opens in a new tab)</span></a></dd></div>
+                <div><dt>Source verification</dt><dd>Reported separately from deployed bytecode. Check the live Blockscout status for each contract in the Contracts directory.</dd></div>
+              </>}
               <div><dt>Interactive environment</dt><dd>Robinhood Chain Testnet</dd></div>
               <div><dt>Testnet chain ID</dt><dd>{ROBINHOOD_TESTNET_CHAIN_ID}</dd></div>
               <div><dt>Currency</dt><dd>ETH (test, no value)</dd></div>
@@ -188,11 +199,11 @@ export default function DocsPage() {
           <section className="docs__sec" id="limits" aria-labelledby="limits-h">
             <h2 id="limits-h"><span>08</span>Security, privacy and limits</h2>
             <dl className="docs__rows">
-              <div><dt>Deployment scope</dt><dd>Mainnet has ten deployed contracts, but DAO and Lending are paused and Lending uses synthetic assets without redemption value. The interactive app runs on Testnet. {name} has not completed independent security audits and is not public production-ready.</dd></div>
+              <div><dt>Deployment scope</dt><dd>{appEnv.mainnetVisible ? "Mainnet has ten deployed contracts, but DAO and Lending are paused and Lending uses synthetic assets without redemption value. The interactive app runs on Testnet. " : "The interactive app runs on Robinhood Testnet with synthetic assets that have no redemption value. "}{name} has not completed independent security audits and is not public production-ready.</dd></div>
               <div><dt>What privacy covers</dt><dd>A proof hides the private eligibility value. Wallet addresses, transactions, amounts and votes are public, and so is the fact that a gated action happened.</dd></div>
               <div><dt>Trusted issuer</dt><dd>The project issuer decides who receives a credential. A proof shows that a holder meets a rule; it does not remove trust in the issuer.</dd></div>
               <div><dt>Not official</dt><dd>Project credentials are separate from official GIWA Dojang and Upbit credentials.</dd></div>
-              <div><dt>Source verification</dt><dd>All ten Testnet contracts have verified source. Mainnet source status is checked independently on Blockscout and shown per contract in the Contracts directory; bytecode presence is not source verification.</dd></div>
+              <div><dt>Source verification</dt><dd>{appEnv.mainnetVisible ? "All ten Testnet contracts have verified source. Mainnet source status is checked independently on Blockscout and shown per contract in the Contracts directory; bytecode presence is not source verification." : "The ten Testnet demonstration contracts have verified source. Check each contract in the Contracts directory; bytecode presence alone is not source verification."}</dd></div>
             </dl>
 
             <details className="docs__tech">

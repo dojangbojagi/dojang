@@ -151,9 +151,9 @@ h4 { font-weight: 600; }
   background: rgba(21, 15, 18, 0.5);
   border: 1px solid var(--line-strong);
   border-radius: 50%;
+  opacity: 0.72;
 }
 .site-header__social svg { width: 1rem; height: 1rem; }
-.site-header__social:disabled { cursor: not-allowed; opacity: 0.72; }
 .site-header__actions > .protocol-notice { flex: 1 1 14rem; min-width: 0; max-width: 22rem; overflow-wrap: anywhere; white-space: normal; }
 
 .brand { gap: 0.7rem; }

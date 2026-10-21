@@ -6,6 +6,8 @@ import { useDisconnect } from "wagmi";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import type { ProtocolChainId } from "@/hooks/use-wallet-network";
 import { supportedProtocolChains } from "@/lib/config/network-registry";
+import { appEnv } from "@/lib/config/env";
+import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo";
 
 export function WalletControl({ expectedChainId, showRecoveryAction = false }: { expectedChainId?: ProtocolChainId; showRecoveryAction?: boolean }) {
   const wallet = useWalletNetwork(expectedChainId);
@@ -14,11 +16,14 @@ export function WalletControl({ expectedChainId, showRecoveryAction = false }: {
   const [connectionSlow, setConnectionSlow] = useState(false);
   const requiredChain = supportedProtocolChains.find((chain) => chain.id === wallet.expectedChainId);
   const activeChainId = wallet.providerChainId ?? wallet.chainId;
-  const activeChain = supportedProtocolChains.find((chain) => chain.id === activeChainId);
+  const activeChain = appEnv.mainnetVisible || activeChainId !== ROBINHOOD_MAINNET_CHAIN_ID
+    ? supportedProtocolChains.find((chain) => chain.id === activeChainId)
+    : undefined;
+  const shownActiveChainId = !appEnv.mainnetVisible && activeChainId === ROBINHOOD_MAINNET_CHAIN_ID ? undefined : activeChainId;
   const networkDescription = wallet.state === "wrong-network"
     ? wallet.providerChainReadError
       ? `The wallet's current network could not be verified. Required: ${requiredChain?.name ?? "configured network"} (chain ${wallet.expectedChainId}).`
-      : `The wallet is on ${activeChain?.name ?? "unsupported network"}${activeChainId === undefined ? "" : ` (chain ${activeChainId})`}; required ${requiredChain?.name ?? "configured network"} (chain ${wallet.expectedChainId}).`
+      : `The wallet is on ${activeChain?.name ?? "unsupported network"}${shownActiveChainId === undefined ? "" : ` (chain ${shownActiveChainId})`}; required ${requiredChain?.name ?? "configured network"} (chain ${wallet.expectedChainId}).`
     : undefined;
 
   useEffect(() => {

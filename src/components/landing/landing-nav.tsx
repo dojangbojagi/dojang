@@ -10,7 +10,11 @@ import { scrollToId } from "./smooth-scroll";
    the way into the product. Lending, docs and contracts are inside the app, behind "Launch App"; connecting a
    wallet happens there too. Light over the white cover, dark glass after it. */
 const SECTIONS = [
-  { id: "dojang", label: "DOJANG", desc: "Project credentials and eligibility." },
+  {
+    id: "dojang",
+    label: "DOJANG",
+    desc: "Project credentials and eligibility.",
+  },
   { id: "bojagi", label: "BOJAGI", desc: "Private zero-knowledge proofs." },
   { id: "dao", label: "DAO", desc: "Credential-gated governance." },
 ] as const;
@@ -32,7 +36,13 @@ export function LandingNav({ appName }: { appName: string }) {
     const jump = () => {
       const id = window.location.hash.slice(1);
       if (!id || !SECTIONS.some((s) => s.id === id)) return;
-      window.setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: "auto", block: "start" }), 350);
+      window.setTimeout(
+        () =>
+          document
+            .getElementById(id)
+            ?.scrollIntoView({ behavior: "auto", block: "start" }),
+        350,
+      );
     };
     jump();
     window.addEventListener("hashchange", jump);
@@ -55,13 +65,14 @@ export function LandingNav({ appName }: { appName: string }) {
     };
   }, [open]);
 
-  const go = (id: SectionId) => (event: React.MouseEvent<HTMLAnchorElement>) => {
-    setOpen(false);
-    if (scrollToId(id)) {
-      event.preventDefault();
-      window.history.replaceState(null, "", `#${id}`);
-    }
-  };
+  const go =
+    (id: SectionId) => (event: React.MouseEvent<HTMLAnchorElement>) => {
+      setOpen(false);
+      if (scrollToId(id)) {
+        event.preventDefault();
+        window.history.replaceState(null, "", `#${id}`);
+      }
+    };
 
   return (
     <>
@@ -88,20 +99,31 @@ export function LandingNav({ appName }: { appName: string }) {
         <div className="lp-nav__right">
           <a
             className="lp-social-link"
-            href="https://x.com"
+            href="https://x.com/useegyevo"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Open X"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path fill="currentColor" d="M18.9 2H22l-6.8 7.8L23.2 22h-6.3L12 14.6 5.6 22H2.4l7.3-8.4L1.9 2h6.5l4.5 6.9L18.9 2Zm-1.1 18h1.7L7.4 3.9H5.6L17.8 20Z" />
+              <path
+                fill="currentColor"
+                d="M18.9 2H22l-6.8 7.8L23.2 22h-6.3L12 14.6 5.6 22H2.4l7.3-8.4L1.9 2h6.5l4.5 6.9L18.9 2Zm-1.1 18h1.7L7.4 3.9H5.6L17.8 20Z"
+              />
             </svg>
           </a>
           <div className="lp-launch">
-            <Link className="lp-pill lp-pill--launch" href="/app" aria-describedby="lp-launch-hint">
+            <Link
+              className="lp-pill lp-pill--launch"
+              href="/app"
+              aria-describedby="lp-launch-hint"
+            >
               Launch App
             </Link>
-            <span className="lp-launch__hint" id="lp-launch-hint" role="tooltip">
+            <span
+              className="lp-launch__hint"
+              id="lp-launch-hint"
+              role="tooltip"
+            >
               <b>Opens the application</b>
               <span>Lending · DAO · Docs · Contracts</span>
             </span>
@@ -133,10 +155,16 @@ export function LandingNav({ appName }: { appName: string }) {
             <span className="lp-menu__desc">{s.desc}</span>
           </a>
         ))}
-        <Link className="lp-menu__launch" href="/app" onClick={() => setOpen(false)}>
+        <Link
+          className="lp-menu__launch"
+          href="/app"
+          onClick={() => setOpen(false)}
+        >
           Launch App
         </Link>
-        <p className="lp-menu__hint">Opens the application: Lending, DAO, Docs and Contracts.</p>
+        <p className="lp-menu__hint">
+          Opens the application: Lending, DAO, Docs and Contracts.
+        </p>
       </nav>
     </>
   );

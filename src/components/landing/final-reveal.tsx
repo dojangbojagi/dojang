@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import { GIWA_EXPLORER_URL } from "@/lib/config/chain";
 import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
 import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo";
+import { appEnv } from "@/lib/config/env";
 import { Arrow } from "./arrow";
 import { BrandLogo } from "@/components/brand-logo";
 
@@ -115,7 +116,7 @@ export function FinalReveal({ appName }: { appName: string }) {
                 <span>{appName}</span>
               </Link>
               <p>
-                Robinhood Testnet demo. Restricted Mainnet: 10 contracts, DAO/Lending paused.
+                {appEnv.mainnetVisible ? "Robinhood Testnet demo. Restricted Mainnet: 10 contracts, DAO/Lending paused. " : "Robinhood Testnet demo. "}
                 Synthetic assets: no redemption. Independent of Robinhood, GIWA or Upbit.
               </p>
             </div>
@@ -186,7 +187,7 @@ export function FinalReveal({ appName }: { appName: string }) {
             </nav>
           </div>
           <p className="lp-legal">
-            <span>Verified Testnet {ROBINHOOD_TESTNET_CHAIN_ID} · Mainnet {ROBINHOOD_MAINNET_CHAIN_ID}</span>
+            <span>Verified Testnet {ROBINHOOD_TESTNET_CHAIN_ID}{appEnv.mainnetVisible ? ` · Mainnet ${ROBINHOOD_MAINNET_CHAIN_ID}` : ""}</span>
             <span>Unaudited · Not public production-ready</span>
           </p>
           <span

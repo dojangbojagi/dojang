@@ -1,4 +1,5 @@
 import type { Address, Hash } from "viem";
+import { appEnv } from "@/lib/config/env";
 import { giwaSepolia, GIWA_CHAIN_ID, GIWA_EXPLORER_URL } from "@/lib/config/chain";
 import {
   invalidContractConfig,
@@ -16,6 +17,9 @@ import {
 import { robinhoodMainnetPhase2Contracts } from "@/lib/config/contracts";
 
 export const supportedProtocolChains = [robinhoodTestnet, giwaSepolia, robinhoodMainnetDemoChain] as const;
+export const publicProtocolChains = appEnv.mainnetVisible
+  ? supportedProtocolChains
+  : [robinhoodTestnet, giwaSepolia] as const;
 export const primaryProtocolChainId = ROBINHOOD_TESTNET_CHAIN_ID;
 export type SupportedProtocolChainId = typeof GIWA_CHAIN_ID | typeof ROBINHOOD_TESTNET_CHAIN_ID | typeof ROBINHOOD_MAINNET_CHAIN_ID;
 

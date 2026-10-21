@@ -6,6 +6,7 @@ test.skip(
   !process.env.UI_BASE_URL,
   "Set UI_BASE_URL to a running GYEVO site for these UI checks.",
 );
+test.skip(process.env.EXPECT_MAINNET_VISIBLE !== "true", "These checks require a Mainnet-visible build.");
 test.setTimeout(60_000);
 
 test("contracts selector preserves Testnet and shows independently checked Mainnet evidence", async ({

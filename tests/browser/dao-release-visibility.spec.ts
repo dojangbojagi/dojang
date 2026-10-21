@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 const site = process.env.TEST_SITE_URL ?? "http://127.0.0.1:3000";
 const phase2Visible = process.env.EXPECT_PHASE2_VISIBLE === "true";
+const mainnetVisible = process.env.EXPECT_MAINNET_VISIBLE === "true";
 
 test("DAO release visibility preserves Phase 1 and gates Phase 2 by the public flag", async ({ page }) => {
   await page.route("https://rpc.testnet.chain.robinhood.com/**", (route) => route.abort());
@@ -21,7 +22,7 @@ test("DAO release visibility preserves Phase 1 and gates Phase 2 by the public f
     await expect(page.locator("#dao-phase2-panel")).toHaveCount(0);
     await expect(page.getByText("Create proposals and vote through the existing Phase 1 governance flow.")).toBeVisible();
     await page.goto(`${site}/dojang`, { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "DAO Governance · Phase 1" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: mainnetVisible ? "DAO Governance · Phase 1" : "DAO Governance Policy 4" })).toBeVisible();
     await expect(page.getByText(/Policy 5/i)).toHaveCount(0);
     return;
   }
@@ -49,7 +50,12 @@ test("DAO release visibility preserves Phase 1 and gates Phase 2 by the public f
   await expect(page.locator("#dao-phase2-panel")).toBeHidden();
 
   await page.goto(`${site}/dojang`, { waitUntil: "domcontentloaded" });
-  await expect(page.getByText("Policy 5", { exact: true })).toBeVisible();
+  if (mainnetVisible) {
+    await expect(page.getByText("Policy 5", { exact: true })).toBeVisible();
+  } else {
+    await expect(page.getByRole("heading", { name: "DAO Governance Policy 4" })).toBeVisible();
+    await expect(page.getByText(/Phase 2 uses a separate Policy 5 credential and reputation proof/)).toBeVisible();
+  }
 
   for (const viewport of [{ width: 390, height: 844 }, { width: 1280, height: 900 }]) {
     await page.setViewportSize(viewport);

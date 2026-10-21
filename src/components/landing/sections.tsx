@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
 import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo";
+import { appEnv } from "@/lib/config/env";
 import { Arrow } from "./arrow";
 
 /* Story sections between the hero and the curtain footer (01, the idea, is the sticky scene in idea-scene.tsx).
@@ -207,7 +208,7 @@ const PHASES: readonly { n: string; name: string; status: PhaseStatus; items: re
       "All ten deployed project contracts have source verified on Robinhood Testnet Blockscout",
     ],
   },
-  {
+  appEnv.mainnetVisible ? {
     n: "05",
     name: "Robinhood Mainnet deployment",
     status: "done",
@@ -215,6 +216,15 @@ const PHASES: readonly { n: string; name: string; status: PhaseStatus; items: re
       "Ten protocol contracts deployed on Robinhood Mainnet (chain 4663), with runtime bytecode confirmed at all ten addresses.",
       "Ten successful contract creation receipts recorded in the Foundry chain 4663 broadcast artifact",
       "Mainnet DAO and Lending are paused; Lending assets are synthetic and have no redemption value.",
+    ],
+  } : {
+    n: "05",
+    name: "Public production readiness",
+    status: "future",
+    items: [
+      "Independent security review and production controls remain pending.",
+      "Production-grade oracle infrastructure is not active.",
+      "Public real-asset activation remains future work.",
     ],
   },
 ];
@@ -235,10 +245,12 @@ export function RoadmapSection() {
       <div className="lp-wrap">
         <Eyebrow n="05" ac="blue">Roadmap</Eyebrow>
         <h2 className="lp-h2" id="road-title" data-lp-reveal style={{ ["--i" as string]: 1 }}>
-          Deployed on Robinhood Mainnet. <em className="o">Production</em> still ahead.
+          {appEnv.mainnetVisible ? "Deployed on Robinhood Mainnet. " : "Live on Robinhood Testnet. "}<em className="o">Production</em> still ahead.
         </h2>
         <p className="lp-lead" data-lp-reveal style={{ ["--i" as string]: 2 }}>
-          GYEVO has ten deployed contracts on Robinhood Mainnet (chain {ROBINHOOD_MAINNET_CHAIN_ID}). DAO and Lending remain paused and use synthetic demo assets. Interactive user journeys run on Robinhood Testnet (chain {ROBINHOOD_TESTNET_CHAIN_ID}); public production readiness remains pending.
+          {appEnv.mainnetVisible
+            ? <>GYEVO has ten deployed contracts on Robinhood Mainnet (chain {ROBINHOOD_MAINNET_CHAIN_ID}). DAO and Lending remain paused and use synthetic demo assets. Interactive user journeys run on Robinhood Testnet (chain {ROBINHOOD_TESTNET_CHAIN_ID}); public production readiness remains pending.</>
+            : <>GYEVO&apos;s interactive DAO and Lending journeys run on Robinhood Testnet (chain {ROBINHOOD_TESTNET_CHAIN_ID}) with synthetic test assets. Public production readiness remains pending.</>}
         </p>
 
         {/* the route: solid where the work is done or live, dotted where it is not. Decorative; the list below says the same in words. */}
@@ -284,8 +296,15 @@ export function FactsSection() {
           What is live today
         </p>
         <dl className="lp-facts__grid" data-lp-reveal>
-          <div className="lp-fact" data-spot><dt>Primary deployment</dt><dd className="mono">Robinhood Mainnet · {ROBINHOOD_MAINNET_CHAIN_ID}</dd></div>
-          <div className="lp-fact" data-spot><dt>Mainnet contracts</dt><dd>10 deployed · 10 runtime bytecodes</dd></div>
+          {appEnv.mainnetVisible
+            ? <>
+                <div className="lp-fact" data-spot><dt>Primary deployment</dt><dd className="mono">Robinhood Mainnet · {ROBINHOOD_MAINNET_CHAIN_ID}</dd></div>
+                <div className="lp-fact" data-spot><dt>Mainnet contracts</dt><dd>10 deployed · 10 runtime bytecodes</dd></div>
+              </>
+            : <>
+                <div className="lp-fact" data-spot><dt>Project status</dt><dd>Testnet demonstration</dd></div>
+                <div className="lp-fact" data-spot><dt>Contract evidence</dt><dd>Testnet receipts and source checks</dd></div>
+              </>}
           <div className="lp-fact" data-spot><dt>Interactive environment</dt><dd>Robinhood Testnet · {ROBINHOOD_TESTNET_CHAIN_ID}</dd></div>
           <div className="lp-fact" data-spot><dt>Audit</dt><dd>None</dd></div>
           <div className="lp-fact" data-spot><dt>Funds held</dt><dd>None</dd></div>

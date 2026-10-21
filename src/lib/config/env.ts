@@ -28,6 +28,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_APP_DESCRIPTION: defaultedString("Prove eligibility without revealing private state."),
   NEXT_PUBLIC_APP_TAGLINE: defaultedString("Prove more. Reveal less."),
   NEXT_PUBLIC_GYEVO_DAO_PHASE2_VISIBLE: publicBoolean,
+  NEXT_PUBLIC_GYEVO_MAINNET_VISIBLE: publicBoolean,
   NEXT_PUBLIC_GIWA_RPC_URL: z.preprocess(
     (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
     z.string().url().default("https://sepolia-rpc.giwa.io"),
@@ -80,6 +81,7 @@ const result = envSchema.safeParse({
   NEXT_PUBLIC_APP_DESCRIPTION: process.env.NEXT_PUBLIC_APP_DESCRIPTION,
   NEXT_PUBLIC_APP_TAGLINE: process.env.NEXT_PUBLIC_APP_TAGLINE,
   NEXT_PUBLIC_GYEVO_DAO_PHASE2_VISIBLE: process.env.NEXT_PUBLIC_GYEVO_DAO_PHASE2_VISIBLE,
+  NEXT_PUBLIC_GYEVO_MAINNET_VISIBLE: process.env.NEXT_PUBLIC_GYEVO_MAINNET_VISIBLE,
   NEXT_PUBLIC_GIWA_RPC_URL: process.env.NEXT_PUBLIC_GIWA_RPC_URL,
   NEXT_PUBLIC_ROBINHOOD_TESTNET_RPC_URL: process.env.NEXT_PUBLIC_ROBINHOOD_TESTNET_RPC_URL,
   NEXT_PUBLIC_ROBINHOOD_MAINNET_RPC_URL: process.env.NEXT_PUBLIC_ROBINHOOD_MAINNET_RPC_URL,
@@ -128,6 +130,7 @@ export const appEnv = {
   description: result.data.NEXT_PUBLIC_APP_DESCRIPTION,
   tagline: result.data.NEXT_PUBLIC_APP_TAGLINE,
   daoPhase2Visible: result.data.NEXT_PUBLIC_GYEVO_DAO_PHASE2_VISIBLE,
+  mainnetVisible: result.data.NEXT_PUBLIC_GYEVO_MAINNET_VISIBLE,
   giwaRpcUrl: result.data.NEXT_PUBLIC_GIWA_RPC_URL,
   robinhoodRpcUrl: result.data.NEXT_PUBLIC_ROBINHOOD_TESTNET_RPC_URL,
   robinhoodMainnetRpcUrl: result.data.NEXT_PUBLIC_ROBINHOOD_MAINNET_RPC_URL,

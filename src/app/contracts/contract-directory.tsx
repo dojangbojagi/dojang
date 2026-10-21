@@ -6,6 +6,7 @@ import { createPublicClient, parseAbi, type Address } from "viem";
 import { inspectRobinhoodContracts, type RobinhoodCodeEvidence } from "@/lib/protocol/robinhood-chain-evidence";
 import { ROBINHOOD_TESTNET_CHAIN_ID, ROBINHOOD_TESTNET_EXPLORER_URL } from "@/lib/config/robinhood-testnet";
 import { robinhoodMainnetDemoChain, robinhoodMainnetDemoContracts, robinhoodMainnetReadTransport, ROBINHOOD_MAINNET_CHAIN_ID, ROBINHOOD_MAINNET_DEMO_EXPLORER_URL } from "@/lib/config/robinhood-mainnet-demo";
+import { appEnv } from "@/lib/config/env";
 import { robinhoodMainnetPhase2Contracts } from "@/lib/config/contracts";
 
 export type DirectoryRow = {
@@ -191,7 +192,8 @@ function CopyButton({ value }: { value: string }) {
    runtime bytecode and explorer source status are checked independently without assuming either result. */
 export function ContractDirectory({ rows, mainnetRows }: { rows: DirectoryRow[]; mainnetRows: DirectoryRow[] }) {
   const client = usePublicClient({ chainId: ROBINHOOD_TESTNET_CHAIN_ID });
-  const [network, setNetwork] = useState<"testnet" | "mainnet">("mainnet");
+  const [selectedNetwork, setNetwork] = useState<"testnet" | "mainnet">(appEnv.mainnetVisible ? "mainnet" : "testnet");
+  const network: "testnet" | "mainnet" = appEnv.mainnetVisible ? selectedNetwork : "testnet";
   const [live, setLive] = useState<Live>({});
   const [mainnetLive, setMainnetLive] = useState<MainnetLive>({});
   const [mainnetProtocol, setMainnetProtocol] = useState<MainnetProtocolReadout>({ state: "checking" });
@@ -254,7 +256,7 @@ export function ContractDirectory({ rows, mainnetRows }: { rows: DirectoryRow[];
             <span>Robinhood Testnet</span>
             <small>Interactive · Chain {ROBINHOOD_TESTNET_CHAIN_ID}</small>
           </button>
-          <button
+          {appEnv.mainnetVisible && <button
             type="button"
             aria-label={`Robinhood Mainnet — Deployed, chain ${ROBINHOOD_MAINNET_CHAIN_ID}`}
             className="cdir__net-opt"
@@ -265,7 +267,7 @@ export function ContractDirectory({ rows, mainnetRows }: { rows: DirectoryRow[];
             <i aria-hidden="true" />
             <span>Robinhood Mainnet</span>
             <small>Deployed · Chain {ROBINHOOD_MAINNET_CHAIN_ID}</small>
-          </button>
+          </button>}
         </div>
       </div>
 
