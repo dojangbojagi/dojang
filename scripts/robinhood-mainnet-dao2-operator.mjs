@@ -10,7 +10,7 @@ import {
 } from "viem";
 import { computeEligibilityCommitment, generateFieldSalt } from "../src/lib/zk/commitment.ts";
 import { generateEligibilityProofFromArtifact } from "../src/lib/zk/eligibility-prover.ts";
-import { parseDemoCredentialWitness } from "../src/lib/credential/witness.ts";
+import { createGyevoCredentialWitness, isCredentialWitnessForChain, parseDemoCredentialWitness } from "../src/lib/credential/witness.ts";
 import { appendConfirmedMainnetCheckpoint } from "./mainnet-checkpoint.mjs";
 import { createVerifiedMainnetClient, getMainnetRpcCandidates, redactMainnetRpcUrls } from "./robinhood-mainnet-rpc.mjs";
 import { parsePhase2Ballot } from "../src/lib/governance/phase2-ballot.ts";
@@ -339,7 +339,7 @@ async function showStatus(wallet, requiredCapabilities) {
 
 async function buildMainnetPolicy5Proof(witnessFile) {
   const witness = secureRead(witnessFile, parseDemoCredentialWitness);
-  assert.equal(witness.format, "robinhood-demo-credential-v1", "Expected a private Mainnet-domain credential witness.");
+  assert.ok(isCredentialWitnessForChain(witness, CHAIN_ID, "robinhood-demo-credential-v1"), "Expected a private Policy 5 witness for Robinhood Mainnet chain 4663.");
   assert.equal(witness.policyId, Number(POLICY_ID), "DAO Phase 2 requires a Policy 5 witness.");
   const ctx = await getContext(true), wallet = getAddress(witness.wallet);
   const [block, credential, claim, activeClaim, threshold, credentialIssuerRole, claimIssuerRole] = await Promise.all([
@@ -421,8 +421,8 @@ async function main() {
     const commitment = await computeEligibilityCommitment({ subject: wallet, privateValue: String(result.body.score), salt,
       policyId: POLICY_ID, policyVersion: POLICY_VERSION, threshold, credentialVersion: version, expiresAt,
       chainId: BigInt(CHAIN_ID), vault: ctx.governance });
-    const witness = { format: "robinhood-demo-credential-v1", wallet, policyId: 5, commitment,
-      privateValue: String(result.body.score), salt, expiresAt: Number(expiresAt) };
+    const witness = createGyevoCredentialWitness({ wallet, policyId: 5, commitment,
+      privateValue: String(result.body.score), salt, expiresAt: Number(expiresAt) }, CHAIN_ID);
     const witnessPath = writePrivate(positional[2], witness);
     const evidencePath = writePrivate(positional[2] + ".evidence.json", { ...result.body, evidenceHash: result.evidenceHash });
     console.log("Prepared Mainnet Policy 5 witness for " + wallet + " · version " + version + ".\nWitness: " + witnessPath + "\nEvidence: " + evidencePath + "\nPrivate score and salt were not printed.");
@@ -532,7 +532,7 @@ async function main() {
   if (command === "issue-reputation") {
     const ctx = await getContext(true), witness = secureRead(positional[0], parseDemoCredentialWitness), stored = secureRead(positional[1]);
     assert.equal(witness.policyId, 5, "Witness is not Policy 5.");
-    assert.equal(witness.format, "robinhood-demo-credential-v1", "Witness must be Mainnet-domain formatted.");
+    assert.ok(isCredentialWitnessForChain(witness, CHAIN_ID, "robinhood-demo-credential-v1"), "Witness must target Robinhood Mainnet chain 4663.");
     assert.equal(stored.format, "gyevo-mainnet-lending-reputation-evidence-v1", "Evidence is not Mainnet-specific.");
     assert.equal(stored.chainId, CHAIN_ID, "Evidence is not chain 4663.");
     assert.ok(stored.wallet.toLowerCase() === witness.wallet.toLowerCase(), "Evidence and witness wallet mismatch.");
@@ -567,7 +567,7 @@ async function main() {
   if (command === "issue-credential") {
     const ctx = await getContext(true), witness = secureRead(positional[0], parseDemoCredentialWitness);
     assert.equal(witness.policyId, 5, "Witness is not Policy 5.");
-    assert.equal(witness.format, "robinhood-demo-credential-v1", "Witness must be Mainnet-domain formatted.");
+    assert.ok(isCredentialWitnessForChain(witness, CHAIN_ID, "robinhood-demo-credential-v1"), "Witness must target Robinhood Mainnet chain 4663.");
     const [current, claim, active, threshold, role] = await Promise.all([
       ctx.client.readContract({ address: contracts.credentialRegistry, abi: credentialAbi, functionName: "getCredential", args: [witness.wallet, POLICY_ID] }),
       ctx.client.readContract({ address: ctx.reputation, abi: repAbi, functionName: "getClaim", args: [witness.wallet] }),

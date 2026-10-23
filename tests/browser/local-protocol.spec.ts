@@ -284,7 +284,8 @@ test("browser-generated proof grants access through the real local vault", async
       attacker,
       outsider,
       witness: {
-        format: "giwa-demo-credential-v1" as const,
+        format: "gyevo-credential-v1" as const,
+        chainId: 91_342,
         wallet: subject,
         policyId: 1,
         commitment,

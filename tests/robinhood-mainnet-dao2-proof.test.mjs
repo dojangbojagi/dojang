@@ -37,6 +37,13 @@ describe("Robinhood Mainnet DAO Phase 2 proof binding", () => {
     expect(() => mainnetPolicy5ProofContext({ witness: { ...witness, policyId: 3 }, wallet, credential, claim, activeClaim: true, threshold: 3n, now: 1_000n, governance, chainId: 4_663 })).toThrow("Policy 5");
   });
 
+  test("accepts the GYEVO credential wrapper only for its declared Mainnet chain", () => {
+    const brandedWitness = { ...witness, format: "gyevo-credential-v1", chainId: 4_663 };
+    const context = mainnetPolicy5ProofContext({ witness: brandedWitness, wallet, credential, claim, activeClaim: true, threshold: 3n, now: 1_000n, governance, chainId: 4_663 });
+    expect(context.chainId).toBe(4_663n);
+    expect(() => mainnetPolicy5ProofContext({ witness: { ...brandedWitness, chainId: 46_630 }, wallet, credential, claim, activeClaim: true, threshold: 3n, now: 1_000n, governance, chainId: 4_663 })).toThrow("another chain");
+  });
+
   test("rejects stale, revoked, or mismatched credentials and claims", () => {
     expect(() => mainnetPolicy5ProofContext({ witness, wallet, credential: { ...credential, expiresAt: 999n }, claim, activeClaim: true, threshold: 3n, now: 1_000n, governance, chainId: 4_663 })).toThrow("not currently active");
     expect(() => mainnetPolicy5ProofContext({ witness, wallet, credential, claim: { ...claim, credentialVersion: 1n }, activeClaim: true, threshold: 3n, now: 1_000n, governance, chainId: 4_663 })).toThrow("versions differ");

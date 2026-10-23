@@ -15,19 +15,19 @@ import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
 import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo";
 import { credentialIssuerRoleAbi } from "@/lib/contracts/abis";
-import { parseDemoCredentialWitness, type DemoCredentialWitness } from "@/lib/credential/witness";
+import { credentialDownloadFilename, isCredentialWitnessForChain, parseCredentialWitnessJson, summarizeCredentialWitness, type DemoCredentialWitness } from "@/lib/credential/witness";
 import { LENDING_V2_ELIGIBILITY_THRESHOLD, LENDING_V2_POLICY_ID } from "@/lib/lending/v2-config";
 import { mapLendingV2Error } from "@/lib/lending/v2-errors";
 import { explainProtocolError } from "@/lib/protocol/errors";
 
 const PROOF_COPY: Record<V2Proof["state"], { tone: Tone; label: string; text: string }> = {
   unconfigured: { tone: "warn", label: "Not available", text: "Lending V2 is not configured, so there is no policy-3 registry to check against." },
-  disconnected: { tone: "neutral", label: "Wallet needed", text: "Connect a wallet to check its Project Test Credential." },
+  disconnected: { tone: "neutral", label: "Wallet needed", text: "Connect a wallet to check its GYEVO Project Credential." },
   "wrong-network": { tone: "warn", label: "Switch network", text: "This action requires Robinhood Chain Testnet (chain 46630). Switch networks to continue." },
   checking: { tone: "pending", label: "Checking", text: "Reading the policy-3 credential from the registry…" },
   unavailable: { tone: "warn", label: "Not available", text: "The configured address is not a compatible Lending V2 deployment." },
   "read-error": { tone: "invalid", label: "Unable to check", text: "The credential could not be read. This does not mean the wallet has none; try again in a moment." },
-  "credential-required": { tone: "neutral", label: "Credential not found", text: "No active Policy 3 Project Test Credential is registered for this wallet. The authorized project issuer must issue one and provide its matching private witness." },
+  "credential-required": { tone: "neutral", label: "Credential not found", text: "No active GYEVO Policy 3 Project Credential is registered for this wallet. The authorized project issuer must issue one and provide its matching private witness." },
   "credential-expired": { tone: "warn", label: "Expired", text: "The credential has expired. New supply, collateral activation and borrowing are blocked. Repaying and withdrawing stay available." },
   "credential-revoked": { tone: "invalid", label: "Revoked", text: "The project issuer revoked this credential. New supply, collateral activation and borrowing are blocked. Repaying and withdrawing stay available." },
   "credential-not-yet-valid": { tone: "warn", label: "Not yet valid", text: "The credential's start time has not been reached." },
@@ -74,7 +74,7 @@ function IssuerTools({ market, onIssued }: { market: V2Market; onIssued: (witnes
         const url = URL.createObjectURL(blob);
         const anchor = document.createElement("a");
         anchor.href = url;
-        anchor.download = `gyevo-policy-3-${recipient.toLowerCase()}.json`;
+        anchor.download = credentialDownloadFilename(Number(LENDING_V2_POLICY_ID));
         anchor.click();
         URL.revokeObjectURL(url);
         setMessage("The on-chain credential is confirmed. A private witness file was downloaded for secure delivery to the recipient; treat that file as a secret.");
@@ -90,7 +90,7 @@ function IssuerTools({ market, onIssued }: { market: V2Market; onIssued: (witnes
       <summary className="protocol-inline-link">Project issuer tools: issue a Policy 3 credential</summary>
       <div className="lend-issuer__body">
         <p className="small muted">
-          Shown only because this wallet holds the project registry&apos;s issuer role. It issues a policy {LENDING_V2_POLICY_ID.toString()} <strong>Project Test Credential</strong>,
+          Shown only because this wallet holds the project registry&apos;s issuer role. It issues a policy {LENDING_V2_POLICY_ID.toString()} <strong>GYEVO Project Credential</strong>,
           bound to the selected {market.networkName} Lending V2 pool. It is a project-issued credential, not official GIWA, Dojang or Upbit verification. The registry stores a commitment only; the private value and salt stay in this browser.
         </p>
         <form className="protocol-form" onSubmit={(event) => void issue(event)}>
@@ -162,6 +162,7 @@ export function EligibilityCard({ market, proof, witness, onWitness }: {
     ? { ...PROOF_COPY[proof.state], text: `This action requires ${market.networkName} (chain ${market.chainId}). Switch networks to continue.` }
     : PROOF_COPY[proof.state];
   const record = proof.credential;
+  const witnessSummary = witness ? summarizeCredentialWitness(witness, market.networkName, Boolean(wallet.address && witness.wallet.toLowerCase() === wallet.address.toLowerCase())) : undefined;
   const canProve = (proof.state === "ready-to-prove" || proof.state === "proof-ready") && !market.isSubmitting;
   const proofBytes = proof.proof ? (proof.proof.proof.length - 2) / 2 : 0;
 
@@ -172,7 +173,10 @@ export function EligibilityCard({ market, proof, witness, onWitness }: {
     setWitnessFile(file.name);
     setImporting(true);
     try {
-      const candidate = parseDemoCredentialWitness(JSON.parse(await file.text()));
+      const candidate = parseCredentialWitnessJson(await file.text());
+      if (!isCredentialWitnessForChain(candidate, market.chainId, "robinhood-demo-credential-v1")) {
+        throw new Error(`This credential file is not for ${market.networkName} (chain ${market.chainId}).`);
+      }
       if (!wallet.address || candidate.wallet.toLowerCase() !== wallet.address.toLowerCase()) throw new Error("This witness is not bound to the connected wallet.");
       if (candidate.policyId !== Number(LENDING_V2_POLICY_ID)) {
         throw new Error(`This witness belongs to policy ${candidate.policyId}. Lending V2 uses policy ${LENDING_V2_POLICY_ID.toString()}; a V1 (policy 2) witness cannot authorize V2.`);
@@ -214,7 +218,7 @@ export function EligibilityCard({ market, proof, witness, onWitness }: {
       <dl className="kv protocol-kv">
         <div className="kv__row">
           <dt>Lending V2 authorization</dt>
-          <dd>GYEVO Project Test Credential, Policy {LENDING_V2_POLICY_ID.toString()}. Official GIWA Dojang credentials do not authorize this pool.</dd>
+          <dd>GYEVO Project Credential, Policy {LENDING_V2_POLICY_ID.toString()}. It is project-issued; official GIWA Dojang credentials do not authorize this pool.</dd>
         </div>
         <div className="kv__row"><dt>Policy and threshold</dt><dd>Policy {LENDING_V2_POLICY_ID.toString()} · private value of at least {formatAmount(LENDING_V2_ELIGIBILITY_THRESHOLD, 0)} test units</dd></div>
         {record ? (
@@ -253,7 +257,7 @@ export function EligibilityCard({ market, proof, witness, onWitness }: {
           <summary className="protocol-inline-link">How to get a matching Policy 3 credential and witness</summary>
           <div className="lendv2-privacy__body">
             <p><strong>1. Connect the recipient wallet.</strong> Check the address shown above and use {market.networkName}, chain {market.chainId}. The credential and witness are bound to that exact address and the deployed Lending V2 pool.</p>
-            <p><strong>2. Request a Policy 3 Project Test Credential.</strong> Give that address to a GYEVO project issuer. A regular wallet cannot issue its own credential. The issuer's hidden local input is test data (at least 1,000 test units), not an official Dojang balance, KYC result, or exchange asset.</p>
+            <p><strong>2. Request a Policy 3 GYEVO Project Credential.</strong> Give that address to a GYEVO project issuer. A regular wallet cannot issue its own credential. The issuer&apos;s hidden local input is test eligibility data (at least 1,000 units), not an official Dojang balance, KYC result, or exchange asset.</p>
             <p><strong>3. Receive the matching JSON privately.</strong> The issuer creates the witness locally, simulates the registry call, and issues only the public commitment after the required owner authorization. Ask the issuer to deliver the resulting `.json` file directly to the recipient; do not post it in a public channel or upload it to a third-party site.</p>
             <p><strong>4. Import it here and generate the proof.</strong> This page checks the wallet, policy, commitment, and expiry before using the witness in the browser. The proof is locally verified first; the contract verifies it again when a protected action is submitted. The witness stays in browser memory for this session and is cleared when removed or when the tab closes.</p>
             {market.chainId === ROBINHOOD_TESTNET_CHAIN_ID && <p>For a Testnet project operator, the guarded preparation command is <code>bun run robinhood:bootstrap prepare-lending &lt;recipient-wallet&gt; &lt;expiry-days&gt; ~/.local/share/gyevo-witnesses/&lt;recipient&gt;-policy3.json</code>. It writes a mode-0600 witness and runs a no-broadcast issuance simulation. The follow-up <code>issue-lending &lt;witness-file&gt;</code> simulates by default; a public issuance needs separate owner authorization.</p>}
@@ -269,11 +273,13 @@ export function EligibilityCard({ market, proof, witness, onWitness }: {
         fileName={witnessFile}
         status={importing ? "loading" : witness ? "loaded" : importFailed ? "invalid" : "idle"}
         message={importMessage || (importing ? "Reading and checking witness metadata in this browser…" : "")}
-        loadedFor={witness ? shortAddress(witness.wallet) : undefined}
+        loadedFor={witnessSummary?.walletAssociation === "matches-connected-wallet" ? "connected wallet" : undefined}
         onFile={(file) => void importWitness(file)}
         onRejected={(file, reason) => { onWitness(null); setWitnessFile(file.name); setImportFailed(true); setImportMessage(reason); }}
         onRemove={() => { onWitness(null); setImportFailed(false); setWitnessFile(""); setImportMessage("Witness cleared from memory."); }}
       />
+
+      {witnessSummary && <p className="xsmall muted" role="status">Policy {witnessSummary.policyId} · {witnessSummary.networkName} (chain {witnessSummary.chainId ?? market.chainId}) · expires {new Date(witnessSummary.expiresAt * 1_000).toLocaleString()} · {witnessSummary.walletAssociation === "matches-connected-wallet" ? "wallet association confirmed" : "wallet changed; re-import to check"}. Private fields are hidden.</p>}
 
       <div className="protocol-actions">
         <button className="btn btn--primary" type="button" onClick={() => void generate()} disabled={!canProve}>
@@ -297,7 +303,7 @@ export function EligibilityCard({ market, proof, witness, onWitness }: {
       {isIssuer.data === true ? (
         <IssuerTools market={market} onIssued={(issued) => { onWitness(issued); setImportFailed(false); setWitnessFile(""); setImportMessage("The new credential and its witness are ready."); void proof.refetchCredential(); }} />
       ) : (
-        <p className="xsmall muted">Project Test Credentials are issued only by wallets that hold the project registry&apos;s issuer role. Ordinary wallets receive a witness file from the project issuer.</p>
+        <p className="xsmall muted">GYEVO Project Credentials are issued only by wallets that hold the project registry&apos;s issuer role. Ordinary wallets receive a private witness file from the project issuer.</p>
       )}
     </section>
   );

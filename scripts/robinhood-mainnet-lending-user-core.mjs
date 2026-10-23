@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { getAddress, isAddress } from "viem";
+import { isCredentialWitnessForChain } from "../src/lib/credential/witness.ts";
 
 export const LENDING_USER_AUTH = Object.freeze({
   approve: "approve-token",
@@ -32,8 +33,8 @@ export function assertParticipantAddress(label, address, configured) {
   return getAddress(configured);
 }
 
-export function assertWitnessForParticipant(witness, participant) {
-  assert.equal(witness?.format, "robinhood-demo-credential-v1", "Expected a Robinhood Mainnet project credential witness.");
+export function assertWitnessForParticipant(witness, participant, chainId = 4_663) {
+  assert.ok(isCredentialWitnessForChain(witness, chainId, "robinhood-demo-credential-v1"), "Expected a Robinhood Mainnet project credential witness for chain 4663.");
   assert.equal(witness?.policyId, 3, "Lending requires a Policy 3 witness.");
   assert.ok(isAddress(witness?.wallet), "Witness wallet is invalid.");
   assert.equal(getAddress(witness.wallet).toLowerCase(), getAddress(participant).toLowerCase(), "Witness belongs to a different participant wallet.");

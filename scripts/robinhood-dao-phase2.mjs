@@ -23,7 +23,7 @@ import {
   robinhoodLendingReputationAbi,
 } from "../src/lib/contracts/abis.ts";
 import { computeEligibilityCommitment, generateFieldSalt } from "../src/lib/zk/commitment.ts";
-import { parseDemoCredentialWitness } from "../src/lib/credential/witness.ts";
+import { createGyevoCredentialWitness, isCredentialWitnessForChain, parseDemoCredentialWitness } from "../src/lib/credential/witness.ts";
 
 const ROOT = process.cwd();
 const CHAIN_ID = 46_630;
@@ -284,15 +284,14 @@ async function prepareMembership(wallet, daysText, witnessFile) {
     chainId: BigInt(CHAIN_ID),
     vault: ctx.governance,
   });
-  const witness = {
-    format: "robinhood-demo-credential-v1",
+  const witness = createGyevoCredentialWitness({
     wallet: address,
     policyId: Number(POLICY_ID),
     commitment,
     privateValue: String(result.evidence.score),
     salt,
     expiresAt: Number(expiresAt),
-  };
+  }, CHAIN_ID);
   const resolvedWitness = writeExclusive(witnessFile, witness);
   const evidenceFile = writeExclusive(`${witnessFile}.evidence.json`, { ...result.evidence, evidenceHash: result.evidenceHash });
   console.log(`PASS prepared Policy 5 membership version ${version} for ${address}.\nWitness: ${resolvedWitness}\nEvidence: ${evidenceFile}\nPrivate score and salt were not printed. No transaction was signed or submitted.`);
@@ -345,6 +344,7 @@ async function guardedWrite(ctx, command, actor, target, abi, functionName, args
 async function issueReputation(witnessFile, evidenceFile, options) {
   const ctx = await context(true);
   const witness = secureJson(witnessFile, parseDemoCredentialWitness).value;
+  assert.ok(isCredentialWitnessForChain(witness, CHAIN_ID, "robinhood-demo-credential-v1"), "Witness must target Robinhood Testnet chain 46630.");
   const evidenceRecord = secureJson(evidenceFile).value;
   assert.equal(witness.policyId, Number(POLICY_ID), "Witness is not Policy 5.");
   assert.ok(sameAddress(witness.wallet, evidenceRecord.wallet), "Witness/evidence wallet mismatch.");
@@ -391,6 +391,7 @@ async function issueReputation(witnessFile, evidenceFile, options) {
 async function issueCredential(witnessFile, options) {
   const ctx = await context(true);
   const witness = secureJson(witnessFile, parseDemoCredentialWitness).value;
+  assert.ok(isCredentialWitnessForChain(witness, CHAIN_ID, "robinhood-demo-credential-v1"), "Witness must target Robinhood Testnet chain 46630.");
   assert.equal(witness.policyId, Number(POLICY_ID), "Witness is not Policy 5.");
   const actor = requiredAddress("RH_TESTNET_PHASE2_MEMBERSHIP_ISSUER_ADDRESS");
   const issuerRole = await ctx.client.readContract({ address: ctx.credentialRegistry, abi: credentialIssuerRoleAbi, functionName: "ISSUER_ROLE" });

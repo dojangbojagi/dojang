@@ -9,6 +9,7 @@ import { useDemoWitness } from "@/components/witness-context";
 import { generateEligibilityProof, proofContextForCredential } from "@/lib/zk/eligibility-prover";
 import { ProtocolError, type EligibilityProof, type ProofState } from "@/lib/protocol/types";
 import { GIWA_CHAIN_ID } from "@/lib/config/chain";
+import { isCredentialWitnessForChain } from "@/lib/credential/witness";
 
 export function useEligibilityProof(): {
   state: ProofState;
@@ -25,7 +26,7 @@ export function useEligibilityProof(): {
 
   const witnessMatchesRecord = Boolean(
     witness &&
-      witness.format === "giwa-demo-credential-v1" &&
+      isCredentialWitnessForChain(witness, GIWA_CHAIN_ID, "giwa-demo-credential-v1") &&
       credential.record &&
       account.address &&
       isAddressEqual(witness.wallet, account.address) &&

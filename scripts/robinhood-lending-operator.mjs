@@ -27,7 +27,7 @@ import {
   credentialRegistryAbi,
   lendingPoolV2Abi,
 } from "../src/lib/contracts/abis.ts";
-import { parseDemoCredentialWitness } from "../src/lib/credential/witness.ts";
+import { isCredentialWitnessForChain, parseDemoCredentialWitness } from "../src/lib/credential/witness.ts";
 import { computeEligibilityCommitment } from "../src/lib/zk/commitment.ts";
 
 const CHAIN_ID = 46_630;
@@ -213,7 +213,7 @@ async function activeWitness(ctx, wallet, file) {
   assert.ok(stats.size > 0 && stats.size <= 16_384, "Witness file size is invalid.");
   // Read private material into process memory only. Never print or pass these fields to a child process.
   const witness = parseDemoCredentialWitness(JSON.parse(fs.readFileSync(resolved, "utf8")));
-  assert.equal(witness.format, "robinhood-demo-credential-v1", "Expected the Robinhood project test credential witness.");
+  assert.ok(isCredentialWitnessForChain(witness, CHAIN_ID, "robinhood-demo-credential-v1"), "Expected a Robinhood Testnet project credential witness for chain 46630.");
   assert.equal(witness.policyId, 3, "The witness is not for Lending policy 3.");
   assert.equal(witness.wallet.toLowerCase(), wallet.toLowerCase(), "The witness belongs to a different participant.");
   const record = await read(ctx.client, ctx.addresses.registry, credentialRegistryAbi, "getCredential", [wallet, 3n]);

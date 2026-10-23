@@ -124,7 +124,7 @@ export function SupplyView({ market, proof, runner, asset, onAsset }: {
               <div className="kv__row"><dt>Supplied position after</dt><dd>{position ? `${formatAmount(position.supplied + amount, decimals)} ${symbol}` : "—"}</dd></div>
               <div className="kv__row"><dt>Wallet balance after</dt><dd>{position ? `${formatAmount(position.walletBalance - amount, decimals)} ${symbol}` : "—"}</dd></div>
               <div className="kv__row"><dt>Supply rate</dt><dd>{formatBps(data.currentSupplyRateBps)} APR, variable <span className="muted">(changes with utilization)</span></dd></div>
-              <div className="kv__row"><dt>Authorization</dt><dd>Policy-3 Project Test Credential proof, verified again by the pool</dd></div>
+              <div className="kv__row"><dt>Authorization</dt><dd>GYEVO Policy 3 proof, verified again by the pool</dd></div>
               <div className="kv__row"><dt>Current allowance</dt><dd>{position ? `${formatAmount(position.allowance, decimals)} ${symbol}` : "Unavailable"}</dd></div>
               <div className="kv__row"><dt>Spender</dt><dd className="addr">{market.poolAddress ?? "Unavailable"}</dd></div>
               <div className="kv__row"><dt>Approval amount</dt><dd>{position && amount > position.allowance ? `${formatAmount(amount, decimals)} ${symbol} exactly` : "No additional approval needed"}</dd></div>

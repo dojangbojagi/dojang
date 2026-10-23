@@ -15,6 +15,7 @@ import {
 import { generateEligibilityProof } from "@/lib/zk/eligibility-prover";
 import { ProtocolError, type EligibilityProof, type LendingProofState } from "@/lib/protocol/types";
 import type { DemoCredentialWitness } from "@/lib/credential/witness";
+import { isCredentialWitnessForChain } from "@/lib/credential/witness";
 
 function witnessMatches(witness: DemoCredentialWitness | undefined, input: {
   wallet: string;
@@ -23,7 +24,7 @@ function witnessMatches(witness: DemoCredentialWitness | undefined, input: {
 }): boolean {
   return Boolean(
     witness &&
-      witness.format === "giwa-demo-credential-v1" &&
+      isCredentialWitnessForChain(witness, GIWA_CHAIN_ID, "giwa-demo-credential-v1") &&
       witness.policyId === Number(LENDING_POLICY_ID) &&
       witness.wallet.toLowerCase() === input.wallet.toLowerCase() &&
       witness.commitment.toLowerCase() === input.commitment.toLowerCase() &&

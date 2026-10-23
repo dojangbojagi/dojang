@@ -43,6 +43,21 @@ describe("Robinhood Mainnet encrypted participant Lending guards", () => {
     expect(() => assertWitnessForParticipant({ ...witness, format: "giwa-demo-credential-v1" }, WALLET_A)).toThrow();
   });
 
+  test("accepts GYEVO Policy 3 only when its explicit chain metadata targets Mainnet", () => {
+    const witness = {
+      format: "gyevo-credential-v1",
+      chainId: 4_663,
+      wallet: WALLET_A,
+      policyId: 3,
+      commitment: `0x${"11".repeat(32)}`,
+      privateValue: "1000",
+      salt: `0x${"22".repeat(32)}`,
+      expiresAt: 1_800_000_000,
+    };
+    expect(assertWitnessForParticipant(witness, WALLET_A)).toBe(witness);
+    expect(() => assertWitnessForParticipant({ ...witness, chainId: 46_630 }, WALLET_A)).toThrow();
+  });
+
   test("active credential checks include wallet, issuer, time validity, and revocation", () => {
     const record = { wallet: WALLET_A, issuer: WALLET_B, issuedAt: 100n, expiresAt: 500n, revoked: false };
     expect(assertActiveCredential(record, WALLET_A, 200n)).toBe(record);

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { getAddress, isAddress } from "viem";
+import { isCredentialWitnessForChain } from "../src/lib/credential/witness.ts";
 
 const ZERO = "0x0000000000000000000000000000000000000000";
 const BYTES32 = /^0x[0-9a-fA-F]{64}$/;
@@ -10,7 +11,7 @@ export function mainnetPolicy5ProofContext({ witness, wallet, credential, claim,
   assert.equal(Number(chainId), 4_663, "Policy 5 proof must target Robinhood Mainnet chain 4663.");
   assert.ok(isAddress(wallet) && isAddress(governance), "Wallet or governance address is invalid.");
   const subject = getAddress(wallet);
-  assert.equal(witness?.format, "robinhood-demo-credential-v1", "Expected a Robinhood project credential witness.");
+  assert.ok(isCredentialWitnessForChain(witness, Number(chainId), "robinhood-demo-credential-v1"), "Expected a Robinhood project credential witness for another chain.");
   assert.equal(witness?.policyId, 5, "DAO Phase 2 requires Policy 5.");
   assert.ok(isAddress(witness.wallet), "Witness wallet is invalid.");
   assert.equal(getAddress(witness.wallet).toLowerCase(), subject.toLowerCase(), "Witness belongs to another wallet.");

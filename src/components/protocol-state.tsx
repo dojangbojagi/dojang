@@ -13,7 +13,7 @@ const LABELS: Record<ProtocolUiState, string> = {
   disconnected: "Disconnected", connecting: "Connecting", connected: "Connected", "wrong-network": "Switch network",
   idle: "Not checked", checking: "Checking", "official-verified": "Official GIWA Credential Verified", "no-official-credential": "No Official GIWA Credential Found",
   invalid: "Invalid", expired: "Expired", revoked: "Revoked", "read-error": "Read Error",
-  unconfigured: "Contracts Not Configured", missing: "No Demo Credential", active: "Demo Credential Ready",
+  unconfigured: "Contracts Not Configured", missing: "No GYEVO Credential", active: "GYEVO Credential Active",
   "credential-required": "Credential Required", "ready-to-prove": "Ready to Prove", generating: "Generating Proof",
   "ready-to-submit": "Proof Verified Locally", "contract-unconfigured": "Vault Not Configured",
   locked: "Locked", eligible: "Eligible", "access-granted": "Access Granted", "previously-granted": "Previously Granted",

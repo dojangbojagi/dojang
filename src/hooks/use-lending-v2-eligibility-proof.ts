@@ -15,6 +15,7 @@ import { eligibilityVerifierProofAbi } from "@/lib/contracts/abis";
 import { generateEligibilityProof } from "@/lib/zk/eligibility-prover";
 import { ProtocolError, type EligibilityProof, type DemoCredentialRecord } from "@/lib/protocol/types";
 import type { DemoCredentialWitness } from "@/lib/credential/witness";
+import { isCredentialWitnessForChain } from "@/lib/credential/witness";
 
 export type LendingV2EligibilityState =
   | "unconfigured"
@@ -44,10 +45,10 @@ type ProofVerificationStatus =
   | "deployed-verifier-rejected"
   | "deployed-verifier-unavailable";
 
-function matchesV2Witness(witness: DemoCredentialWitness | undefined, wallet: Address, record: DemoCredentialRecord): boolean {
+function matchesV2Witness(witness: DemoCredentialWitness | undefined, wallet: Address, record: DemoCredentialRecord, chainId: LendingV2ChainId): boolean {
   return Boolean(
     witness &&
-    witness.format === "robinhood-demo-credential-v1" &&
+    isCredentialWitnessForChain(witness, chainId, "robinhood-demo-credential-v1") &&
     witness.policyId === 3 &&
     witness.wallet.toLowerCase() === wallet.toLowerCase() &&
     witness.commitment.toLowerCase() === record.commitment.toLowerCase() &&
@@ -57,7 +58,7 @@ function matchesV2Witness(witness: DemoCredentialWitness | undefined, wallet: Ad
 
 export function useLendingV2EligibilityProof(witness?: DemoCredentialWitness, chainId: LendingV2ChainId = ROBINHOOD_TESTNET_CHAIN_ID): {
   state: LendingV2EligibilityState;
-  credentialLabel: "Project Test Credential";
+  credentialLabel: "GYEVO Project Credential";
   credential?: DemoCredentialRecord;
   proof?: EligibilityProof;
   verificationStatus: ProofVerificationStatus;
@@ -102,7 +103,7 @@ export function useLendingV2EligibilityProof(witness?: DemoCredentialWitness, ch
   const [verificationStatus, setVerificationStatus] = useState<ProofVerificationStatus>("not-generated");
   const credential = credentialQuery.data?.record;
   const currentWitness = witness ?? proofWitness;
-  const witnessMatches = Boolean(account.address && credential && matchesV2Witness(currentWitness, account.address, credential));
+  const witnessMatches = Boolean(account.address && credential && matchesV2Witness(currentWitness, account.address, credential, chainId));
   const context = useMemo(() => {
     if (!pool || !account.address || !credential) return undefined;
     return robinhoodLendingV2ProofContextForCredential({ subject: account.address, record: credential, lendingPool: pool, chainId });
@@ -148,10 +149,10 @@ export function useLendingV2EligibilityProof(witness?: DemoCredentialWitness, ch
     }
     const refreshedCredential = await readLendingV2Credential(client, deploymentQuery.data.credentialRegistry, account.address);
     if (refreshedCredential.state !== "active" || !refreshedCredential.record) {
-      throw new ProtocolError("CREDENTIAL_REQUIRED", "An active policy-3 Project Test Credential from a currently authorized issuer is required.");
+      throw new ProtocolError("CREDENTIAL_REQUIRED", "An active GYEVO Policy 3 Project Credential from a currently authorized issuer is required.");
     }
-    if (!selectedWitness) throw new ProtocolError("CREDENTIAL_REQUIRED", "Import the private policy-3 Project Test Credential witness.");
-    if (!matchesV2Witness(selectedWitness, account.address, refreshedCredential.record)) {
+    if (!selectedWitness) throw new ProtocolError("CREDENTIAL_REQUIRED", "Import the private GYEVO Policy 3 witness.");
+    if (!matchesV2Witness(selectedWitness, account.address, refreshedCredential.record, chainId)) {
       throw new ProtocolError("CREDENTIAL_MISMATCH", "The witness does not match this wallet's active policy-3 credential.");
     }
 
@@ -220,26 +221,26 @@ export function useLendingV2EligibilityProof(witness?: DemoCredentialWitness, ch
       : state === "read-error"
         ? `The V2 pool or policy-3 credential could not be read from Robinhood Chain ${chainId === ROBINHOOD_MAINNET_CHAIN_ID ? "Mainnet" : "Testnet"}.`
         : state === "credential-required"
-          ? "No policy-3 Project Test Credential is registered for this wallet."
+          ? "No GYEVO Policy 3 Project Credential is registered for this wallet."
           : state === "credential-expired"
-            ? "The policy-3 Project Test Credential has expired. Request a new project-issued credential."
+            ? "The GYEVO Policy 3 Project Credential has expired. Request a new project-issued credential."
             : state === "credential-revoked"
               ? "The project issuer revoked this policy-3 credential."
               : state === "credential-not-yet-valid"
-                ? "The policy-3 Project Test Credential is not yet valid."
+                ? "The GYEVO Policy 3 Project Credential is not yet valid."
                 : state === "issuer-untrusted"
                   ? "The credential issuer no longer has the project registry issuer role."
                   : state === "verifier-unavailable"
                     ? "The local proof is valid, but the deployed verifier could not be reached. Retry before taking a protected action."
                   : state === "witness-required"
-                    ? "Import the private witness for this policy-3 Project Test Credential."
+                    ? "Import the private witness for this GYEVO Policy 3 Project Credential."
                     : state === "witness-mismatch"
                       ? "The imported witness does not match the active policy-3 credential."
                       : undefined);
 
   return {
     state,
-    credentialLabel: "Project Test Credential",
+    credentialLabel: "GYEVO Project Credential",
     credential,
     proof,
     verificationStatus,

@@ -7,7 +7,7 @@ import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import { useProtocolNetworkSelection } from "@/components/protocol-network-selection";
 import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
 import { getDaoPhase2ContractSet } from "@/lib/config/network-registry";
-import { parseDemoCredentialWitness, type DemoCredentialWitness } from "@/lib/credential/witness";
+import { isCredentialWitnessForChain, parseCredentialWitnessJson, type DemoCredentialWitness } from "@/lib/credential/witness";
 import { computeEligibilityCommitment } from "@/lib/zk/commitment";
 import { parsePhase2Ballot } from "@/lib/governance/phase2-ballot";
 import type { Phase2BallotSecret } from "@/lib/governance/phase2-types";
@@ -99,8 +99,8 @@ export function DaoPhase2Workspace() {
           || snapshot.reputation.credentialVersion !== snapshot.credential.version
           || snapshot.reputation.expiresAt !== snapshot.credential.expiresAt
       ) throw new Error("The active Policy 5 credential and reputation claim do not match the same commitment and version.");
-      const parsed = parseDemoCredentialWitness(JSON.parse(await file.text()));
-      if (parsed.format !== "robinhood-demo-credential-v1" || parsed.policyId !== 5) {
+      const parsed = parseCredentialWitnessJson(await file.text());
+      if (!isCredentialWitnessForChain(parsed, selectedChainId, "robinhood-demo-credential-v1") || parsed.policyId !== 5) {
         throw new Error("Choose the Robinhood Policy 5 reputation witness issued for DAO Phase 2.");
       }
       if (parsed.wallet.toLowerCase() !== wallet.address.toLowerCase()) {

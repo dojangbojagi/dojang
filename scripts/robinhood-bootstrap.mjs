@@ -27,7 +27,7 @@ import {
   robinhoodGovernanceAbi,
 } from "../src/lib/contracts/abis.ts";
 import { computeEligibilityCommitment, generateFieldSalt } from "../src/lib/zk/commitment.ts";
-import { parseDemoCredentialWitness } from "../src/lib/credential/witness.ts";
+import { createGyevoCredentialWitness, isCredentialWitnessForChain, parseDemoCredentialWitness } from "../src/lib/credential/witness.ts";
 
 const ROOT = process.cwd();
 const CHAIN_ID = 46_630;
@@ -659,10 +659,10 @@ async function prepareLending(wallet, daysText, witnessPath) {
     policyId: 3n, policyVersion: 1n, threshold: 1_000n, credentialVersion: 1n,
     expiresAt, chainId: BigInt(CHAIN_ID), vault: ctx.addresses.LendingPoolV2,
   });
-  const witness = {
-    format: "robinhood-demo-credential-v1", wallet: getAddress(wallet), policyId: 3,
+  const witness = createGyevoCredentialWitness({
+    wallet: getAddress(wallet), policyId: 3,
     commitment, privateValue: value, salt, expiresAt: Number(expiresAt),
-  };
+  }, CHAIN_ID);
   const resolved = path.resolve(witnessPath);
   fs.mkdirSync(path.dirname(resolved), { recursive: true, mode: 0o700 });
   assert.equal(fs.statSync(path.dirname(resolved)).mode & 0o077, 0, "Witness directory must be private (mode 0700 or stricter).");
@@ -688,7 +688,7 @@ async function actionIssueLending(witnessPath, options) {
   const stat = fs.statSync(resolved);
   assert.equal(stat.mode & 0o077, 0, "Witness file must have mode 0600 or stricter before use.");
   const witness = parseDemoCredentialWitness(JSON.parse(fs.readFileSync(resolved, "utf8")));
-  assert.equal(witness.format, "robinhood-demo-credential-v1");
+  assert.ok(isCredentialWitnessForChain(witness, CHAIN_ID, "robinhood-demo-credential-v1"), "Witness is not for Robinhood Testnet chain 46630.");
   assert.equal(witness.policyId, 3);
   const ctx = await liveContext(); ctx.options = options;
   assert.equal(BigInt(witness.expiresAt) > await chainTimestamp(ctx), true, "Witness has expired.");

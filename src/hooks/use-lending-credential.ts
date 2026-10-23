@@ -20,7 +20,7 @@ import {
   type LendingCredentialState,
   type TransactionLifecycle,
 } from "@/lib/protocol/types";
-import type { DemoCredentialWitness } from "@/lib/credential/witness";
+import { createGyevoCredentialWitness, type DemoCredentialWitness } from "@/lib/credential/witness";
 
 export function useLendingCredential(walletOverride?: Address) {
   const account = useWalletNetwork(GIWA_CHAIN_ID);
@@ -188,15 +188,14 @@ export function useLendingCredentialIssuance() {
       }
 
       setTransaction({ state: "confirmed", hash: transactionHash, explorerUrl });
-      return {
-        format: "giwa-demo-credential-v1",
+      return createGyevoCredentialWitness({
         wallet: input.wallet,
         policyId: Number(LENDING_POLICY_ID),
         commitment,
         privateValue: input.privateValue,
         salt,
         expiresAt: Number(input.expiresAt),
-      };
+      }, GIWA_CHAIN_ID);
     } catch (error) {
       if (error instanceof ProtocolError && error.code === "TRANSACTION_STATE_UNCONFIRMED") throw error;
       const detail = explainProtocolError(error);

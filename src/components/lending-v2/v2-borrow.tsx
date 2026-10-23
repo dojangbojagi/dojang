@@ -248,7 +248,7 @@ export function BorrowView({ market, proof, runner, borrowAsset, onBorrowAsset, 
                       <div className="kv__row"><dt>Health factor now</dt><dd>{account ? formatHealthFactor(account.healthFactorWad) : "Unavailable"}</dd></div>
                       <div className="kv__row"><dt>Health factor after (estimate)</dt><dd>{preview ? formatHealthFactor(preview.healthFactorRay) : "Unavailable"}</dd></div>
                       <div className="kv__row"><dt>Borrowing limit used after (estimate)</dt><dd>{preview?.limitUsageBps !== undefined ? formatBps(preview.limitUsageBps) : "Unavailable"}</dd></div>
-                      <div className="kv__row"><dt>Authorization</dt><dd>Policy-3 Project Test Credential proof, verified again by the pool</dd></div>
+                      <div className="kv__row"><dt>Authorization</dt><dd>GYEVO Policy 3 proof, verified again by the pool</dd></div>
                     </dl>
                     {preview && !preview.withinLimit && (
                       <p className="callout callout--caution protocol-notice" role="alert">This would take debt above your borrowing limit. The pool will reject it.</p>

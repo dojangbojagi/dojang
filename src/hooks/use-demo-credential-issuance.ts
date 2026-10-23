@@ -9,7 +9,7 @@ import { projectContracts } from "@/lib/config/contracts";
 import { credentialRegistryAbi } from "@/lib/contracts/abis";
 import { explainProtocolError } from "@/lib/protocol/errors";
 import { ProtocolError, type TransactionLifecycle } from "@/lib/protocol/types";
-import type { DemoCredentialWitness } from "@/lib/credential/witness";
+import { createGyevoCredentialWitness, type DemoCredentialWitness } from "@/lib/credential/witness";
 import { computeEligibilityCommitment, generateFieldSalt } from "@/lib/zk/commitment";
 
 export function useDemoCredentialIssuance() {
@@ -105,15 +105,14 @@ export function useDemoCredentialIssuance() {
       }
 
       setTransaction({ state: "confirmed", hash: transactionHash, explorerUrl });
-      const witness: DemoCredentialWitness = {
-        format: "giwa-demo-credential-v1",
+      const witness = createGyevoCredentialWitness({
         wallet: input.wallet,
         policyId: 1,
         commitment,
         privateValue: input.privateValue,
         salt,
         expiresAt: Number(input.expiresAt),
-      };
+      }, GIWA_CHAIN_ID);
       return witness;
     } catch (error) {
       const detail = explainProtocolError(error);

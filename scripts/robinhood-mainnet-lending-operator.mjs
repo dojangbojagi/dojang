@@ -9,7 +9,7 @@ import {
   isAddress, keccak256, parseAbi, zeroAddress,
 } from "viem";
 import { computeEligibilityCommitment, generateFieldSalt } from "../src/lib/zk/commitment.ts";
-import { parseDemoCredentialWitness } from "../src/lib/credential/witness.ts";
+import { createGyevoCredentialWitness, isCredentialWitnessForChain, parseDemoCredentialWitness } from "../src/lib/credential/witness.ts";
 import { robinhoodMainnetDemoContracts as contracts, ROBINHOOD_MAINNET_CHAIN_ID as CHAIN_ID } from "../src/lib/config/robinhood-mainnet-demo.ts";
 import { appendConfirmedMainnetCheckpoint } from "./mainnet-checkpoint.mjs";
 import { createVerifiedMainnetClient, formatMainnetRpcError, getMainnetRpcCandidates, requestMainnetRpcReadBatch } from "./robinhood-mainnet-rpc.mjs";
@@ -725,8 +725,8 @@ async function prepareCredential(ctx, walletText, daysText, output) {
   const salt = generateFieldSalt();
   const commitment = await computeEligibilityCommitment({ subject: wallet, privateValue, salt, policyId: POLICY_ID, policyVersion: POLICY_VERSION,
     threshold: THRESHOLD, credentialVersion: version, expiresAt, chainId: BigInt(CHAIN_ID), vault: contracts.lendingPool });
-  const file = writePrivate(output, { format: "robinhood-demo-credential-v1", wallet, policyId: Number(POLICY_ID), commitment,
-    privateValue, salt, expiresAt: Number(expiresAt) });
+  const file = writePrivate(output, createGyevoCredentialWitness({ wallet, policyId: Number(POLICY_ID), commitment,
+    privateValue, salt, expiresAt: Number(expiresAt) }, CHAIN_ID));
   console.log(`Prepared private Mainnet Policy 3 witness for ${wallet} · version ${version} · expiry ${expiresAt}.`);
   console.log(`Witness saved mode 0600: ${file}. Private value, salt, and witness content were not printed.`);
   console.log(`Next read-only command: bun run robinhood:mainnet:lending:operator issue-lending ${JSON.stringify(file)}`);
@@ -997,7 +997,7 @@ async function main() {
   if (command === "issue-lending") {
     assert.ok(positional[0], "Use issue-lending <private-policy-3-witness.json>.");
     const witness = secureRead(positional[0]);
-    assert.equal(witness.format, "robinhood-demo-credential-v1", "Witness must use the Robinhood project credential format.");
+    assert.ok(isCredentialWitnessForChain(witness, CHAIN_ID, "robinhood-demo-credential-v1"), "Witness must target Robinhood Mainnet chain 4663.");
     assert.equal(witness.policyId, Number(POLICY_ID), "Witness must be Policy 3.");
     assert.ok([ctx.roles.participantA, ctx.roles.participantB].some((wallet) => wallet.toLowerCase() === witness.wallet.toLowerCase()), "Witness wallet is not one of the configured demo participants.");
     assert.equal(await ctx.client.readContract({ address: contracts.lendingPool, abi: poolAbi, functionName: "isDemoParticipant", args: [witness.wallet] }), true,

@@ -72,10 +72,10 @@ export function DemoCredentialTools() {
   return (
     <section className="panel panel--ticks protocol-panel" aria-labelledby="demo-onboarding-heading">
       <div className="protocol-panel__head">
-        <h2 id="demo-onboarding-heading">Project demo issuer</h2>
+        <h2 id="demo-onboarding-heading">GYEVO Project Credential</h2>
         <StateChip state={credential.state} />
       </div>
-      <p className="protocol-copy">The connected wallet issues only to itself in this browser. The registry stores a commitment; the private value and salt remain in memory for this session.</p>
+      <p className="protocol-copy">The connected authorized issuer can issue to its own wallet in this browser. The GIWA Sepolia registry stores a commitment; the private value and salt remain in memory for this session.</p>
       <div className="callout callout--demo"><p><strong>Separate from official Dojang.</strong> Issuance requires the configured registry and vault, a GIWA Sepolia wallet, and an authorized issuer role. Only the contract enforces that role.</p></div>
 
       <dl className="kv protocol-kv">
@@ -93,7 +93,7 @@ export function DemoCredentialTools() {
             <input id="demo-expiry" name="expiresAt" type="datetime-local" value={expiresAt} onChange={(event) => setExpiresAt(event.currentTarget.value)} />
           </label>
         </div>
-        <p id="demo-value-help" className="xsmall muted">At least 1,000 project demo test units. This is not a currency amount. The value is never included in the registry call.</p>
+        <p id="demo-value-help" className="xsmall muted">At least 1,000 project eligibility units. This is not a currency amount. The value is never included in the registry call.</p>
         <div className="protocol-actions">
           <button className="btn btn--primary" type="submit" disabled={!canIssue}>
             {issuance.isSubmitting ? "Issuing credential…" : "Issue to connected wallet"}
@@ -114,7 +114,7 @@ export function DemoCredentialTools() {
 
       {credential.record && !credential.record.revoked && (
         <details className="protocol-revoke">
-          <summary className="protocol-inline-link">Revoke this demo credential</summary>
+          <summary className="protocol-inline-link">Revoke this GYEVO credential</summary>
           <p className="small muted">The credential issuer or registry admin can revoke it. The contract checks authorization; revocation is confirmed only after receipt and registry readback.</p>
           <button className="btn btn--secondary" type="button" onClick={() => void revoke()} disabled={!wallet.isGiwaSepolia || submitting || revocation.state !== "active"}>
             {revocation.isSubmitting ? "Revoking…" : "Revoke credential"}

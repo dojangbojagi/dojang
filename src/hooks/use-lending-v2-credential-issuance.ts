@@ -15,10 +15,10 @@ import { readLendingV2Deployment } from "@/lib/lending/v2-service";
 import { mapLendingV2Error } from "@/lib/lending/v2-errors";
 import { computeEligibilityCommitment, generateFieldSalt } from "@/lib/zk/commitment";
 import { ProtocolError, type TransactionLifecycle } from "@/lib/protocol/types";
-import type { DemoCredentialWitness } from "@/lib/credential/witness";
+import { createGyevoCredentialWitness, type DemoCredentialWitness } from "@/lib/credential/witness";
 
 export function useLendingV2CredentialIssuance(chainId: LendingV2ChainId = ROBINHOOD_TESTNET_CHAIN_ID): {
-  credentialLabel: "Project Test Credential";
+  credentialLabel: "GYEVO Project Credential";
   transaction: TransactionLifecycle;
   isSubmitting: boolean;
   issueCredential: (input: { wallet: Address; privateValue: string; expiresAt: bigint }) => Promise<DemoCredentialWitness>;
@@ -110,8 +110,8 @@ export function useLendingV2CredentialIssuance(chainId: LendingV2ChainId = ROBIN
       setTransaction({ state: "confirming", hash, explorerUrl });
       const receipt = await client.waitForTransactionReceipt({ hash });
       if (receipt.status !== "success") {
-        setTransaction({ state: "reverted", hash, explorerUrl, error: "The Project Test Credential transaction reverted on-chain." });
-        throw new ProtocolError("RPC_ERROR", "The Project Test Credential transaction reverted on-chain.");
+        setTransaction({ state: "reverted", hash, explorerUrl, error: "The GYEVO Project Credential transaction reverted on-chain." });
+        throw new ProtocolError("RPC_ERROR", "The GYEVO Project Credential transaction reverted on-chain.");
       }
       const confirmed = await client.readContract({
         address: deployment.credentialRegistry,
@@ -128,19 +128,18 @@ export function useLendingV2CredentialIssuance(chainId: LendingV2ChainId = ROBIN
         throw new ProtocolError("TRANSACTION_STATE_UNCONFIRMED", "The transaction receipt succeeded, but the policy-3 credential readback did not match.");
       }
       await queryClient.invalidateQueries({ queryKey: robinhoodLendingV2CredentialQueryKey(deployment.credentialRegistry, input.wallet, chainId) });
-      const witness: DemoCredentialWitness = {
-        format: "robinhood-demo-credential-v1",
+      const witness = createGyevoCredentialWitness({
         wallet: input.wallet,
         policyId: Number(LENDING_V2_POLICY_ID),
         commitment,
         privateValue: input.privateValue,
         salt,
         expiresAt: Number(input.expiresAt),
-      };
+      }, chainId);
       setTransaction({ state: "confirmed", hash, explorerUrl });
       return witness;
     } catch (error) {
-      if (error instanceof ProtocolError && error.message === "The Project Test Credential transaction reverted on-chain.") throw error;
+      if (error instanceof ProtocolError && error.message === "The GYEVO Project Credential transaction reverted on-chain.") throw error;
       if (error instanceof ProtocolError && error.code === "TRANSACTION_STATE_UNCONFIRMED") {
         setTransaction({ state: "rpc-error", hash, explorerUrl, error: error.message });
         throw error;
@@ -153,7 +152,7 @@ export function useLendingV2CredentialIssuance(chainId: LendingV2ChainId = ROBIN
   }, [account.address, account.isOnExpectedNetwork, chainId, client, configuredRegistry, honkVerifier, incompleteRobinhoodConfig, oracle, pool, queryClient, verifier, writer, robinhood]);
 
   return {
-    credentialLabel: "Project Test Credential",
+    credentialLabel: "GYEVO Project Credential",
     transaction,
     isSubmitting: ["simulating", "awaiting-signature", "submitted", "confirming"].includes(transaction.state),
     issueCredential,

@@ -17,6 +17,7 @@ import { readPhase2Snapshot, type Phase2Addresses } from "@/lib/governance/phase
 import type { Phase2BallotSecret } from "@/lib/governance/phase2-types";
 import { generateEligibilityProof } from "@/lib/zk/eligibility-prover";
 import type { DemoCredentialWitness } from "@/lib/credential/witness";
+import { isCredentialWitnessForChain } from "@/lib/credential/witness";
 import type { EligibilityProof, GovernanceWriteResult, TransactionLifecycle } from "@/lib/protocol/types";
 import { ProtocolError } from "@/lib/protocol/types";
 
@@ -168,7 +169,7 @@ export function useRobinhoodDaoPhase2(proposalId?: bigint, chainId: SupportedPro
         || data.reputation.expiresAt !== data.credential.expiresAt
     ) throw new Error("The Policy 5 credential and Lending reputation claim do not describe the same private commitment.");
     if (
-      witness.format !== "robinhood-demo-credential-v1" || witness.policyId !== 5
+      !isCredentialWitnessForChain(witness, chainId, "robinhood-demo-credential-v1") || witness.policyId !== 5
         || !isAddressEqual(witness.wallet, current.wallet)
         || witness.commitment.toLowerCase() !== data.credential.commitment.toLowerCase()
         || BigInt(witness.expiresAt) !== data.credential.expiresAt
