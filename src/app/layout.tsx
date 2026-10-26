@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Providers } from "@/components/providers";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { PrototypeBar } from "@/components/prototype-bar";
 import { ReferenceEffects } from "@/components/reference-effects";
 import { appEnv } from "@/lib/config/env";
 import { jetbrainsMono, quicksandDisplay, quicksandUi } from "@/components/fonts";
@@ -56,7 +55,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" className={`${quicksandDisplay.variable} ${quicksandUi.variable} ${jetbrainsMono.variable}`}>
       <body>
         <Providers>
-          <PrototypeBar />
           <SiteHeader />
           {children}
           <SiteFooter />

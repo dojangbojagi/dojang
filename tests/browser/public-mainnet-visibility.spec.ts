@@ -15,12 +15,41 @@ test("public network selection follows the Mainnet visibility flag", async ({ pa
   await page.addInitScript(() => window.localStorage.setItem("gyevo:robinhood-network", "4663"));
   await page.goto(`${site}/app?network=mainnet&chainId=4663`, { waitUntil: "domcontentloaded" });
   const picker = page.getByRole("combobox", { name: "Select application network" });
-  await expect(picker).toContainText(mainnetVisible ? "Mainnet" : "Testnet");
-  await picker.click();
-  await expect(page.getByRole("option", { name: /Robinhood Mainnet/ })).toHaveCount(mainnetVisible ? 1 : 0);
-  await expect(page.getByRole("option", { name: /Robinhood Testnet/ })).toHaveCount(1);
-  if (!mainnetVisible) {
+  if (mainnetVisible) {
+    await expect(picker).toContainText("Mainnet");
+    await picker.click();
+    await expect(page.getByRole("option", { name: /Robinhood Mainnet/ })).toHaveCount(1);
+    await expect(page.getByRole("option", { name: /Robinhood Testnet/ })).toHaveCount(1);
+    await page.getByRole("option", { name: /Robinhood Testnet/ }).click();
+    await expect(picker).toContainText("Testnet");
+    await picker.click();
+    await page.getByRole("option", { name: /Robinhood Mainnet/ }).click();
+    await expect(picker).toContainText("Mainnet");
+  } else {
+    await expect(picker).toHaveCount(0);
     await expect.poll(() => page.evaluate(() => window.localStorage.getItem("gyevo:robinhood-network"))).toBe("46630");
+  }
+  await expect(page.locator(".site-header__social")).toBeVisible();
+  await expect(page.locator(".site-header").getByRole("button", { name: /Connect Wallet/ })).toBeVisible();
+});
+
+test("landing removes demo marketing copy while preserving the hero destination", async ({ page }) => {
+  await page.goto(site, { waitUntil: "domcontentloaded" });
+  const hero = page.locator(".lp-hero");
+  await expect(hero.locator(".lp-badge")).toContainText(mainnetVisible ? "Robinhood Mainnet" : "Robinhood Testnet");
+  await expect(hero.locator(".lp-badge")).toContainText("Not audited");
+  await expect(hero.locator(".lp-badge")).toContainText("No funds held");
+  await expect(hero.locator(".lp-btn--primary")).toHaveText(/Launch App/);
+  await expect(hero.locator(".lp-btn--primary")).toHaveAttribute("href", "/dojang");
+  expect(await page.locator(".lp").textContent()).not.toMatch(/\bdemo\b/i);
+});
+
+test("application routes have no top announcement strip or reserved space", async ({ page }) => {
+  for (const route of ["/app", "/docs", "/contracts", "/dao", "/lending", "/dojang", "/bojagi"]) {
+    await page.goto(`${site}${route}`, { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".proto-bar")).toHaveCount(0);
+    await expect(page.locator(".site-header")).toBeVisible();
+    expect(await page.locator(".site-header").evaluate((header) => header.getBoundingClientRect().top)).toBe(0);
   }
 });
 

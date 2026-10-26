@@ -64,7 +64,7 @@ export function SiteHeader() {
       : "Wallet disconnected";
 
   return (
-    <header className="site-header site-header--app" data-scrolled={scrolled}>
+    <header className="site-header site-header--app" data-scrolled={scrolled} data-mainnet-visible={appEnv.mainnetVisible}>
       <div className="container site-header__inner">
         <Link className="brand" href="/app" aria-label={`${appEnv.appName}, app home`}>
           <BrandLogo size={34} />
@@ -80,7 +80,7 @@ export function SiteHeader() {
           </ul>
         </nav>
         <div className="site-header__actions">
-          <ProtocolNetworkPicker selectedChainId={headerChainId} onSelect={selectChain} />
+          {appEnv.mainnetVisible && <ProtocolNetworkPicker selectedChainId={headerChainId} onSelect={selectChain} />}
           <span className="site-header__current-chain" title={`Actual wallet network: ${connectedNetwork}`} aria-live="polite">
             {connectedNetwork}
           </span>
