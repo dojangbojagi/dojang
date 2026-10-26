@@ -272,9 +272,7 @@ test("Docs identifies Mainnet first and Testnet as the interactive environment",
   page,
 }) => {
   await page.goto(`${site}/docs`, { waitUntil: "domcontentloaded" });
-  await expect(page.locator(".proto-bar")).toContainText(
-    "Deployed on Robinhood Mainnet",
-  );
+  await expect(page.locator(".proto-bar")).toHaveCount(0);
   await expect(page.locator(".docs__glance")).toContainText(
     "Robinhood Mainnet · 4663",
   );

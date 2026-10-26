@@ -96,7 +96,7 @@ export function FinalReveal({ appName }: { appName: string }) {
           </p>
           <div className="lp-actions">
             <Link className="lp-btn lp-btn--primary" href="/dojang">
-              Launch the demo <Arrow />
+              Launch App <Arrow />
             </Link>
             <Link className="lp-btn lp-btn--ghost" href="/docs">
               Read the docs
@@ -116,7 +116,7 @@ export function FinalReveal({ appName }: { appName: string }) {
                 <span>{appName}</span>
               </Link>
               <p>
-                {appEnv.mainnetVisible ? "Robinhood Testnet demo. Restricted Mainnet: 10 contracts, DAO/Lending paused. " : "Robinhood Testnet demo. "}
+                {appEnv.mainnetVisible ? "Robinhood Testnet. Restricted Mainnet: 10 contracts, DAO/Lending paused. " : "Robinhood Testnet. "}
                 Synthetic assets: no redemption. Independent of Robinhood, GIWA or Upbit.
               </p>
             </div>

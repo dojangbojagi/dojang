@@ -311,7 +311,7 @@ export function CoverReveal({ tagline }: Props) {
                 <i aria-hidden="true" />
                 <span>
                   {appEnv.mainnetVisible ? "Robinhood Mainnet" : "Robinhood Testnet"}
-                  <span className="lp-badge__more">{appEnv.mainnetVisible ? " deployed" : " demo"}</span>
+                  {appEnv.mainnetVisible && <span className="lp-badge__more"> deployed</span>}
                 </span>
                 <span>Not audited</span>
                 <span>No funds held</span>
@@ -425,7 +425,7 @@ export function CoverReveal({ tagline }: Props) {
                 </p>
                 <div className="lp-actions">
                   <Link className="lp-btn lp-btn--primary" href="/dojang">
-                    Try the demo
+                    Launch App
                     <Arrow />
                   </Link>
                   <a

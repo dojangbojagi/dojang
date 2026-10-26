@@ -9,25 +9,30 @@ test("network picker is Radix-based, selection stays distinct from the real wall
   const trigger = header.getByRole("combobox", { name: "Select application network" });
 
   await expect(header.locator("select")).toHaveCount(0);
-  await expect(header.locator("[role=combobox]")).toHaveCount(1);
+  await expect(header.locator("[role=combobox]")).toHaveCount(mainnetVisible ? 1 : 0);
   await expect(header.locator("[data-wallet]")).toHaveCount(1);
   await expect(header.getByRole("button", { name: /Connect Wallet/ })).toBeVisible();
 
-  await trigger.click();
-  await expect(page.getByRole("option", { name: "Robinhood Mainnet — 4663" })).toHaveCount(mainnetVisible ? 1 : 0);
-  await expect(page.getByRole("option", { name: "Robinhood Testnet — 46630" })).toBeVisible();
-  await page.getByRole("option", { name: mainnetVisible ? "Robinhood Mainnet — 4663" : "Robinhood Testnet — 46630" }).click();
-  await expect(trigger).toContainText(mainnetVisible ? "Mainnet" : "Testnet");
+  if (mainnetVisible) {
+    await trigger.click();
+    await expect(page.getByRole("option", { name: "Robinhood Mainnet — 4663" })).toBeVisible();
+    await expect(page.getByRole("option", { name: "Robinhood Testnet — 46630" })).toBeVisible();
+    await page.getByRole("option", { name: "Robinhood Mainnet — 4663" }).click();
+    await expect(trigger).toContainText("Mainnet");
+  } else {
+    await expect(trigger).toHaveCount(0);
+  }
   await expect(header.getByRole("button", { name: /Connect Wallet/ })).toBeVisible();
   await expect(header.getByText("Wallet disconnected", { exact: true })).toBeVisible();
 
   for (const width of [1920, 1600, 1440, 1280, 1024, 768, 390, 320]) {
     await page.setViewportSize({ width, height: 1000 });
+    if (!mainnetVisible) await expect(header.locator(".site-header__social")).toBeVisible();
     const layout = await header.locator(".site-header__inner").evaluate((inner) => {
       const box = inner.getBoundingClientRect();
       const brand = inner.querySelector(":scope > .brand")!.getBoundingClientRect();
       const nav = inner.querySelector(":scope > .nav")!;
-      const network = inner.querySelector(".protocol-network-picker")!.getBoundingClientRect();
+      const network = inner.querySelector(".protocol-network-picker")?.getBoundingClientRect();
       const wallet = inner.querySelector("[data-wallet]")!.getBoundingClientRect();
       const menu = inner.querySelector(".menu-toggle")!.getBoundingClientRect();
       const actions = inner.querySelector(":scope > .site-header__actions")!.getBoundingClientRect();
@@ -41,7 +46,7 @@ test("network picker is Radix-based, selection stays distinct from the real wall
         navLeft: navBox.left,
         navRight: navBox.right,
         actionsLeft: actions.left,
-        networkRight: network.right,
+        networkRight: network?.right ?? null,
         walletLeft: wallet.left,
         walletRight: wallet.right,
         walletTop: wallet.top,
@@ -59,7 +64,8 @@ test("network picker is Radix-based, selection stays distinct from the real wall
     } else {
       await expect(header.getByRole("button", { name: "Open menu" })).toBeVisible();
     }
-    expect(layout.networkRight, `network picker overlaps wallet control at ${width}px`).toBeLessThanOrEqual(layout.walletLeft + 1);
+    if (mainnetVisible) expect(layout.networkRight, `network picker overlaps wallet control at ${width}px`).toBeLessThanOrEqual(layout.walletLeft + 1);
+    else expect(layout.networkRight, `hidden network picker leaves a placeholder at ${width}px`).toBeNull();
     if (width <= 1439) {
       const overlapsX = layout.walletLeft < layout.menuRight && layout.walletRight > layout.menuLeft;
       const overlapsY = layout.walletTop < layout.menuBottom && layout.walletBottom > layout.menuTop;

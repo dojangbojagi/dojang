@@ -128,7 +128,7 @@ export function LendingSection() {
           </p>
           <div className="lp-lend__cta" data-lp-reveal style={{ ["--i" as string]: 4 }}>
             <Link className="lp-btn lp-btn--primary" href="/lending">Open Lending <Arrow /></Link>
-            <Link className="lp-btn lp-btn--ghost" href="/contracts#verified-history">Explore Verified Demo</Link>
+            <Link className="lp-btn lp-btn--ghost" href="/contracts#verified-history">Explore Verified History</Link>
           </div>
         </div>
 
@@ -184,18 +184,18 @@ const PHASES: readonly { n: string; name: string; status: PhaseStatus; items: re
     status: "done",
     items: [
       "Ten project contracts deployed and read back from chain 46630",
-      "Synthetic test prices set and controlled demo tokens minted",
+      "Synthetic test prices set and controlled test tokens minted",
       "Policy 3 Lending and Policy 4 DAO credentials issued by the authorized project issuer",
     ],
   },
   {
     n: "03",
-    name: "Live testnet demo",
+    name: "Live Testnet activity",
     status: "done",
     items: [
       "Live contract addresses and status are read from Robinhood Testnet",
       "The app separates Policy 4 governance from Policy 3 private Lending proofs",
-      "Confirmed demo activity is explorable without a connected wallet",
+      "Confirmed Testnet activity is explorable without a connected wallet",
     ],
   },
   {
@@ -204,7 +204,7 @@ const PHASES: readonly { n: string; name: string; status: PhaseStatus; items: re
     status: "done",
     items: [
       "DAO Proposal 1 received two For votes, was finalized and executed at 3,600 seconds",
-      "Two demo wallets completed proof-gated Lending actions; the loan was repaid and assets withdrawn",
+      "Two test wallets completed proof-gated Lending actions; the loan was repaid and assets withdrawn",
       "All ten deployed project contracts have source verified on Robinhood Testnet Blockscout",
     ],
   },
@@ -249,7 +249,7 @@ export function RoadmapSection() {
         </h2>
         <p className="lp-lead" data-lp-reveal style={{ ["--i" as string]: 2 }}>
           {appEnv.mainnetVisible
-            ? <>GYEVO has ten deployed contracts on Robinhood Mainnet (chain {ROBINHOOD_MAINNET_CHAIN_ID}). DAO and Lending remain paused and use synthetic demo assets. Interactive user journeys run on Robinhood Testnet (chain {ROBINHOOD_TESTNET_CHAIN_ID}); public production readiness remains pending.</>
+            ? <>GYEVO has ten deployed contracts on Robinhood Mainnet (chain {ROBINHOOD_MAINNET_CHAIN_ID}). DAO and Lending remain paused and use synthetic test assets. Interactive user journeys run on Robinhood Testnet (chain {ROBINHOOD_TESTNET_CHAIN_ID}); public production readiness remains pending.</>
             : <>GYEVO&apos;s interactive DAO and Lending journeys run on Robinhood Testnet (chain {ROBINHOOD_TESTNET_CHAIN_ID}) with synthetic test assets. Public production readiness remains pending.</>}
         </p>
 
@@ -302,7 +302,7 @@ export function FactsSection() {
                 <div className="lp-fact" data-spot><dt>Mainnet contracts</dt><dd>10 deployed · 10 runtime bytecodes</dd></div>
               </>
             : <>
-                <div className="lp-fact" data-spot><dt>Project status</dt><dd>Testnet demonstration</dd></div>
+                <div className="lp-fact" data-spot><dt>Project status</dt><dd>Testnet deployment</dd></div>
                 <div className="lp-fact" data-spot><dt>Contract evidence</dt><dd>Testnet receipts and source checks</dd></div>
               </>}
           <div className="lp-fact" data-spot><dt>Interactive environment</dt><dd>Robinhood Testnet · {ROBINHOOD_TESTNET_CHAIN_ID}</dd></div>
