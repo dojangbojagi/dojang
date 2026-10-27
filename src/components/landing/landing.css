@@ -593,7 +593,7 @@
   .lp-word--a, .lp-word--b { margin: 0; }
   .lp-stage { --push-x: 0px; --push-y: -30svh; }
   .lp-slot { width: .3em; height: .3em; margin-block: .16em; }
-  .lp-hero { align-items: flex-end; padding-bottom: 6.6rem; }
+  .lp-hero { align-items: flex-end; padding-bottom: 9.1rem; }
   .lp-hero__col { gap: 1.05rem; justify-items: center; text-align: center; }
   .lp-badge { justify-content: center; flex-wrap: nowrap; gap: .4rem .7rem; font-size: .58rem; letter-spacing: .1em; padding: .5rem .9rem; }
   .lp-badge > span + span::before { margin-right: .7rem; }
@@ -611,6 +611,8 @@
 }
 
 @media (max-width: 380px) {
+  .lp-hero__col { gap: .55rem; }
+  .lp .lp-btn { padding-inline: .65rem; }
   .lp-badge { font-size: .52rem; letter-spacing: .08em; gap: .4rem .55rem; padding-inline: .75rem; }
   .lp-badge > span + span::before { margin-right: .55rem; }
   .lp-ca { gap: .4rem; font-size: .6rem; }

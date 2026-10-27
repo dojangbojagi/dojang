@@ -15,11 +15,9 @@ export function ProjectTokenCa() {
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const configuredAddress = projectTokenConfig.address;
   const chainId = projectTokenConfig.chainId;
+  const hasValidChain = chainId !== undefined && Number.isSafeInteger(chainId) && chainId > 0;
   const isConfigured = Boolean(
     configuredAddress &&
-    chainId &&
-    Number.isSafeInteger(chainId) &&
-    chainId > 0 &&
     isAddress(configuredAddress) &&
     configuredAddress !== "0x0000000000000000000000000000000000000000",
   );
@@ -51,20 +49,20 @@ export function ProjectTokenCa() {
     <div
       className="lp-ca"
       role="group"
-      aria-label="GYEVO project token contract address"
+      aria-label="Contract address"
     >
-      <span className="hidden! lp-ca__label"></span>
-      {isConfigured && configuredAddress && chainId ? (
+      {isConfigured && configuredAddress ? (
         <>
+          <span className="lp-ca__label">CA</span>
           <span className="lp-ca__address" title={configuredAddress}>
             {shortAddress(configuredAddress)}
           </span>
-          <span className="lp-ca__chain">CHAIN {chainId}</span>
+          {hasValidChain && <span className="lp-ca__chain">CHAIN {chainId}</span>}
           <button
             className="lp-ca__copy"
             type="button"
             onClick={copyAddress}
-            aria-label="Copy full GYEVO project token contract address"
+            aria-label="Copy full contract address"
           >
             {copyState === "copied"
               ? "Copied!"
@@ -74,7 +72,7 @@ export function ProjectTokenCa() {
           </button>
           <span className="lp-sr" aria-live="polite">
             {copyState === "copied"
-              ? "GYEVO contract address copied"
+              ? "Contract address copied"
               : copyState === "failed"
                 ? "Could not copy contract address"
                 : ""}

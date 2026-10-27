@@ -5,8 +5,8 @@ export type ProjectTokenConfig = Readonly<{
   chainId: number | undefined;
 }>;
 
-// Set these only after the project token address and its network are confirmed.
+// The address is supplied for the landing CA display; add a chain ID only when confirmed.
 export const projectTokenConfig: ProjectTokenConfig = {
-  address: undefined,
+  address: "0xae82c2e2dbb71ffe27d2115406dab84b91bc806f",
   chainId: undefined,
 };

@@ -44,6 +44,42 @@ test("landing removes demo marketing copy while preserving the hero destination"
   expect(await page.locator(".lp").textContent()).not.toMatch(/\bdemo\b/i);
 });
 
+test("landing hero displays the supplied CA with the full address available to copy", async ({ page }) => {
+  await page.goto(site, { waitUntil: "domcontentloaded" });
+  const ca = page.locator(".lp-hero .lp-ca");
+  await expect(ca.locator(".lp-ca__label")).toHaveText("CA");
+  await expect(ca).toContainText("0xae82...806f");
+  await expect(ca.locator(".lp-ca__address")).toHaveAttribute("title", "0xae82c2e2dbb71ffe27d2115406dab84b91bc806f");
+  await expect(ca.getByRole("button", { name: "Copy full contract address" })).toHaveCount(1);
+  await expect(ca.locator(".lp-ca__chain")).toHaveCount(0);
+});
+
+test("landing CA clears the mobile hero hint", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(site, { waitUntil: "domcontentloaded" });
+  await page.evaluate(() => window.scrollTo(0, window.innerHeight * 1.1));
+  await expect.poll(async () => page.locator(".lp-hero").getAttribute("inert")).toBeNull();
+  const ca = await page.locator(".lp-ca").boundingBox();
+  const hint = await page.locator(".lp-drag-hint").boundingBox();
+  expect(ca).not.toBeNull();
+  expect(hint).not.toBeNull();
+  expect(ca!.y + ca!.height).toBeLessThan(hint!.y - 8);
+});
+
+test("landing hero stays below navigation on compact phones with CA", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.goto(site, { waitUntil: "domcontentloaded" });
+  await page.evaluate(() => window.scrollTo(0, window.innerHeight * 1.1));
+  await expect.poll(async () => page.locator(".lp-hero").getAttribute("inert")).toBeNull();
+  const nav = await page.locator(".lp-nav").boundingBox();
+  const badge = await page.locator(".lp-badge").boundingBox();
+  const ca = await page.locator(".lp-ca").boundingBox();
+  const hint = await page.locator(".lp-drag-hint").boundingBox();
+  expect(nav && badge && ca && hint).toBeTruthy();
+  expect(badge!.y).toBeGreaterThanOrEqual(nav!.y + nav!.height);
+  expect(ca!.y + ca!.height).toBeLessThan(hint!.y - 8);
+});
+
 test("application routes have no top announcement strip or reserved space", async ({ page }) => {
   for (const route of ["/app", "/docs", "/contracts", "/dao", "/lending", "/dojang", "/bojagi"]) {
     await page.goto(`${site}${route}`, { waitUntil: "domcontentloaded" });
