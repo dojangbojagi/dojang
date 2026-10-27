@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { formatDuration } from "@/components/dao/format";
 import { useProtocolNetworkSelection } from "@/components/protocol-network-selection";
+import { useRobinhoodDaoGovernance } from "@/hooks/use-robinhood-dao-governance";
 import { useRobinhoodDaoPhase2 } from "@/hooks/use-robinhood-dao-phase2";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo";
@@ -39,6 +41,72 @@ export function DarkDaoNetworkStatus({ mainnetVisible }: { mainnetVisible: boole
         </div>
       )}
     </dl>
+  );
+}
+
+const phase1StateLabel: Record<string, string> = {
+  unconfigured: "Governance or credential registry is not configured",
+  checking: "Reading governance contract and registry state",
+  "read-error": "Live governance read unavailable",
+  "no-code": "No governance code at the configured Testnet address",
+  "dependency-mismatch": "Configured credential registry does not match the DAO contract",
+  ready: "Live governance state read",
+};
+
+export function DarkDaoPhase1Status({ mainnetVisible }: { mainnetVisible: boolean }) {
+  const { selectedChainId } = useProtocolNetworkSelection();
+  const wallet = useWalletNetwork(selectedChainId);
+  const governance = useRobinhoodDaoGovernance(selectedChainId === ROBINHOOD_TESTNET_CHAIN_ID);
+  const snapshot = governance.snapshot;
+  const onMainnet = selectedChainId === ROBINHOOD_MAINNET_CHAIN_ID;
+  const eligibility = !wallet.isConnected
+    ? "Connect a wallet to check Policy 4 eligibility"
+    : !wallet.isOnExpectedNetwork
+      ? "Verify the wallet on Robinhood Testnet to check eligibility"
+      : snapshot?.isVerifiedMember === undefined
+        ? "Eligibility read unavailable"
+        : snapshot.isVerifiedMember
+          ? "Eligible under the current Policy 4 credential"
+          : "No active Policy 4 governance eligibility";
+
+  return (
+    <section className="dark-dao-live dark-dao-live--phase1" role="region" aria-label="Phase 1 live status">
+      <div className="dark-dao-section-heading">
+        <h2>Phase 1 live governance status</h2>
+        <p>{onMainnet
+          ? mainnetVisible
+            ? "Phase 1 Mainnet status is read in Contracts; this existing workspace remains Testnet-bound."
+            : "Phase 1 contract status is not available for the selected network."
+          : "Read-only Robinhood Testnet governance and Policy 4 state."}</p>
+      </div>
+      {onMainnet ? (
+        <p className="dark-dao-live__state" data-status="external-read">
+          <span aria-hidden="true" />Mainnet pause state is not read in this panel.
+        </p>
+      ) : (
+        <>
+          <p className="dark-dao-live__state" data-status={governance.state} aria-live="polite">
+            <span aria-hidden="true" />{snapshot?.paused === true
+              ? "Governance paused"
+              : snapshot?.paused === false
+                ? "Governance unpaused"
+                : phase1StateLabel[governance.state] ?? "Governance state unavailable"}
+          </p>
+          <dl className="dark-dao-network__readout dark-dao-network__readout--live">
+            {snapshot ? (
+              <>
+                <div><dt>Governance contract</dt><dd>{snapshot.paused ? "Paused" : "Unpaused"}</dd></div>
+                <div><dt>Proposals recorded</dt><dd>{(snapshot.nextProposalId > 0n ? snapshot.nextProposalId - 1n : 0n).toString()}</dd></div>
+                <div><dt>Minimum credential validity</dt><dd>{formatDuration(snapshot.minimumRemainingValidity)}</dd></div>
+                <div><dt>Wallet eligibility</dt><dd>{eligibility}</dd></div>
+              </>
+            ) : (
+              <div><dt>Governance contract</dt><dd>{phase1StateLabel[governance.state] ?? "Governance state unavailable"}</dd></div>
+            )}
+          </dl>
+        </>
+      )}
+    </section>
   );
 }
 

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { appEnv } from "@/lib/config/env";
-import { DarkDaoNetworkStatus, DarkDaoPhase2Status } from "./live-status";
+import { DarkDaoNetworkStatus, DarkDaoPhase1Status, DarkDaoPhase2Status } from "./live-status";
 import "./dark-dao.css";
 
 export const metadata: Metadata = {
@@ -80,6 +80,7 @@ export default function DarkDaoPage() {
         )}
       </section>
 
+      <DarkDaoPhase1Status mainnetVisible={appEnv.mainnetVisible} />
       {appEnv.daoPhase2Visible && <DarkDaoPhase2Status />}
 
       <section className="dark-dao-entry" aria-labelledby="dark-dao-entry-title">

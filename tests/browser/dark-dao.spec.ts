@@ -25,6 +25,9 @@ test("DARK DAO page reflects the selected network and preserves Phase 2 visibili
   await expect(page.getByRole("heading", { name: "Governance, backed by proof." })).toBeVisible();
   await expect(page.locator(".dark-dao-entry").getByRole("link", { name: "Enter DARK DAO" })).toHaveAttribute("href", "/dao");
   await expect(page.getByText(mainnetVisible ? "Robinhood Mainnet · 4663" : "Robinhood Testnet · 46630", { exact: true })).toBeVisible();
+  const phase1Status = page.getByRole("region", { name: "Phase 1 live status" });
+  await expect(phase1Status).toHaveCount(1);
+  await expect(phase1Status).toContainText(mainnetVisible ? "Phase 1 Mainnet status is read in Contracts" : "Robinhood Testnet");
   await expect(page.getByRole("region", { name: "Phase 2 live status" })).toHaveCount(phase2Visible ? 1 : 0);
 
   if (mainnetVisible) {
