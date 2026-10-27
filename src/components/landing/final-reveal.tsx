@@ -89,7 +89,7 @@ export function FinalReveal({ appName }: { appName: string }) {
             See what your wallet can <em>prove.</em>
           </h2>
           <p className="lp-final__lead">
-            Check your GYEVO project credential for DAO governance, or prove
+            Check your GYEVO project credential for DARK DAO governance, or prove
             eligibility privately with BOJAGI for Lending.
           </p>
           <div className="lp-actions">
@@ -125,7 +125,7 @@ export function FinalReveal({ appName }: { appName: string }) {
                   <Link href="/dojang">Dojang</Link>
                 </li>
                 <li>
-                  <Link href="/dao">DAO governance</Link>
+                  <Link href="/dark-dao">DARK DAO</Link>
                 </li>
                 <li>
                   <Link href="/bojagi">Bojagi</Link>

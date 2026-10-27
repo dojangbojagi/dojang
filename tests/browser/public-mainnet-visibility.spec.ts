@@ -92,7 +92,7 @@ test("landing hero stays below navigation on compact phones with CA", async ({ p
 });
 
 test("application routes have no top announcement strip or reserved space", async ({ page }) => {
-  for (const route of ["/app", "/docs", "/contracts", "/dao", "/lending", "/dojang", "/bojagi"]) {
+  for (const route of ["/app", "/docs", "/contracts", "/dao", "/dark-dao", "/lending", "/dojang", "/bojagi"]) {
     await page.goto(`${site}${route}`, { waitUntil: "domcontentloaded" });
     await expect(page.locator(".proto-bar")).toHaveCount(0);
     await expect(page.locator(".site-header")).toBeVisible();
@@ -103,7 +103,7 @@ test("application routes have no top announcement strip or reserved space", asyn
 test("landing, documentation, and contracts follow the Mainnet visibility flag", async ({ page }) => {
   for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
     await page.setViewportSize(viewport);
-    for (const route of ["/", "/docs", "/contracts", "/dao", "/lending", "/dojang", "/bojagi"]) {
+    for (const route of ["/", "/docs", "/contracts", "/dao", "/dark-dao", "/lending", "/dojang", "/bojagi"]) {
       await page.goto(`${site}${route}${mainnetVisible ? "" : "?network=mainnet&chainId=4663"}`, { waitUntil: "domcontentloaded" });
       const visibleText = await page.locator("body").evaluate((body) => (body as HTMLElement).innerText);
       if (mainnetVisible) {

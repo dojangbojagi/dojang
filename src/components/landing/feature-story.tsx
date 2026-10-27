@@ -65,15 +65,15 @@ const SCENES: Scene[] = [
   {
     id: "dao",
     n: "03",
-    name: "DAO",
-    sub: "Credential-Gated Governance",
+    name: "DARK DAO",
+    sub: "GYEVO Governance",
     kicker: "Governance layer · public",
-    headline: "Governance for credential holders.",
-    text: "Holders of an active project credential propose and vote on-chain. Each eligible wallet counts once per proposal, and every vote is public.",
-    use: "Propose a change to the DAO's own credential-validity rule, then let eligible holders vote on it.",
-    chips: ["Policy 4 · Voting", "Public votes"],
-    href: "/dao",
-    cta: "Open DAO",
+    headline: "Governance, backed by proof.",
+    text: "DARK DAO connects project-issued credentials to on-chain governance. Policy 4 gates public proposals and votes; each phase keeps its own eligibility and contract rules.",
+    use: "Enter the existing DARK DAO workspace to inspect governance releases and the state read from their contracts.",
+    chips: ["Policy 4 · Phase 1", "Phase 2 · ZK membership"],
+    href: "/dark-dao",
+    cta: "Explore DARK DAO",
   },
 ];
 
@@ -282,12 +282,12 @@ export function FeatureStory() {
           </h2>
           <p className="lp-lead" data-lp-reveal style={{ ["--i" as string]: 2 }}>
             DOJANG establishes project-defined eligibility. BOJAGI proves that eligibility without exposing the private value.
-            DAO governance and Lending put both to work.
+            DARK DAO governance and Lending put both to work.
           </p>
         </div>
       </section>
 
-      <section className="lp-fx" data-mode={mode} aria-label="DOJANG, BOJAGI and DAO">
+      <section className="lp-fx" data-mode={mode} aria-label="DOJANG, BOJAGI and DARK DAO">
         <div className="lp-fx__runway" ref={runwayRef}>
           <div className="lp-fx__stage">
             <div className="lp-fx__top">

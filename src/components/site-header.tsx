@@ -14,7 +14,7 @@ import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo"
 /* The application bar: its own sections, a way back to the website and the wallet. The public
    website (the landing) has its own bar with the introductions and "Launch App". */
 const APP_LINKS = [
-  ["app", "App", "/app"], ["lending", "Lending", "/lending"], ["dao", "DAO", "/dao"],
+  ["app", "App", "/app"], ["lending", "Lending", "/lending"], ["dao", "DARK DAO", "/dark-dao"],
   ["docs", "Docs", "/docs"], ["contracts", "Contracts", "/contracts"],
 ] as const;
 

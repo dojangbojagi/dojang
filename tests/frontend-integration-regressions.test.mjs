@@ -114,7 +114,7 @@ test("DAO defaults to the Robinhood project-credential route and does not follow
   const workspace = await readFile(new URL("../src/components/dao/dao-workspace.tsx", import.meta.url), "utf8");
   expect(workspace).toContain("useState<ProtocolChainId>(ROBINHOOD_TESTNET_CHAIN_ID)");
   expect(workspace).not.toContain("observedWallet.chainId");
-  expect(workspace).toContain("GYEVO DAO · Robinhood Testnet");
+  expect(workspace).toContain("DARK DAO · Robinhood Testnet");
   expect(workspace).toContain("Legacy GIWA Sepolia governance");
 });
 
@@ -130,7 +130,7 @@ test("recording history is read-only and verifies receipts against project event
   expect(history).toContain("Current on-chain state");
   expect(history).toContain("These are historical actions, not current positions.");
   expect(history).not.toContain("window.ethereum");
-  expect(productCopy).toContain("Policy 4 → DAO, or Policy 3 → BOJAGI → Lending");
+  expect(productCopy).toContain("Policy 4 → DARK DAO, or Policy 3 → BOJAGI → Lending");
   expect(productCopy).not.toContain("full public wallet journeys are still being confirmed");
 });
 

@@ -32,7 +32,7 @@ const STEPS = [
     name: "Credential record",
     lane: "public",
     where: "On-chain",
-    text: "The project registry binds your wallet to a policy and sealed commitment. Policy 4 is for DAO governance; Policy 3 is for Lending.",
+    text: "The project registry binds your wallet to a policy and sealed commitment. Policy 4 is for DARK DAO governance; Policy 3 is for Lending.",
     pub: ["The commitment", "The wallet it is bound to", "Expiry and revocation status"],
     priv: ["The value", "The salt"],
   },
@@ -40,7 +40,7 @@ const STEPS = [
     name: "BOJAGI proof",
     lane: "private",
     where: "In your browser",
-    text: "For Policy 3 Lending, BOJAGI uses the matching witness to prove eligibility without revealing its private value. DAO governance needs no proof.",
+    text: "For Policy 3 Lending, BOJAGI uses the matching witness to prove eligibility without revealing its private value. DARK DAO Phase 1 uses a public Policy 4 credential; Phase 2 has a separate ZK membership path.",
     pub: ["The policy and its threshold", "The proof itself"],
     priv: ["The value", "The salt"],
   },
@@ -48,7 +48,7 @@ const STEPS = [
     name: "Choose a path",
     lane: "public",
     where: "On-chain",
-    text: "Policy 4 opens public proposal and voting actions. Policy 3 plus a proof opens eligible Lending actions; repayment and safe withdrawals do not need a proof.",
+    text: "Policy 4 opens public DARK DAO proposal and voting actions. Policy 3 plus a proof opens eligible Lending actions; repayment and safe withdrawals do not need a proof.",
     pub: ["DAO proposals and votes", "Lending transactions and amounts", "The proof and public inputs"],
     priv: ["The eligibility value and salt stay unpublished"],
   },
@@ -63,7 +63,7 @@ export function PathSection() {
           From a trusted fact to a <em className="o">verified</em> action.
         </h2>
         <p className="lp-lead" data-lp-reveal style={{ ["--i" as string]: 2 }}>
-          DOJANG project credentials lead to two clear paths: Policy 4 → DAO, or Policy 3 → BOJAGI → Lending.
+          DOJANG project credentials lead to two clear paths: Policy 4 → DARK DAO, or Policy 3 → BOJAGI → Lending.
         </p>
         <p className="lp-legend" data-lp-reveal style={{ ["--i" as string]: 3 }}>
           <span className="pv"><i aria-hidden="true" />Private: stays on your device</span>
@@ -96,7 +96,7 @@ export function PathSection() {
 }
 
 /* ----------------------------------------------------------------- 04 */
-/* The trust layer itself (DOJANG, BOJAGI, DAO) is the pinned story in feature-story.tsx. Lending follows it as
+/* The trust layer itself (DOJANG, BOJAGI, DARK DAO) is the pinned story in feature-story.tsx. Lending follows it as
    an ordinary section: what the market does on Robinhood Testnet and which actions need a proof. Facts only:
    supply, collateral, borrow, repay and withdraw exist; supply, collateral activation and borrow need a
    policy-3 project credential and a genuine proof; repay and safe withdrawal do not. Prices are synthetic and
@@ -210,7 +210,7 @@ const PHASES: readonly { n: string; name: string; status: PhaseStatus; items: re
   },
   appEnv.mainnetVisible ? {
     n: "05",
-    name: "Robinhood Mainnet deployment",
+    name: "Controlled Robinhood Mainnet deployment",
     status: "done",
     items: [
       "Ten protocol contracts deployed on Robinhood Mainnet (chain 4663), with runtime bytecode confirmed at all ten addresses.",
@@ -245,12 +245,12 @@ export function RoadmapSection() {
       <div className="lp-wrap">
         <Eyebrow n="05" ac="blue">Roadmap</Eyebrow>
         <h2 className="lp-h2" id="road-title" data-lp-reveal style={{ ["--i" as string]: 1 }}>
-          GYEVO is deployed. <em className="o">Production</em> still ahead.
+          GYEVO is on-chain. <em className="o">Production readiness</em> still ahead.
         </h2>
         <p className="lp-lead" data-lp-reveal style={{ ["--i" as string]: 2 }}>
           {appEnv.mainnetVisible
             ? <>GYEVO has ten deployed contracts on Robinhood Mainnet (chain {ROBINHOOD_MAINNET_CHAIN_ID}). DAO and Lending remain paused and use synthetic test assets. Interactive user journeys run on Robinhood Testnet (chain {ROBINHOOD_TESTNET_CHAIN_ID}); public production readiness remains pending.</>
-            : <>GYEVO&apos;s interactive DAO and Lending journeys run on Robinhood Testnet (chain {ROBINHOOD_TESTNET_CHAIN_ID}) with synthetic test assets. Public production readiness remains pending.</>}
+            : <>GYEVO&apos;s currently available interactive journeys use Robinhood Testnet (chain {ROBINHOOD_TESTNET_CHAIN_ID}) and synthetic test assets. Public production readiness remains pending.</>}
         </p>
 
         {/* the route: solid where the work is done or live, dotted where it is not. Decorative; the list below says the same in words. */}
@@ -302,8 +302,8 @@ export function FactsSection() {
                 <div className="lp-fact" data-spot><dt>Mainnet contracts</dt><dd>10 deployed · 10 runtime bytecodes</dd></div>
               </>
             : <>
-                <div className="lp-fact" data-spot><dt>Project status</dt><dd>Testnet deployment</dd></div>
-                <div className="lp-fact" data-spot><dt>Contract evidence</dt><dd>Testnet receipts and source checks</dd></div>
+                <div className="lp-fact" data-spot><dt>Current contract deployment</dt><dd>Robinhood Testnet</dd></div>
+                <div className="lp-fact" data-spot><dt>Contract evidence</dt><dd>Confirmed Testnet receipts and source checks</dd></div>
               </>}
           <div className="lp-fact" data-spot><dt>Interactive environment</dt><dd>Robinhood Testnet · {ROBINHOOD_TESTNET_CHAIN_ID}</dd></div>
           <div className="lp-fact" data-spot><dt>Audit</dt><dd>None</dd></div>

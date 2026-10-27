@@ -6,7 +6,7 @@ import { BrandLogo } from "@/components/brand-logo";
 import { getFeature, subscribeFeature, type FeatureId } from "./feature-state";
 import { scrollToId } from "./smooth-scroll";
 
-/* The public bar: the logo, three direct links to the introductions on this page (DOJANG, BOJAGI, DAO) and
+/* The public bar: the logo, three direct links to the introductions on this page (DOJANG, BOJAGI, DARK DAO) and
    the way into the product. Lending, docs and contracts are inside the app, behind "Launch App"; connecting a
    wallet happens there too. Light over the white cover, dark glass after it. */
 const SECTIONS = [
@@ -16,7 +16,7 @@ const SECTIONS = [
     desc: "Project credentials and eligibility.",
   },
   { id: "bojagi", label: "BOJAGI", desc: "Private zero-knowledge proofs." },
-  { id: "dao", label: "DAO", desc: "Credential-gated governance." },
+  { id: "dao", label: "DARK DAO", desc: "GYEVO's credential-gated governance product." },
 ] as const;
 
 type SectionId = FeatureId;
@@ -125,7 +125,7 @@ export function LandingNav({ appName }: { appName: string }) {
               role="tooltip"
             >
               <b>Opens the application</b>
-              <span>Lending · DAO · Docs · Contracts</span>
+              <span>Lending · DARK DAO · Docs · Contracts</span>
             </span>
           </div>
           <button
@@ -163,7 +163,7 @@ export function LandingNav({ appName }: { appName: string }) {
           Launch App
         </Link>
         <p className="lp-menu__hint">
-          Opens the application: Lending, DAO, Docs and Contracts.
+          Opens the application: Lending, DARK DAO, Docs and Contracts.
         </p>
       </nav>
     </>

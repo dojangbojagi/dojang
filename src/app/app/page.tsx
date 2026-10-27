@@ -11,16 +11,16 @@ export const metadata: Metadata = { title: `App · ${appEnv.appName}` };
    Web3 logic: the wallet card, the chain check and every action live in the routes it links to. */
 const SECTIONS = [
   {
-    href: "/dao",
-    name: "DAO Governance",
+    href: "/dark-dao",
+    name: "DARK DAO",
     tag: "Policy 4 · No private proof",
-    text: "An active GYEVO project credential lets an eligible wallet create proposals and vote. Every vote is public.",
+    text: "Explore credential-gated governance, live contract status, and the separate paths for each DARK DAO phase.",
   },
   {
     href: "/lending",
     name: "Lending",
     tag: "Policy 3 · BOJAGI proof",
-    text: "Use a matching private witness to prove eligibility in your browser, then interact with test assets in Lending V2.",
+    text: "Use a matching private witness to prove eligibility in your browser. Lending V2 assets are synthetic and have no redemption value.",
   },
   {
     href: "/docs",
@@ -43,7 +43,7 @@ export default function AppHomePage() {
         <p className="eyebrow">Application · GYEVO protocol</p>
         <h1>{appEnv.appName} app</h1>
         <p className="page-lead">
-          GYEVO uses project-issued credentials to gate two paths: Policy 4 for public DAO governance, and Policy 3 plus a private BOJAGI proof for lending. The proof hides the private eligibility value; it does not hide public transactions or amounts.
+          GYEVO connects project-issued credentials to DARK DAO governance and Lending V2: Policy 4 for public proposals and votes, and Policy 3 plus a private BOJAGI proof for lending. A proof hides the private eligibility value; it does not hide public transactions or amounts.
         </p>
         <p className="app-home__back">
           <Link className="protocol-inline-link" href="/">← Back to the website</Link>
@@ -58,7 +58,7 @@ export default function AppHomePage() {
           <span className="app-card__idx" aria-hidden="true">00</span>
           <span className="app-card__tag">Read-only · No wallet needed</span>
           <strong className="app-card__name">Explore Verified Activity</strong>
-          <span className="app-card__text">Review confirmed historical receipts and contract readbacks. Historical transactions are not active positions.</span>
+          <span className="app-card__text">Review confirmed Robinhood Testnet receipts and contract readbacks. Historical Testnet transactions are not active positions.</span>
           <span className="app-card__go" aria-hidden="true">Explore history →</span>
         </Link>
         <Link className="app-card" href="/dojang">

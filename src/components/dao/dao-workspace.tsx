@@ -14,6 +14,7 @@ import { WalletNetworkCard } from "@/components/wallet-network-card";
 import { useDaoGovernance } from "@/hooks/use-dao-governance";
 import { useRobinhoodDaoGovernance } from "@/hooks/use-robinhood-dao-governance";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
+import { appEnv } from "@/lib/config/env";
 import { GIWA_CHAIN_ID } from "@/lib/config/chain";
 import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
 import type { ProtocolChainId } from "@/hooks/use-wallet-network";
@@ -113,8 +114,10 @@ export function DaoWorkspace() {
     <div className="lend dao">
       <GovernanceNotice chainId={selectedChainId} />
       <div className="protocol-actions" role="group" aria-label="Governance network">
-        <span className="small muted">GYEVO governance runs on Robinhood Testnet. GIWA Sepolia is a separate legacy DAO; use it only if you intend to interact with those contracts.</span>
-        <button className={`btn btn--${selectedChainId === ROBINHOOD_TESTNET_CHAIN_ID ? "primary" : "secondary"} btn--sm`} type="button" aria-pressed={selectedChainId === ROBINHOOD_TESTNET_CHAIN_ID} onClick={() => { setSelectedChainId(ROBINHOOD_TESTNET_CHAIN_ID); setSelectedId(undefined); setFallback(undefined); }}>GYEVO DAO · Robinhood Testnet</button>
+        <span className="small muted">{appEnv.mainnetVisible
+          ? "DARK DAO Phase 1 member actions use Robinhood Testnet. Mainnet Phase 1 state is available as a read-only contract check in Contracts; GIWA Sepolia is a separate legacy DAO."
+          : "DARK DAO Phase 1 member actions use Robinhood Testnet. GIWA Sepolia is a separate legacy DAO; use it only if you intend to interact with those contracts."}</span>
+        <button className={`btn btn--${selectedChainId === ROBINHOOD_TESTNET_CHAIN_ID ? "primary" : "secondary"} btn--sm`} type="button" aria-pressed={selectedChainId === ROBINHOOD_TESTNET_CHAIN_ID} onClick={() => { setSelectedChainId(ROBINHOOD_TESTNET_CHAIN_ID); setSelectedId(undefined); setFallback(undefined); }}>DARK DAO · Robinhood Testnet</button>
         <button className={`btn btn--${selectedChainId === GIWA_CHAIN_ID ? "primary" : "secondary"} btn--sm`} type="button" aria-pressed={selectedChainId === GIWA_CHAIN_ID} onClick={() => { setSelectedChainId(GIWA_CHAIN_ID); setSelectedId(undefined); setFallback(undefined); }}>Legacy GIWA Sepolia governance</button>
       </div>
       <WalletNetworkCard expectedChainId={selectedChainId} />

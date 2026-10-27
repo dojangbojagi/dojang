@@ -11,7 +11,7 @@ test("DAO release visibility preserves Phase 1 and gates Phase 2 by the public f
 
   // A phase query is deliberately not a visibility bypass or an unsupported deep link.
   await page.goto(`${site}/dao?phase=2`, { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("button", { name: "GYEVO DAO · Robinhood Testnet" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "DARK DAO · Robinhood Testnet" })).toBeVisible();
   await expect(page.locator("#dao-phase1-panel")).toBeVisible();
   await expect(page.getByRole("button", { name: "Refresh governance" })).toBeVisible();
   expect((await page.request.get(`${site}/dao/phase2`)).status()).toBe(404);
@@ -20,7 +20,7 @@ test("DAO release visibility preserves Phase 1 and gates Phase 2 by the public f
     await expect(page.getByRole("tab", { name: "Phase 1" })).toHaveCount(0);
     await expect(page.getByRole("tab", { name: "Phase 2" })).toHaveCount(0);
     await expect(page.locator("#dao-phase2-panel")).toHaveCount(0);
-    await expect(page.getByText("Create proposals and vote through the existing Phase 1 governance flow.")).toBeVisible();
+    await expect(page.getByText("GYEVO governance uses an active project-issued Policy 4 credential to gate public proposals and votes.")).toBeVisible();
     await page.goto(`${site}/dojang`, { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: mainnetVisible ? "DAO Governance · Phase 1" : "DAO Governance Policy 4" })).toBeVisible();
     await expect(page.getByText(/Policy 5/i)).toHaveCount(0);
