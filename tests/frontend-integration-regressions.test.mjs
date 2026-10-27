@@ -51,7 +51,7 @@ test("the selected Robinhood network is shared by the header and Mainnet-capable
   ]);
   expect(provider).toContain("<ProtocolNetworkSelectionProvider>");
   expect(selection).toContain("localStorage.setItem(STORAGE_KEY, String(chainId))");
-  expect(header).toContain("<ProtocolNetworkPicker");
+  expect(header).not.toContain("<ProtocolNetworkPicker");
   expect(header).not.toMatch(/<select\b/i);
   expect(picker).toContain('full: "Robinhood Mainnet — 4663"');
   expect(picker).toContain('full: "Robinhood Testnet — 46630"');
@@ -124,7 +124,7 @@ test("recording history is read-only and verifies receipts against project event
     readFile(new URL("../src/app/app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../src/components/landing/sections.tsx", import.meta.url), "utf8"),
   ]);
-  expect(appHome).toContain("Explore Verified Demo");
+  expect(appHome).toContain("Explore Verified Activity");
   expect(history).toContain("readRobinhoodTransactionEvidence(client, item.hash)");
   expect(history).toContain("receiptMatches(item, evidence)");
   expect(history).toContain("Current on-chain state");

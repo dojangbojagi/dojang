@@ -44,7 +44,7 @@ export default function DocsPage() {
             <div><dt>Interactive app</dt><dd>Robinhood Testnet · {ROBINHOOD_TESTNET_CHAIN_ID}</dd></div>
           </> : <>
             <div><dt>Interactive app</dt><dd>Robinhood Testnet · {ROBINHOOD_TESTNET_CHAIN_ID}</dd></div>
-            <div><dt>Contracts</dt><dd>Testnet demonstration</dd></div>
+            <div><dt>Contracts</dt><dd>Testnet deployment</dd></div>
             <div><dt>Governance and Lending</dt><dd>Interactive Testnet journeys</dd></div>
             <div><dt>Production readiness</dt><dd>Pending</dd></div>
           </>}
@@ -171,7 +171,7 @@ export default function DocsPage() {
               <li><b>Take part</b><p>With a policy-4 credential, use DAO Governance. With a policy-3 credential and its witness, use Lending.</p></li>
             </ol>
             <p className="docs__note">
-              You can explore confirmed historical Robinhood Testnet activity without a wallet, test ETH or a credential on the <Link href="/contracts#verified-history">Explore Verified Demo</Link> section. Historical transactions are not active positions.
+              You can explore confirmed historical Robinhood Testnet activity without a wallet, test ETH or a credential on the <Link href="/contracts#verified-history">Explore Verified Activity</Link> section. Historical transactions are not active positions.
             </p>
           </section>
 
@@ -203,7 +203,7 @@ export default function DocsPage() {
               <div><dt>What privacy covers</dt><dd>A proof hides the private eligibility value. Wallet addresses, transactions, amounts and votes are public, and so is the fact that a gated action happened.</dd></div>
               <div><dt>Trusted issuer</dt><dd>The project issuer decides who receives a credential. A proof shows that a holder meets a rule; it does not remove trust in the issuer.</dd></div>
               <div><dt>Not official</dt><dd>Project credentials are separate from official GIWA Dojang and Upbit credentials.</dd></div>
-              <div><dt>Source verification</dt><dd>{appEnv.mainnetVisible ? "All ten Testnet contracts have verified source. Mainnet source status is checked independently on Blockscout and shown per contract in the Contracts directory; bytecode presence is not source verification." : "The ten Testnet demonstration contracts have verified source. Check each contract in the Contracts directory; bytecode presence alone is not source verification."}</dd></div>
+              <div><dt>Source verification</dt><dd>{appEnv.mainnetVisible ? "All ten Testnet contracts have verified source. Mainnet source status is checked independently on Blockscout and shown per contract in the Contracts directory; bytecode presence is not source verification." : "The ten Testnet contracts have verified source. Check each contract in the Contracts directory; bytecode presence alone is not source verification."}</dd></div>
             </dl>
 
             <details className="docs__tech">

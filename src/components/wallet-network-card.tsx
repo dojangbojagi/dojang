@@ -8,6 +8,12 @@ import { ROBINHOOD_MAINNET_CHAIN_ID, robinhoodMainnetRpcUrls } from "@/lib/confi
 import { supportedProtocolChains } from "@/lib/config/network-registry";
 import { appEnv } from "@/lib/config/env";
 import { StateChip } from "@/components/protocol-state";
+import { useProtocolNetworkSelection } from "@/components/protocol-network-selection";
+
+export function SelectedWalletNetworkCard() {
+  const { selectedChainId } = useProtocolNetworkSelection();
+  return <WalletNetworkCard expectedChainId={selectedChainId} />;
+}
 
 export function WalletNetworkCard({ expectedChainId = ROBINHOOD_TESTNET_CHAIN_ID }: { expectedChainId?: ProtocolChainId }) {
   const wallet = useWalletNetwork(expectedChainId);

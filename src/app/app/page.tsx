@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { TestAssetAddresses } from "@/components/test-asset-addresses";
-import { WalletNetworkCard } from "@/components/wallet-network-card";
+import { SelectedWalletNetworkCard } from "@/components/wallet-network-card";
 import { appEnv } from "@/lib/config/env";
-import { ROBINHOOD_TESTNET_CHAIN_ID } from "@/lib/config/robinhood-testnet";
 import "./app-home.css";
 
 export const metadata: Metadata = { title: `App · ${appEnv.appName}` };
@@ -27,15 +26,13 @@ const SECTIONS = [
     href: "/docs",
     name: "Docs",
     tag: "Reference",
-    text: "How GYEVO works, what is private and what is public, and the limits of this testnet demonstration.",
+    text: "How GYEVO works, what stays private, what is public, and the protocol's limits.",
   },
   {
     href: "/contracts",
     name: "Contracts",
     tag: "Transparency",
-    text: appEnv.mainnetVisible
-      ? "Testnet and controlled Mainnet contracts, their addresses and independent verification status."
-      : "Robinhood Testnet contracts, their addresses and source verification status.",
+    text: "Inspect contract addresses, deployment evidence, and source-verification status.",
   },
 ] as const;
 
@@ -43,7 +40,7 @@ export default function AppHomePage() {
   return (
     <main className="page app-home">
       <header className="page-head app-home__head">
-        <p className="eyebrow">Application · Robinhood Testnet · chain {ROBINHOOD_TESTNET_CHAIN_ID}</p>
+        <p className="eyebrow">Application · GYEVO protocol</p>
         <h1>{appEnv.appName} app</h1>
         <p className="page-lead">
           GYEVO uses project-issued credentials to gate two paths: Policy 4 for public DAO governance, and Policy 3 plus a private BOJAGI proof for lending. The proof hides the private eligibility value; it does not hide public transactions or amounts.
@@ -60,13 +57,13 @@ export default function AppHomePage() {
         <Link className="app-card" href="/contracts#verified-history">
           <span className="app-card__idx" aria-hidden="true">00</span>
           <span className="app-card__tag">Read-only · No wallet needed</span>
-          <strong className="app-card__name">Explore Verified Demo</strong>
-          <span className="app-card__text">Review confirmed Robinhood Testnet receipts and current contract readbacks. Historical transactions are not active positions.</span>
+          <strong className="app-card__name">Explore Verified Activity</strong>
+          <span className="app-card__text">Review confirmed historical receipts and contract readbacks. Historical transactions are not active positions.</span>
           <span className="app-card__go" aria-hidden="true">Explore history →</span>
         </Link>
         <Link className="app-card" href="/dojang">
           <span className="app-card__idx" aria-hidden="true">01</span>
-          <span className="app-card__tag">Connect wallet · Robinhood Testnet</span>
+          <span className="app-card__tag">Connect wallet · GYEVO</span>
           <strong className="app-card__name">Use GYEVO</strong>
           <span className="app-card__text">Check your project credential first. The authorized project issuer must issue it; Policy 3 also needs a matching private witness.</span>
           <span className="app-card__go" aria-hidden="true">Check credential →</span>
@@ -87,7 +84,7 @@ export default function AppHomePage() {
 
       <TestAssetAddresses />
 
-      <WalletNetworkCard expectedChainId={ROBINHOOD_TESTNET_CHAIN_ID} />
+      <SelectedWalletNetworkCard />
 
       <p className="callout callout--demo app-home__note">
         Credentials here are issued by this project. They are not official GIWA, Dojang or Upbit credentials.

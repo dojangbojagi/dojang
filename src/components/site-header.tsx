@@ -6,13 +6,12 @@ import { useEffect, useState } from "react";
 import { appEnv } from "@/lib/config/env";
 import { BrandLogo } from "@/components/brand-logo";
 import { useProtocolNetworkSelection } from "@/components/protocol-network-selection";
-import { ProtocolNetworkPicker } from "@/components/protocol-network-picker";
 import { WalletControl } from "@/components/wallet-control";
 import { useWalletNetwork } from "@/hooks/use-wallet-network";
 import { publicProtocolChains } from "@/lib/config/network-registry";
 import { ROBINHOOD_MAINNET_CHAIN_ID } from "@/lib/config/robinhood-mainnet-demo";
 
-/* The application bar: its own sections, a way back to the website, the network and the wallet. The public
+/* The application bar: its own sections, a way back to the website and the wallet. The public
    website (the landing) has its own bar with the introductions and "Launch App". */
 const APP_LINKS = [
   ["app", "App", "/app"], ["lending", "Lending", "/lending"], ["dao", "DAO", "/dao"],
@@ -21,7 +20,7 @@ const APP_LINKS = [
 
 export function SiteHeader() {
   const pathname = usePathname();
-  const { selectedChainId, selectChain } = useProtocolNetworkSelection();
+  const { selectedChainId } = useProtocolNetworkSelection();
   const headerChainId = selectedChainId;
   const wallet = useWalletNetwork(headerChainId);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -80,7 +79,6 @@ export function SiteHeader() {
           </ul>
         </nav>
         <div className="site-header__actions">
-          {appEnv.mainnetVisible && <ProtocolNetworkPicker selectedChainId={headerChainId} onSelect={selectChain} />}
           <span className="site-header__current-chain" title={`Actual wallet network: ${connectedNetwork}`} aria-live="polite">
             {connectedNetwork}
           </span>

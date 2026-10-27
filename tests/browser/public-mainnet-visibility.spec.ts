@@ -11,24 +11,19 @@ test("the application X link opens the official account", async ({ page }) => {
   await expect(page.locator(".site-header__social")).toHaveAttribute("target", "_blank");
 });
 
-test("public network selection follows the Mainnet visibility flag", async ({ page }) => {
+test("hidden header selector preserves the Mainnet visibility flag and X link", async ({ page }) => {
   await page.addInitScript(() => window.localStorage.setItem("gyevo:robinhood-network", "4663"));
   await page.goto(`${site}/app?network=mainnet&chainId=4663`, { waitUntil: "domcontentloaded" });
   const picker = page.getByRole("combobox", { name: "Select application network" });
+  await expect(picker).toHaveCount(0);
   if (mainnetVisible) {
-    await expect(picker).toContainText("Mainnet");
-    await picker.click();
-    await expect(page.getByRole("option", { name: /Robinhood Mainnet/ })).toHaveCount(1);
-    await expect(page.getByRole("option", { name: /Robinhood Testnet/ })).toHaveCount(1);
-    await page.getByRole("option", { name: /Robinhood Testnet/ }).click();
-    await expect(picker).toContainText("Testnet");
-    await picker.click();
-    await page.getByRole("option", { name: /Robinhood Mainnet/ }).click();
-    await expect(picker).toContainText("Mainnet");
+    await expect.poll(() => page.evaluate(() => window.localStorage.getItem("gyevo:robinhood-network"))).toBe("4663");
   } else {
-    await expect(picker).toHaveCount(0);
     await expect.poll(() => page.evaluate(() => window.localStorage.getItem("gyevo:robinhood-network"))).toBe("46630");
   }
+  await expect(page.locator(".kv__row").filter({ hasText: "Expected network" })).toContainText(
+    mainnetVisible ? "Robinhood Chain Mainnet · chain 4663" : "Robinhood Chain Testnet · chain 46630",
+  );
   await expect(page.locator(".site-header__social")).toBeVisible();
   await expect(page.locator(".site-header").getByRole("button", { name: /Connect Wallet/ })).toBeVisible();
 });
@@ -36,12 +31,28 @@ test("public network selection follows the Mainnet visibility flag", async ({ pa
 test("landing removes demo marketing copy while preserving the hero destination", async ({ page }) => {
   await page.goto(site, { waitUntil: "domcontentloaded" });
   const hero = page.locator(".lp-hero");
-  await expect(hero.locator(".lp-badge")).toContainText(mainnetVisible ? "Robinhood Mainnet" : "Robinhood Testnet");
+  await expect(hero.locator(".lp-badge")).toContainText("GYEVO protocol");
   await expect(hero.locator(".lp-badge")).toContainText("Not audited");
-  await expect(hero.locator(".lp-badge")).toContainText("No funds held");
+  await expect(hero.locator(".lp-badge")).toContainText("Synthetic assets");
   await expect(hero.locator(".lp-btn--primary")).toHaveText(/Launch App/);
   await expect(hero.locator(".lp-btn--primary")).toHaveAttribute("href", "/dojang");
   expect(await page.locator(".lp").textContent()).not.toMatch(/\bdemo\b/i);
+});
+
+test("generic landing and app introductions do not call the product a Testnet demo", async ({ page }) => {
+  for (const [route, selector] of [
+    ["/", ".lp-badge"],
+    ["/app", ".app-home__head"],
+    ["/dojang", ".stub__lead"],
+    ["/lending", ".stub__lead"],
+  ]) {
+    await page.goto(`${site}${route}`, { waitUntil: "domcontentloaded" });
+    const copy = await page.locator(selector).innerText();
+    expect(copy, `${route} generic introduction`).not.toMatch(/Robinhood Testnet|chain 46630|\bdemo\b/i);
+  }
+  await page.goto(`${site}/contracts#verified-history`, { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "Explore Verified Activity" })).toBeVisible();
+  await expect(page.locator("#verified-history")).toContainText("Robinhood Testnet");
 });
 
 test("landing hero displays the supplied CA with the full address available to copy", async ({ page }) => {

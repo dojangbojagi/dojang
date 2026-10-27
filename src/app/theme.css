@@ -291,16 +291,11 @@ h4 { font-weight: 600; }
   .site-header__current-chain { display: none; }
 }
 
-@media (max-width: 1200px) {
-  .site-header__social { display: none; }
-  .site-header[data-mainnet-visible="false"] .site-header__social { display: grid; }
-}
-
 @media (max-width: 1000px) {
   .gyevo-select__trigger { width: 10rem; }
 }
 
-/* The one selector stays in the header on phones; only the app navigation moves into the menu. */
+/* On phones only the app navigation moves into the menu. */
 @media (max-width: 520px) {
   .site-header__inner { gap: 0.45rem; }
   .site-header__actions { gap: 0.4rem; flex: 0 1 auto; flex-wrap: wrap; }

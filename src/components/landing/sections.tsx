@@ -67,7 +67,7 @@ export function PathSection() {
         </p>
         <p className="lp-legend" data-lp-reveal style={{ ["--i" as string]: 3 }}>
           <span className="pv"><i aria-hidden="true" />Private: stays on your device</span>
-          <span className="pb"><i aria-hidden="true" />Public: on the selected testnet</span>
+          <span className="pb"><i aria-hidden="true" />Public: on-chain</span>
         </p>
 
         <ol className="lp-path" data-lp-rail>
@@ -119,11 +119,11 @@ export function LendingSection() {
             Borrow with a <em className="o">proof,</em> not a disclosure.
           </h2>
           <p className="lp-lead" data-lp-reveal style={{ ["--i" as string]: 2 }}>
-            Lending V2 supports supply, collateral, borrow, repay and withdraw on Robinhood Testnet. The protected actions require a
+            GYEVO&apos;s Lending V2 flow covers supply, collateral, borrow, repay and withdraw. The protected actions require a
             valid project-issued policy-3 credential and a genuine zero-knowledge proof, checked again by the contract.
           </p>
           <p className="lp-lend__fine" data-lp-reveal style={{ ["--i" as string]: 3 }}>
-            Test tokens and synthetic test prices. A credential-gated demonstration of lending, not an exchange: there is no spot or
+            Synthetic assets and project-set prices. This is not an exchange: there is no spot or
             derivatives trading. Credentials are issued by this project, not by GIWA, Dojang or Upbit.
           </p>
           <div className="lp-lend__cta" data-lp-reveal style={{ ["--i" as string]: 4 }}>
@@ -245,7 +245,7 @@ export function RoadmapSection() {
       <div className="lp-wrap">
         <Eyebrow n="05" ac="blue">Roadmap</Eyebrow>
         <h2 className="lp-h2" id="road-title" data-lp-reveal style={{ ["--i" as string]: 1 }}>
-          {appEnv.mainnetVisible ? "Deployed on Robinhood Mainnet. " : "Live on Robinhood Testnet. "}<em className="o">Production</em> still ahead.
+          GYEVO is deployed. <em className="o">Production</em> still ahead.
         </h2>
         <p className="lp-lead" data-lp-reveal style={{ ["--i" as string]: 2 }}>
           {appEnv.mainnetVisible

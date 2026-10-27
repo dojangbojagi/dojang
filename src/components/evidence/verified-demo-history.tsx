@@ -247,7 +247,7 @@ export function VerifiedDemoHistory() {
   return (
     <section className="panel" id="verified-history" aria-labelledby="verified-history-heading">
       <div className="protocol-panel__head">
-        <h2 id="verified-history-heading">Explore Verified Demo</h2>
+        <h2 id="verified-history-heading">Explore Verified Activity</h2>
         <span className="status" data-state="demo"><i className="status__dot" aria-hidden="true" />Read-only · Robinhood Testnet</span>
       </div>
       <p className="muted">No wallet, test ETH, credential or witness is needed to explore. Each transaction below is checked against chain {ROBINHOOD_TESTNET_CHAIN_ID} and its expected GYEVO event. These are historical actions, not current positions.</p>

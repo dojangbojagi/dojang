@@ -74,7 +74,7 @@ export default function ContractsPage() {
         <p className="page-lead">
           {appEnv.mainnetVisible
             ? <>{appEnv.appName} has deployed contracts on Robinhood Mainnet (chain {ROBINHOOD_MAINNET_CHAIN_ID}). Mainnet Phase 2 governance is separately deployed and its activation state is checked live; the interactive Lending journey remains on Robinhood Testnet (chain {ROBINHOOD_TESTNET_CHAIN_ID}). Select a network to inspect contract evidence.</>
-            : <>{appEnv.appName} publishes its interactive demonstration contracts on Robinhood Testnet (chain {ROBINHOOD_TESTNET_CHAIN_ID}). Inspect their addresses and independently checked contract evidence below.</>}
+            : <>{appEnv.appName} publishes its interactive contracts on Robinhood Testnet (chain {ROBINHOOD_TESTNET_CHAIN_ID}). Inspect their addresses and independently checked contract evidence below.</>}
         </p>
       </header>
 

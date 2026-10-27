@@ -14,8 +14,8 @@ export default function LendingPage() {
       glyph={{ shape: "rings", label: "Two linked rings: supplying and borrowing, joined by a proof.", caption: "Supply and borrow, linked by a proof", legend: ["public", "private"] }}
       title="Lending & borrowing."
       lead={appEnv.mainnetVisible
-        ? "Supply, deposit collateral, prove private eligibility, borrow, repay and withdraw on the selected Robinhood network. Policy 3 proofs gate risk-increasing actions; amounts, positions and transactions are public. Mainnet uses allowlisted synthetic assets and is not public production lending."
-        : "Supply, deposit collateral, prove private eligibility, borrow, repay and withdraw on Robinhood Testnet. Policy 3 proofs gate risk-increasing actions; amounts, positions and transactions are public. Demo assets are synthetic and have no redemption value."}
+        ? "Supply, deposit collateral, prove private eligibility, borrow, repay and withdraw in GYEVO. Policy 3 proofs gate risk-increasing actions; amounts, positions and transactions are public. Mainnet uses allowlisted synthetic assets and is not public production lending."
+        : "Supply, deposit collateral, prove private eligibility, borrow, repay and withdraw in GYEVO. Policy 3 proofs gate risk-increasing actions; amounts, positions and transactions are public. Assets are synthetic and have no redemption value."}
     >
       <div className="protocol-section">
         <LendingExperience />

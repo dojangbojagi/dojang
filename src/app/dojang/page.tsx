@@ -28,7 +28,7 @@ export default function DojangPage() {
       status="Project credentials"
       glyph={{ shape: "orb", label: "A sphere of readable characters: a credential record is public, so anyone can read it.", caption: "The record is public", legend: ["public"] }}
       title="Your project credential."
-      lead="DOJANG is the credential layer: an authorized issuer records who is eligible, and contracts check it each time. See the credential held by your wallet on Robinhood Testnet. An optional read of an official GIWA Dojang record is kept below as an external reference."
+      lead="DOJANG is the credential layer: an authorized issuer records who is eligible, and contracts check it each time. Check the GYEVO credential held by your wallet. An optional read of an official GIWA Dojang record is kept below as an external reference."
     >
       <div className="protocol-stack protocol-section">
         <RobinhoodProjectCredentialStatus />
@@ -53,7 +53,7 @@ export default function DojangPage() {
             {wallet.address && !readRequested && <p className="protocol-empty">No official GIWA lookup has been requested. The Robinhood project credential above is the credential used by GYEVO.</p>}
             {wallet.address && dojang.state === "checking" && <p className="callout callout--demo" role="status" aria-live="polite">Reading Dojang and EAS attestation details from GIWA Sepolia…</p>}
             {wallet.address && dojang.state === "read-error" && <p className="callout callout--caution" role="alert">The official record could not be validated. This result does not mean the wallet lacks a credential.{dojang.error ? ` ${dojang.error.message}` : ""}</p>}
-            {wallet.address && dojang.state === "no-official-credential" && <p className="protocol-empty"><strong>No Official GIWA Credential Found.</strong> Official GIWA credentials are separate from GYEVO project credentials. You can still explore GYEVO&apos;s verified testnet activity.</p>}
+            {wallet.address && dojang.state === "no-official-credential" && <p className="protocol-empty"><strong>No Official GIWA Credential Found.</strong> Official GIWA credentials are separate from GYEVO project credentials. You can still explore GYEVO&apos;s verified historical activity.</p>}
             {readRequested && dojang.credential && (
               <>
                 <div className="protocol-panel__head"><h3>Attestation details</h3><StateChip state={dojang.credential.state} /></div>

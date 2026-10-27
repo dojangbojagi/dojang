@@ -8,7 +8,6 @@ import { createCipherSculpture } from "./cipher-sculpture";
 import { createGlobeSculpture } from "./globe-sculpture";
 import { FORM_TIMELINE, GlyphField } from "./glyph-field";
 import { scrollToId } from "./smooth-scroll";
-import { appEnv } from "@/lib/config/env";
 
 /* Phase 1 is the claim on white. The full stop after "more" is a black dot, like the one after "less";
    scrolling cuts it into a row of slabs that turn, fly and settle as the strips of the screen (see
@@ -24,7 +23,7 @@ import { appEnv } from "@/lib/config/env";
    in the stylesheet reads them. Nothing here animates by itself, so it runs in reverse. */
 
 const STACK = [
-  appEnv.mainnetVisible ? "Robinhood Mainnet" : "Robinhood Testnet",
+  "Robinhood Chain",
   "Dojang",
   "EAS",
   "Noir",
@@ -310,11 +309,10 @@ export function CoverReveal({ tagline }: Props) {
               <p className="lp-badge">
                 <i aria-hidden="true" />
                 <span>
-                  {appEnv.mainnetVisible ? "Robinhood Mainnet" : "Robinhood Testnet"}
-                  {appEnv.mainnetVisible && <span className="lp-badge__more"> deployed</span>}
+                  GYEVO protocol
                 </span>
                 <span>Not audited</span>
-                <span>No funds held</span>
+                <span>Synthetic assets</span>
               </p>
               <h2 className="lp-h">
                 {/* the first words are the original headline, untouched; the other three overlay it, one at a time, as the picture changes form */}

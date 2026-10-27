@@ -13,7 +13,7 @@ export function V2LimitationsNotice({ configured, chainId, riskPaused }: { confi
   return (
     <aside className="callout callout--caution lend-limits" aria-labelledby="lendv2-limits-heading">
       <div>
-        <h2 id="lendv2-limits-heading" className="lend-limits__title">{isMainnet ? "Robinhood Mainnet controlled demonstration" : "Testnet demonstration of Lending V2"}</h2>
+        <h2 id="lendv2-limits-heading" className="lend-limits__title">Lending V2 limits · Robinhood {isMainnet ? "Mainnet" : "Testnet"}</h2>
         <ul className="lend-limits__list">
           <li><strong>Synthetic assets only.</strong> These capped project tokens have no redemption value and are not real assets or a financial product.</li>
           <li><strong>A controlled synthetic oracle.</strong> Prices are set by the project within bounds; they are not market prices.</li>

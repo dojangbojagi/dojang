@@ -46,7 +46,7 @@ export function GovernanceNotice({ chainId = GIWA_CHAIN_ID }: { chainId?: Protoc
       </ul>
       <p className="small muted">
         Using Lending does not require any governance step, and governance does not require a ZK proof.{" "}
-        <Link href="/lending">Lending</Link> · <Link href="/dojang">{isRobinhood ? "Credential tools" : "Check your Dojang credential"}</Link> · <Link href="/contracts#verified-history">Explore verified demo history</Link>
+        <Link href="/lending">Lending</Link> · <Link href="/dojang">{isRobinhood ? "Credential tools" : "Check your Dojang credential"}</Link> · <Link href="/contracts#verified-history">Explore verified history</Link>
       </p>
     </section>
   );
